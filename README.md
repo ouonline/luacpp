@@ -146,7 +146,7 @@ int main(void)
     };
     auto lfunc = l.newfunction(echo, "echo");
 
-    l.set("msg",  "calling cpp function with return value from cpp");
+    l.set("msg", "calling cpp function with return value from cpp");
     lfunc.exec(1, &res, nullptr, l.get("msg"));
     cout << ", return value -> " << res[0].tonumber() << endl;
 
@@ -271,7 +271,7 @@ int main(void)
 
 `LuaClass::set()` is a template function used to export member functions for this class.
 
-All user-defined class member functions should be called with colon operator, in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
+Class member functions should be called with colon operator, in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
 
 The following program displays how to use `LuaUserdata` to exchange data between C++ and Lua.
 
@@ -624,7 +624,7 @@ Loads and evaluates the Lua script `script`. If error occurs, error message is s
 * The `lua_State` object inside each `LuaState` instance is handled by `std::shared_ptr`, so all objects can be passed around freely.
 * Arguments of user-defined types of exported C++ functions must be passed by pointer.
 * Only numbers and dynamic allocated objects can be returned from exported C++ functions.
-* All user-defined class member functions should be called with colon operator, in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
+* Class member functions should be called with colon operator, in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
 
 [[back to top](#table-of-contents)]
 

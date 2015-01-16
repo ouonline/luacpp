@@ -82,7 +82,7 @@ static inline void test_function_with_return_value()
     };
     auto lfunc = l.newfunction(echo, "echo");
 
-    l.set("msg",  "calling cpp function with return value from cpp");
+    l.set("msg", "calling cpp function with return value from cpp");
     lfunc.exec(1, &res, nullptr, l.get("msg"));
     cout << ", return value -> " << res[0].tonumber() << endl;
 
