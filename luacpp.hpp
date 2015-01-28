@@ -829,7 +829,7 @@ bool LuaTable::foreach(std::function<bool (const LuaObject& key,
     lua_pushnil(m_l.get());
     while (lua_next(m_l.get(), -2) != 0) {
         if (!func(LuaObject(m_l, -2), LuaObject(m_l, -1))) {
-            lua_pop(m_l.get(), 2);
+            lua_pop(m_l.get(), 3);
             return false;
         }
 
@@ -904,6 +904,7 @@ bool LuaFunction::exec(int nresults, std::vector<LuaObject>* res,
     bool ok = (lua_pcall(m_l.get(), sizeof...(Argv), nresults, 0) == 0);
     if (ok) {
         if (res) {
+            res->clear();
             res->reserve(nresults);
             for (int i = nresults; i > 0; --i)
                 res->push_back(LuaObject(m_l, -i));
