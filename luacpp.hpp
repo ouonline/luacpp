@@ -168,8 +168,8 @@ class LuaFunction : public LuaRefObject {
         {}
 
         template<typename... Argv>
-            bool exec(int nresults = 0, std::vector<LuaObject>* res = nullptr,
-                      std::string* errstr = nullptr, const Argv&... argv);
+        bool exec(int nresults = 0, std::vector<LuaObject>* res = nullptr,
+                  std::string* errstr = nullptr, const Argv&... argv);
 
         LuaFunction& operator=(const LuaFunction& lfunc)
         {
@@ -193,8 +193,8 @@ class LuaFunction : public LuaRefObject {
         bool pusharg(int* argc, std::string* errstr) { return true; }
 
         template<typename First, typename... Rest>
-            bool pusharg(int* argc, std::string* errstr,
-                         const First& first, const Rest&... rest);
+        bool pusharg(int* argc, std::string* errstr,
+                     const First& first, const Rest&... rest);
 
         friend class LuaState;
         friend class LuaObject;
@@ -207,22 +207,22 @@ class FunctionCaller {
     public:
 
         template<typename FuncType, typename... Argv>
-            static int exec(FuncType f, lua_State* l, int argoffset,
-                            const Argv&... argv)
-            {
-                return FunctionCaller<N - 1>::exec(f, l, argoffset,
-                                                   FuncArg(l, N + argoffset),
-                                                   argv...);
-            }
+        static int exec(FuncType f, lua_State* l, int argoffset,
+                        const Argv&... argv)
+        {
+            return FunctionCaller<N - 1>::exec(f, l, argoffset,
+                                               FuncArg(l, N + argoffset),
+                                               argv...);
+        }
 
         template<typename T, typename FuncType, typename... Argv>
-            static int exec(T* obj, FuncType f, lua_State* l, int argoffset,
-                            const Argv&... argv)
-            {
-                return FunctionCaller<N - 1>::exec(obj, f, l, argoffset,
-                                                   FuncArg(l, N + argoffset),
-                                                   argv...);
-            }
+        static int exec(T* obj, FuncType f, lua_State* l, int argoffset,
+                        const Argv&... argv)
+        {
+            return FunctionCaller<N - 1>::exec(obj, f, l, argoffset,
+                                               FuncArg(l, N + argoffset),
+                                               argv...);
+        }
 
     private:
 
@@ -238,11 +238,11 @@ class FunctionCaller {
                 operator const char* () const { return lua_tostring(m_l, m_index); }
 
                 template<typename T>
-                    operator T* () const
-                    {
-                        T** ud = (T**)lua_touserdata(m_l, m_index);
-                        return *ud;
-                    }
+                operator T* () const
+                {
+                    T** ud = (T**)lua_touserdata(m_l, m_index);
+                    return *ud;
+                }
 
             private:
 
@@ -257,53 +257,53 @@ class FunctionCaller<0> {
     public:
 
         template<typename FuncRetType, typename... FuncArgType, typename... Argv>
-            static int exec(FuncRetType (*f)(FuncArgType...), lua_State* l, int,
-                            const Argv&... argv)
-            {
-                FunctionCaller<0>::pushres(l, f(argv...));
-                return 1;
-            }
+        static int exec(FuncRetType (*f)(FuncArgType...), lua_State* l, int,
+                        const Argv&... argv)
+        {
+            pushres(l, f(argv...));
+            return 1;
+        }
 
         template<typename... FuncArgType, typename... Argv>
-            static int exec(void (*f)(FuncArgType...), lua_State* l, int,
-                            const Argv&... argv)
-            {
-                f(argv...);
-                return 0;
-            }
+        static int exec(void (*f)(FuncArgType...), lua_State* l, int,
+                        const Argv&... argv)
+        {
+            f(argv...);
+            return 0;
+        }
 
 
         template<typename T, typename FuncRetType, typename... FuncArgType, typename... Argv>
-            static int exec(T* obj, FuncRetType (T::*f)(FuncArgType...), lua_State* l, int,
-                            const Argv&... argv)
-            {
-                FunctionCaller<0>::pushres(l, (obj->*f)(argv...));
-                return 1;
-            }
+        static int exec(T* obj, FuncRetType (T::*f)(FuncArgType...), lua_State* l, int,
+                        const Argv&... argv)
+        {
+            pushres(l, (obj->*f)(argv...));
+            return 1;
+        }
 
         template<typename T, typename... FuncArgType, typename... Argv>
-            static int exec(T* obj, void (T::*f)(FuncArgType...), lua_State* l, int,
-                            const Argv&... argv)
-            {
-                (obj->*f)(argv...);
-                return 0;
-            }
+        static int exec(T* obj, void (T::*f)(FuncArgType...), lua_State* l, int,
+                        const Argv&... argv)
+        {
+            (obj->*f)(argv...);
+            return 0;
+        }
 
         template<typename T, typename FuncRetType, typename... FuncArgType, typename... Argv>
-            static int exec(T* obj, FuncRetType (T::*f)(FuncArgType...) const, lua_State* l, int,
-                            const Argv&... argv)
-            {
-                FunctionCaller<0>::pushres(l, (obj->*f)(argv...));
-                return 1;
-            }
+        static int exec(T* obj, FuncRetType (T::*f)(FuncArgType...) const, lua_State* l, int,
+                        const Argv&... argv)
+        {
+            pushres(l, (obj->*f)(argv...));
+            return 1;
+        }
 
         template<typename T, typename... FuncArgType, typename... Argv>
-            static int exec(T* obj, void (T::*f)(FuncArgType...) const, lua_State* l, int,
-                            const Argv&... argv)
-            {
-                (obj->*f)(argv...);
-                return 0;
-            }
+        static int exec(T* obj, void (T::*f)(FuncArgType...) const, lua_State* l, int,
+                        const Argv&... argv)
+        {
+            (obj->*f)(argv...);
+            return 0;
+        }
 
     private:
 
@@ -313,12 +313,12 @@ class FunctionCaller<0> {
         }
 
         template<typename T>
-            static inline void pushres(lua_State* l, T* obj)
-            {
-                T** ud = (T**)lua_newuserdata(l, sizeof(T*));
-                *ud = obj;
-                luaL_setmetatable(l, METATABLENAME(T));
-            }
+        static inline void pushres(lua_State* l, T* obj)
+        {
+            T** ud = (T**)lua_newuserdata(l, sizeof(T*));
+            *ud = obj;
+            luaL_setmetatable(l, METATABLENAME(T));
+        }
 };
 
 template<typename FuncRetType, typename... FuncArgType>
@@ -347,86 +347,86 @@ class LuaClass : protected LuaRefObject {
         }
 
         template<typename... FuncArgType>
-            LuaClass<T>& setconstructor()
-            {
-                pushself();
+        LuaClass<T>& setconstructor()
+        {
+            pushself();
 
-                lua_pushinteger(m_l.get(), 1); // argument offset
-                lua_pushlightuserdata(m_l.get(), (void*)(constructor<FuncArgType...>));
-                lua_pushcclosure(m_l.get(), l_function<T*, FuncArgType...>, 2);
-                lua_setfield(m_l.get(), -2, "__call");
+            lua_pushinteger(m_l.get(), 1); // argument offset
+            lua_pushlightuserdata(m_l.get(), (void*)(constructor<FuncArgType...>));
+            lua_pushcclosure(m_l.get(), l_function<T*, FuncArgType...>, 2);
+            lua_setfield(m_l.get(), -2, "__call");
 
-                lua_pop(m_l.get(), 1);
+            lua_pop(m_l.get(), 1);
 
-                return *this;
-            }
+            return *this;
+        }
 
         // register common member function
         template<typename FuncRetType, typename... FuncArgType>
-            LuaClass<T>& set(const char* name, FuncRetType (T::*f)(FuncArgType...))
-            {
-                typedef MemberFuncWrapper<FuncRetType, FuncArgType...> wrapper_t;
+        LuaClass<T>& set(const char* name, FuncRetType (T::*f)(FuncArgType...))
+        {
+            typedef MemberFuncWrapper<FuncRetType, FuncArgType...> wrapper_t;
 
-                luaL_getmetatable(m_l.get(), METATABLENAME(T)); // metatable of userdata
+            luaL_getmetatable(m_l.get(), METATABLENAME(T)); // metatable of userdata
 
-                auto wrapper = (wrapper_t*)lua_newuserdata(m_l.get(), sizeof(wrapper_t));
-                wrapper->f = f;
-                lua_pushcclosure(m_l.get(), memberfunc<FuncRetType, FuncArgType...>, 1);
-                lua_setfield(m_l.get(), -2, name);
+            auto wrapper = (wrapper_t*)lua_newuserdata(m_l.get(), sizeof(wrapper_t));
+            wrapper->f = f;
+            lua_pushcclosure(m_l.get(), memberfunc<FuncRetType, FuncArgType...>, 1);
+            lua_setfield(m_l.get(), -2, name);
 
-                lua_pop(m_l.get(), 1);
+            lua_pop(m_l.get(), 1);
 
-                return *this;
-            }
+            return *this;
+        }
 
         // register member function with const qualifier
         template<typename FuncRetType, typename... FuncArgType>
-            LuaClass<T>& set(const char* name, FuncRetType (T::*f)(FuncArgType...) const)
-            {
-                typedef MemberFuncWrapper<FuncRetType, FuncArgType...> wrapper_t;
+        LuaClass<T>& set(const char* name, FuncRetType (T::*f)(FuncArgType...) const)
+        {
+            typedef MemberFuncWrapper<FuncRetType, FuncArgType...> wrapper_t;
 
-                luaL_getmetatable(m_l.get(), METATABLENAME(T)); // metatable of userdata
+            luaL_getmetatable(m_l.get(), METATABLENAME(T)); // metatable of userdata
 
-                auto wrapper = (wrapper_t*)lua_newuserdata(m_l.get(), sizeof(wrapper_t));
-                wrapper->fc = f;
-                lua_pushcclosure(m_l.get(), constmemberfunc<FuncRetType, FuncArgType...>, 1);
-                lua_setfield(m_l.get(), -2, name);
+            auto wrapper = (wrapper_t*)lua_newuserdata(m_l.get(), sizeof(wrapper_t));
+            wrapper->fc = f;
+            lua_pushcclosure(m_l.get(), constmemberfunc<FuncRetType, FuncArgType...>, 1);
+            lua_setfield(m_l.get(), -2, name);
 
-                lua_pop(m_l.get(), 1);
+            lua_pop(m_l.get(), 1);
 
-                return *this;
-            }
+            return *this;
+        }
 
         // register static member function
         template<typename FuncRetType, typename... FuncArgType>
-            LuaClass<T>& set(const char* name, FuncRetType (*func)(FuncArgType...))
-            {
-                lua_pushinteger(m_l.get(), 1); // argument offset, skip `self` in argv[0]
-                lua_pushlightuserdata(m_l.get(), (void*)func);
-                lua_pushcclosure(m_l.get(), l_function<FuncRetType, FuncArgType...>, 2);
+        LuaClass<T>& set(const char* name, FuncRetType (*func)(FuncArgType...))
+        {
+            lua_pushinteger(m_l.get(), 1); // argument offset, skip `self` in argv[0]
+            lua_pushlightuserdata(m_l.get(), (void*)func);
+            lua_pushcclosure(m_l.get(), l_function<FuncRetType, FuncArgType...>, 2);
 
-                // can be used without being instantiated
-                pushself();
-                lua_pushvalue(m_l.get(), -2); // the function
-                lua_setfield(m_l.get(), -2, name);
+            // can be used without being instantiated
+            pushself();
+            lua_pushvalue(m_l.get(), -2); // the function
+            lua_setfield(m_l.get(), -2, name);
 
-                // can be used by instances
-                luaL_getmetatable(m_l.get(), METATABLENAME(T)); // metatable of userdata
-                lua_pushvalue(m_l.get(), -3); // the function
-                lua_setfield(m_l.get(), -2, name);
+            // can be used by instances
+            luaL_getmetatable(m_l.get(), METATABLENAME(T)); // metatable of userdata
+            lua_pushvalue(m_l.get(), -3); // the function
+            lua_setfield(m_l.get(), -2, name);
 
-                lua_pop(m_l.get(), 3);
+            lua_pop(m_l.get(), 3);
 
-                return *this;
-            }
+            return *this;
+        }
 
     private:
 
         template<typename FuncRetType, typename... FuncArgType>
-            union MemberFuncWrapper {
-                FuncRetType (T::*f)(FuncArgType...);
-                FuncRetType (T::*fc)(FuncArgType...) const;
-            };
+        union MemberFuncWrapper {
+            FuncRetType (T::*f)(FuncArgType...);
+            FuncRetType (T::*fc)(FuncArgType...) const;
+        };
 
     private:
 
@@ -462,10 +462,10 @@ class LuaClass : protected LuaRefObject {
         }
 
         template<typename... FuncArgType>
-            static T* constructor(FuncArgType... argv)
-            {
-                return new T(argv...);
-            }
+        static T* constructor(FuncArgType... argv)
+        {
+            return new T(argv...);
+        }
 
         static int destructor(lua_State* l)
         {
@@ -475,22 +475,22 @@ class LuaClass : protected LuaRefObject {
         }
 
         template<typename FuncRetType, typename... FuncArgType>
-            static int memberfunc(lua_State* l)
-            {
-                T** ud = (T**)lua_touserdata(l, 1);
-                auto wrapper = (MemberFuncWrapper<FuncRetType, FuncArgType...>*)
-                    lua_touserdata(l, lua_upvalueindex(1));
-                return FunctionCaller<sizeof...(FuncArgType)>::exec(*ud, wrapper->f, l, 1);
-            }
+        static int memberfunc(lua_State* l)
+        {
+            T** ud = (T**)lua_touserdata(l, 1);
+            auto wrapper = (MemberFuncWrapper<FuncRetType, FuncArgType...>*)
+                lua_touserdata(l, lua_upvalueindex(1));
+            return FunctionCaller<sizeof...(FuncArgType)>::exec(*ud, wrapper->f, l, 1);
+        }
 
         template<typename FuncRetType, typename... FuncArgType>
-            static int constmemberfunc(lua_State* l)
-            {
-                T** ud = (T**)lua_touserdata(l, 1);
-                auto wrapper = (MemberFuncWrapper<FuncRetType, FuncArgType...>*)
-                    lua_touserdata(l, lua_upvalueindex(1));
-                return FunctionCaller<sizeof...(FuncArgType)>::exec(*ud, wrapper->fc, l, 1);
-            }
+        static int constmemberfunc(lua_State* l)
+        {
+            T** ud = (T**)lua_touserdata(l, 1);
+            auto wrapper = (MemberFuncWrapper<FuncRetType, FuncArgType...>*)
+                lua_touserdata(l, lua_upvalueindex(1));
+            return FunctionCaller<sizeof...(FuncArgType)>::exec(*ud, wrapper->fc, l, 1);
+        }
 
         friend class LuaState;
 };
@@ -510,15 +510,15 @@ class LuaUserdata : public LuaRefObject {
         }
 
         template<typename T>
-            T* object() const
-            {
-                pushself();
-                T** ud = (T**)lua_touserdata(m_l.get(), -1);
-                T* ret = *ud;
-                lua_pop(m_l.get(), 1);
+        T* object() const
+        {
+            pushself();
+            T** ud = (T**)lua_touserdata(m_l.get(), -1);
+            T* ret = *ud;
+            lua_pop(m_l.get(), 1);
 
-                return ret;
-            }
+            return ret;
+        }
 
     private:
 
@@ -556,15 +556,15 @@ class LuaState {
         LuaTable newtable(const char* name = nullptr);
 
         template<typename FuncRetType, typename... FuncArgType>
-            LuaFunction newfunction(FuncRetType (*)(FuncArgType...),
-                                    const char* name = nullptr);
+        LuaFunction newfunction(FuncRetType (*)(FuncArgType...),
+                                const char* name = nullptr);
 
         template<typename T, typename... Argv>
-            LuaUserdata newuserdata(const char* name = nullptr,
-                                    const Argv&... argv);
+        LuaUserdata newuserdata(const char* name = nullptr,
+                                const Argv&... argv);
 
         template<typename T>
-            LuaClass<T> newclass(const char* name);
+        LuaClass<T> newclass(const char* name);
 
         bool dostring(const char* chunk, std::string* errstr = nullptr);
         bool dofile(const char* script, std::string* errstr = nullptr);
