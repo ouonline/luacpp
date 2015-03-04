@@ -48,7 +48,7 @@ class LuaRefObject {
 
     protected:
 
-        LuaRefObject(std::shared_ptr<lua_State> l, int index);
+        LuaRefObject(const std::shared_ptr<lua_State>& l, int index);
         LuaRefObject(const LuaRefObject& lobj);
 
         virtual ~LuaRefObject();
@@ -96,7 +96,7 @@ class LuaObject : public LuaRefObject {
 
     private:
 
-        LuaObject(std::shared_ptr<lua_State> l, int index)
+        LuaObject(const std::shared_ptr<lua_State>& l, int index)
             : LuaRefObject(l, index)
         {}
 
@@ -134,8 +134,8 @@ class LuaTable : public LuaRefObject {
         bool set(const char* name, const LuaFunction& lfunc);
         bool set(const char* name, const LuaUserdata& lud);
 
-        bool foreach(std::function<bool (const LuaObject& key,
-                                         const LuaObject& value)> func) const;
+        bool foreach(const std::function<bool (const LuaObject& key,
+                                               const LuaObject& value)>& func) const;
 
         LuaTable& operator=(const LuaTable& ltable)
         {
@@ -145,7 +145,7 @@ class LuaTable : public LuaRefObject {
 
     protected:
 
-        LuaTable(std::shared_ptr<lua_State> l, size_t index)
+        LuaTable(const std::shared_ptr<lua_State>& l, size_t index)
             : LuaRefObject(l, index)
         {}
 
@@ -179,7 +179,7 @@ class LuaFunction : public LuaRefObject {
 
     private:
 
-        LuaFunction(std::shared_ptr<lua_State> l, size_t index)
+        LuaFunction(const std::shared_ptr<lua_State>& l, size_t index)
             : LuaRefObject(l, index)
         {}
 
@@ -430,7 +430,7 @@ class LuaClass : protected LuaRefObject {
 
     private:
 
-        LuaClass(const char* name, std::shared_ptr<lua_State> l, int index)
+        LuaClass(const char* name, const std::shared_ptr<lua_State>& l, int index)
             : LuaRefObject(l, index)
         {
             // metatable for the class table
@@ -522,7 +522,7 @@ class LuaUserdata : public LuaRefObject {
 
     private:
 
-        LuaUserdata(std::shared_ptr<lua_State> l, int index)
+        LuaUserdata(const std::shared_ptr<lua_State>& l, int index)
             : LuaRefObject(l, index)
         {}
 
@@ -584,7 +584,7 @@ class LuaState {
 
 /* ------------------------------------------------------------------------- */
 
-LuaRefObject::LuaRefObject(std::shared_ptr<lua_State> l, int index)
+LuaRefObject::LuaRefObject(const std::shared_ptr<lua_State>& l, int index)
 {
     m_l = l;
     m_type = lua_type(l.get(), index);
@@ -821,8 +821,8 @@ bool LuaTable::set(const char* name, const LuaUserdata& lud)
     return setobject(name, lud);
 }
 
-bool LuaTable::foreach(std::function<bool (const LuaObject& key,
-                                           const LuaObject& value)> func) const
+bool LuaTable::foreach(const std::function<bool (const LuaObject& key,
+                                                 const LuaObject& value)>& func) const
 {
     pushself();
 
