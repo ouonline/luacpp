@@ -180,7 +180,7 @@ static inline void test_class_member_function()
         .setconstructor()
         .set("set", &TestClass::set)
         .set("print", &TestClass::print)
-        .set<void, const char*>("echo_str", &TestClass::echo) // overdofileed function
+        .set<void, const char*>("echo_str", &TestClass::echo) // overloaded function
         .set<void, int>("echo_int", &TestClass::echo)
         .set("s_echo", &TestClass::s_echo); // static member function
 

@@ -1,9 +1,9 @@
 CXX := g++
 
-ifeq ($(release), y)
-    CXXFLAGS := -O2 -DNDEBUG
-else
+ifeq ($(debug), y)
     CXXFLAGS := -g
+else
+    CXXFLAGS := -O2 -DNDEBUG
 endif
 
 CXXFLAGS := $(CXXFLAGS) -Wall -Werror -std=c++11
