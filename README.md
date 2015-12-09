@@ -604,16 +604,20 @@ LuaUserdata newuserdata(const char* name = nullptr,
 Creates a `LuaUserdata` of type `T` with the name `name`(if not NULL). Arguments `argv` are passed to the constructor of `T` to create an instance. If `T` is not exported, it throws a `std::runtime_error` exception.
 
 ```c++
-bool dostring(const char* chunk, std::string* errstr = nullptr);
+bool dostring(const char* chunk, int nresults = 0,
+              std::vector<LuaObject>* res = nullptr,
+              std::string* errstr = nullptr);
 ```
 
-Evaluates the chunk `chunk`. If error occurs, error message is stored in `errstr`.
+Evaluates the chunk `chunk`. Results are stored in `res`. If error occurs, error message is stored in `errstr`.
 
 ```c++
-bool dofile(const char* script, std::string* errstr = nullptr);
+bool dofile(const char* script, int nresults = 0,
+            std::vector<LuaObject>* res = nullptr,
+            std::string* errstr = nullptr);
 ```
 
-Loads and evaluates the Lua script `script`. If error occurs, error message is stored in `errstr`.
+Loads and evaluates the Lua script `script`. Results are stored in `res`. If error occurs, error message is stored in `errstr`.
 
 [[back to top](#table-of-contents)]
 
