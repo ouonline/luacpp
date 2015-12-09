@@ -566,8 +566,12 @@ class LuaState {
         template<typename T>
         LuaClass<T> newclass(const char* name);
 
-        bool dostring(const char* chunk, std::string* errstr = nullptr);
-        bool dofile(const char* script, std::string* errstr = nullptr);
+        bool dostring(const char* chunk, int nresults = 0,
+                      std::vector<LuaObject>* res = nullptr,
+                      std::string* errstr = nullptr);
+        bool dofile(const char* script, int nresults = 0,
+                    std::vector<LuaObject>* res = nullptr,
+                    std::string* errstr = nullptr);
 
     private:
 
@@ -903,14 +907,15 @@ bool LuaFunction::exec(int nresults, std::vector<LuaObject>* res,
 
     bool ok = (lua_pcall(m_l.get(), sizeof...(Argv), nresults, 0) == 0);
     if (ok) {
-        if (res) {
-            res->clear();
-            res->reserve(nresults);
-            for (int i = nresults; i > 0; --i)
-                res->push_back(LuaObject(m_l, -i));
-        }
+        if (nresults > 0) {
+            if (res) {
+                res->reserve(res->size() + nresults);
+                for (int i = nresults; i > 0; --i)
+                    res->push_back(LuaObject(m_l, -i));
+            }
 
-        lua_pop(m_l.get(), nresults);
+            lua_pop(m_l.get(), nresults);
+        }
     } else {
         if (errstr)
             *errstr = lua_tostring(m_l.get(), -1);
@@ -1059,11 +1064,23 @@ LuaClass<T> LuaState::newclass(const char* name)
     return ret;
 }
 
-bool LuaState::dostring(const char* chunk, std::string* errstr)
+bool LuaState::dostring(const char* chunk, int nresults,
+                        std::vector<LuaObject>* res,
+                        std::string* errstr)
 {
     bool ok = (luaL_dostring(m_l.get(), chunk) == 0);
 
-    if (!ok) {
+    if (ok) {
+        if (nresults > 0) {
+            if (res) {
+                res->reserve(res->size() + nresults);
+                for (int i = nresults; i > 0; --i)
+                    res->push_back(LuaObject(m_l, -i));
+            }
+
+            lua_pop(m_l.get(), nresults);
+        }
+    } else {
         if (errstr)
             *errstr = lua_tostring(m_l.get(), -1);
 
@@ -1073,11 +1090,23 @@ bool LuaState::dostring(const char* chunk, std::string* errstr)
     return ok;
 }
 
-bool LuaState::dofile(const char* script, std::string* errstr)
+bool LuaState::dofile(const char* script, int nresults,
+                      std::vector<LuaObject>* res,
+                      std::string* errstr)
 {
     bool ok = (luaL_dofile(m_l.get(), script) == 0);
 
-    if (!ok) {
+    if (ok) {
+        if (nresults > 0) {
+            if (res) {
+                res->reserve(res->size() + nresults);
+                for (int i = nresults; i > 0; --i)
+                    res->push_back(LuaObject(m_l, -i));
+            }
+
+            lua_pop(m_l.get(), nresults);
+        }
+    } else {
         if (errstr)
             *errstr = lua_tostring(m_l.get(), -1);
 

@@ -218,12 +218,27 @@ static inline void test_userdata_2()
     l.get("tc").touserdata().object<TestClass>()->print();
 }
 
+static inline void test_dostring()
+{
+    LuaState l;
+    string errstr;
+    vector<LuaObject> res;
+
+    if (l.dostring("return 'ouonline', 5", 2, &res, &errstr)) {
+        cout << "get result:" << endl
+            << "res[0] -> " << res[0].tostring() << endl
+            << "res[1] -> " << res[1].tonumber() << endl;
+    } else {
+        cerr << "dostring() failed: " << errstr << endl;
+    }
+}
+
 static inline void test_misc()
 {
     LuaState l;
 
     string var;
-    if (!l.dofile(__FILE__, &var))
+    if (!l.dofile(__FILE__, 0, nullptr, &var))
         cerr << "loading " << __FILE__ << " failed: " << var << endl;
 }
 
@@ -242,6 +257,7 @@ static struct {
     {"class static member function test", test_class_static_member_function},
     {"userdata test 1", test_userdata_1},
     {"userdata test 2", test_userdata_2},
+    {"dostring test", test_dostring},
     {"misc test", test_misc},
     {nullptr, nullptr},
 };
