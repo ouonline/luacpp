@@ -286,8 +286,10 @@ int main(void)
 {
     LuaState l;
 
-    l.newclass<TestClass>("TestClass").set("print", &TestClass::print);
-    l.newuserdata<TestClass>("tc").object<TestClass>()->set("in lua: print test data from cpp");
+    l.newclass<TestClass>("TestClass")
+        .setconstructor<const char*, int>()
+        .set("print", &TestClass::print);
+    l.newuserdata<TestClass>("tc", "ouonline", 5).object<TestClass>()->set("in lua: print test data from cpp");
     l.dostring("tc:print()");
 
     return 0;
@@ -309,11 +311,11 @@ int main(void)
 {
     LuaState l;
 
-    l.newclass<TestClass>("TestClass").set("set", &TestClass::set);
-    l.dostring("tc = TestClass(); tc:set('in cpp: print test data from lua')");
+    l.newclass<TestClass>("TestClass")
+        .setconstructor<const char*, int>()
+        .set("set", &TestClass::set);
+    l.dostring("tc = TestClass('ouonline', 5); tc:set('in cpp: print test data from lua')");
     l.get("tc").touserdata().object<TestClass>()->print();
-
-    return 0;
 }
 ```
 
