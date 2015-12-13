@@ -393,22 +393,22 @@ LuaObject get(const char* name) const;
 Gets an object by its `index` or `name` in this table.
 
 ```c++
-void set(int index, const char* str);
-void set(const char* name, const char* str);
+bool set(int index, const char* str);
+bool set(const char* name, const char* str);
 ```
 
 Sets the value at `index` or `name` to be the string `str`.
 
 ```c++
-void set(int index, const char* str, size_t len);
-void set(const char* name, const char* str, size_t len)
+bool set(int index, const char* str, size_t len);
+bool set(const char* name, const char* str, size_t len)
 ```
 
 Sets the value at `index` or `name` to be the string `str` with length `len`.
 
 ```c++
-void set(int index, lua_Number n);
-void set(const char* name, lua_Number n);
+bool set(int index, lua_Number n);
+bool set(const char* name, lua_Number n);
 ```
 
 Sets the value at `index` or `name` to be the number `n`.
@@ -535,19 +535,19 @@ LuaObject get(const char* name) const;
 Gets an object by its name.
 
 ```c++
-void set(const char* name, const char* str);
+bool set(const char* name, const char* str);
 ```
 
 Sets the variable `name` to be the string `str`.
 
 ```c++
-void set(const char* name, const char* str, size_t len);
+bool set(const char* name, const char* str, size_t len);
 ```
 
 Sets the variable `name` to be the string `str` with length `len`.
 
 ```c++
-void set(const char* name, lua_Number n);
+bool set(const char* name, lua_Number n);
 ```
 
 Sets the variable `name` to be the number `n`.
