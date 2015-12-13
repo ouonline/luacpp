@@ -443,11 +443,6 @@ class LuaClass : protected LuaRefObject {
             lua_pushvalue(l.get(), -1);
             lua_setfield(l.get(), -2, "__index");
 
-            lua_pushinteger(l.get(), 1); // argument offset
-            lua_pushlightuserdata(l.get(), (void*)constructor<>);
-            lua_pushcclosure(l.get(), l_function<T*>, 2); // default constructor
-            lua_setfield(l.get(), -2, "__call");
-
             // metatable for userdata
 
             luaL_newmetatable(l.get(), METATABLENAME(T));

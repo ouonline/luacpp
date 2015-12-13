@@ -185,10 +185,12 @@ class TestClass {
         }
 
         TestClass(const char* msg, int x)
-            : m_msg(msg)
         {
+            if (msg)
+                m_msg = msg;
+
             cout << "TestClass::TestClass() is called with string -> '"
-                << msg << "' and value -> " << x << "." << endl;
+                << m_msg << "' and value -> " << x << "." << endl;
         }
 
         virtual ~TestClass()
@@ -238,7 +240,7 @@ int main(void)
     LuaState l;
 
     // NOTE: export only once
-    auto lclass = l.newclass<TestClass>("TestClass"); // with default constructor
+    auto lclass = l.newclass<TestClass>("TestClass").setconstructor();
 
     cout << "--------------------------------------------" << endl;
     l.dostring("tc = TestClass()");
@@ -251,10 +253,8 @@ int main(void)
     lclass.set("print", &TestClass::print)
         .set<void, const char*>("echo_str", &TestClass::echo) // overloaded function
         .set<void, int>("echo_int", &TestClass::echo);
-    l.dostring("tc = TestClass(5); tc:print();"
+    l.dostring("tc = TestClass('ouonline', 5); tc:print();"
                "tc:echo_str('calling class member function from lua')");
-
-    lclass.setconstructor(); // reset constructor
 
     cout << "--------------------------------------------" << endl;
     lclass.set("s_echo", &TestClass::s_echo);

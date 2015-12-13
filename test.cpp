@@ -123,10 +123,12 @@ class TestClass {
         }
 
         TestClass(const char* msg, int x)
-            : m_msg(msg)
         {
+            if (msg)
+                m_msg = msg;
+
             cout << "TestClass::TestClass() is called with string -> '"
-                << msg << "' and value -> " << x << "." << endl;
+                << m_msg << "' and value -> " << x << "." << endl;
         }
 
         virtual ~TestClass()
@@ -165,7 +167,7 @@ static inline void test_class_constructor()
 {
     LuaState l;
 
-    auto lclass = l.newclass<TestClass>("TestClass"); // with default constructor
+    auto lclass = l.newclass<TestClass>("TestClass").setconstructor();
     l.dostring("tc = TestClass()");
 
     lclass.setconstructor<const char*, int>();
@@ -177,14 +179,14 @@ static inline void test_class_member_function()
     LuaState l;
 
     l.newclass<TestClass>("TestClass")
-        .setconstructor()
+        .setconstructor<const char*, int>()
         .set("set", &TestClass::set)
         .set("print", &TestClass::print)
         .set<void, const char*>("echo_str", &TestClass::echo) // overloaded function
         .set<void, int>("echo_int", &TestClass::echo)
         .set("s_echo", &TestClass::s_echo); // static member function
 
-    l.dostring("tc = TestClass();"
+    l.dostring("tc = TestClass();" // calling TestClass::TestClass(const char*, int) with default values provided by Lua
                "tc:set('content from lua'); tc:print();"
                "tc:echo_str('calling class member function from lua')");
 }
@@ -192,20 +194,27 @@ static inline void test_class_member_function()
 static inline void test_class_static_member_function()
 {
     LuaState l;
+    string errstr;
 
-    auto lclass = l.newclass<TestClass>("TestClass"); // with default constructor
+    auto lclass = l.newclass<TestClass>("TestClass")
+        .set("s_echo", &TestClass::s_echo);
 
-    lclass.set("s_echo", &TestClass::s_echo);
-    l.dostring("TestClass:s_echo('static member function is called without being instantiated');"
-               "tc = TestClass(); tc:s_echo('static member function is called by an instance')");
+    bool ok = l.dostring("TestClass:s_echo('static member function is called without being instantiated');"
+                         "tc = TestClass('ouonline', 5);" // error: constructor missed
+                         "tc:s_echo('static member function is called by an instance')",
+                         0, nullptr, &errstr);
+    if (!ok)
+        cerr << "error: " << errstr << endl;
 }
 
 static inline void test_userdata_1()
 {
     LuaState l;
 
-    l.newclass<TestClass>("TestClass").set("print", &TestClass::print);
-    l.newuserdata<TestClass>("tc").object<TestClass>()->set("in lua: print test data from cpp");
+    l.newclass<TestClass>("TestClass")
+        .setconstructor<const char*, int>()
+        .set("print", &TestClass::print);
+    l.newuserdata<TestClass>("tc", "ouonline", 5).object<TestClass>()->set("in lua: print test data from cpp");
     l.dostring("tc:print()");
 }
 
@@ -213,8 +222,10 @@ static inline void test_userdata_2()
 {
     LuaState l;
 
-    l.newclass<TestClass>("TestClass").set("set", &TestClass::set);
-    l.dostring("tc = TestClass(); tc:set('in cpp: print test data from lua')");
+    l.newclass<TestClass>("TestClass")
+        .setconstructor<const char*, int>()
+        .set("set", &TestClass::set);
+    l.dostring("tc = TestClass('ouonline', 5); tc:set('in cpp: print test data from lua')");
     l.get("tc").touserdata().object<TestClass>()->print();
 }
 
