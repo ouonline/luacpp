@@ -162,6 +162,25 @@ class TestClass {
         string m_msg;
 };
 
+static inline void test_class()
+{
+    LuaState l;
+
+    l.newclass<TestClass>("TestClass")
+        .setconstructor<const char*, int>()
+        .set("set", &TestClass::set)
+        .set("print", &TestClass::print);
+
+    l.newclass<TestClass>("TestClass2");
+
+    l.dostring("tc1 = TestClass();"
+               "tc1:set('test class 1');"
+               "tc1:print();"
+               "tc2 = TestClass2();"
+               "tc2:set('duplicated test class 2');"
+               "tc2:print()");
+}
+
 static inline void test_class_constructor()
 {
     LuaState l;
@@ -262,6 +281,7 @@ static struct {
     {"table test", test_table},
     {"function with return value test", test_function_with_return_value},
     {"function without return value test", test_function_without_return_value},
+    {"class test", test_class},
     {"class constructor test", test_class_constructor},
     {"class member function test", test_class_member_function},
     {"class static member function test", test_class_static_member_function},

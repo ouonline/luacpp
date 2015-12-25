@@ -460,29 +460,7 @@ class LuaClass : protected LuaRefObject {
 
         LuaClass(const std::shared_ptr<lua_State>& l, int index)
             : LuaRefObject(l, index), m_metatable_name(METATABLENAME(T))
-        {
-            // metatable for the class table
-
-            pushself();
-
-            lua_pushvalue(l.get(), -1);
-            lua_setmetatable(l.get(), -2);
-
-            lua_pushvalue(l.get(), -1);
-            lua_setfield(l.get(), -2, "__index");
-
-            // metatable for userdata
-
-            luaL_newmetatable(l.get(), m_metatable_name.c_str());
-
-            lua_pushvalue(l.get(), -1);
-            lua_setfield(l.get(), -2, "__index");
-
-            lua_pushcfunction(m_l.get(), destructor);
-            lua_setfield(m_l.get(), -2, "__gc");
-
-            lua_pop(m_l.get(), 2);
-        }
+        {}
 
         template<typename... FuncArgType>
         static T* constructor(FuncArgType... argv)
@@ -1083,11 +1061,7 @@ LuaFunction LuaState::newfunction(const std::function<FuncRetType (FuncArgType..
     auto ud = (func_t*)lua_newuserdata(m_l.get(), sizeof(func_t));
     new (ud) func_t(func);
 
-    luaL_getmetatable(m_l.get(), metatable.c_str());
-    if (lua_isnil(m_l.get(), -1)) {
-        lua_pop(m_l.get(), 1);
-        luaL_newmetatable(m_l.get(), metatable.c_str());
-
+    if (luaL_newmetatable(m_l.get(), metatable.c_str()) != 0) {
         lua_pushcclosure(m_l.get(), std_function_destructor<FuncRetType, FuncArgType...>, 0);
         lua_setfield(m_l.get(), -2, "__gc");
     }
@@ -1140,21 +1114,48 @@ LuaClass<T> LuaState::newclass(const char* name)
 {
     static const std::string metatable(METATABLENAME(T));
 
-    luaL_getmetatable(m_l.get(), metatable.c_str());
-    if (!lua_isnil(m_l.get(), -1)) {
-        lua_pop(m_l.get(), 1);
-        throw std::runtime_error("import class `" + metatable +
-                                 "` more than once!");
+    lua_State* l = m_l.get();
+
+    if (luaL_newmetatable(l, metatable.c_str()) == 0) {
+        lua_getfield(l, -1, "__host_class__");
+        if (lua_istable(l, -1)) {
+            goto found;
+        } else {
+            lua_pop(l, 2);
+            throw std::runtime_error("error class `" + metatable +
+                                     "`: __host_class__ is not a table.");
+        }
     }
 
-    lua_newtable(m_l.get());
+    lua_newtable(l);
+
+    // metatable for the class itself
+
+    lua_pushvalue(l, -1);
+    lua_setmetatable(l, -2);
+
+    lua_pushvalue(l, -1);
+    lua_setfield(l, -2, "__index");
+
+    // metatable for userdata
+
+    lua_pushvalue(l, -2);
+    lua_setfield(l, -3, "__index");
+
+    lua_pushcfunction(l, LuaClass<T>::destructor);
+    lua_setfield(l, -3, "__gc");
+
+    lua_pushvalue(l, -1);
+    lua_setfield(l, -3, "__host_class__"); // the class itself
+
+found:
     LuaClass<T> ret(m_l, -1);
-
     if (name)
-        lua_setglobal(m_l.get(), name);
+        lua_setglobal(l, name);
     else
-        lua_pop(m_l.get(), 1);
+        lua_pop(l, 1);
 
+    lua_pop(l, 1); // the meta table
     return ret;
 }
 
