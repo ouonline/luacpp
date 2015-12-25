@@ -458,7 +458,7 @@ class LuaClass : protected LuaRefObject {
             FuncRetType (T::*fc)(FuncArgType...) const;
         };
 
-        LuaClass(const char* name, const std::shared_ptr<lua_State>& l, int index)
+        LuaClass(const std::shared_ptr<lua_State>& l, int index)
             : LuaRefObject(l, index), m_metatable_name(METATABLENAME(T))
         {
             // metatable for the class table
@@ -576,6 +576,9 @@ class LuaState {
         bool set(const char* name, const LuaFunction& lfunc);
         bool set(const char* name, const LuaUserdata& lud);
 
+        template<typename T>
+        bool set(const char* name, const LuaClass<T>& lclass);
+
         LuaTable newtable(const char* name = nullptr);
 
         template<typename FuncRetType, typename... FuncArgType>
@@ -591,7 +594,7 @@ class LuaState {
                                 const Argv&... argv);
 
         template<typename T>
-        LuaClass<T> newclass(const char* name);
+        LuaClass<T> newclass(const char* name = nullptr);
 
         bool dostring(const char* chunk, int nresults = 0,
                       std::vector<LuaObject>* res = nullptr,
@@ -1022,6 +1025,12 @@ bool LuaState::set(const char* name, const LuaUserdata& lud)
     return setobject(name, lud);
 }
 
+template<typename T>
+bool LuaState::set(const char* name, const LuaClass<T>& lclass)
+{
+    return setobject(name, lclass);
+}
+
 LuaObject LuaState::get(const char* name) const
 {
     lua_getglobal(m_l.get(), name);
@@ -1139,8 +1148,12 @@ LuaClass<T> LuaState::newclass(const char* name)
     }
 
     lua_newtable(m_l.get());
-    LuaClass<T> ret(name, m_l, -1);
-    lua_setglobal(m_l.get(), name);
+    LuaClass<T> ret(m_l, -1);
+
+    if (name)
+        lua_setglobal(m_l.get(), name);
+    else
+        lua_pop(m_l.get(), 1);
 
     return ret;
 }
