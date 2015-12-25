@@ -265,13 +265,28 @@ class FunctionCaller<0> {
         }
 
         template<typename... FuncArgType, typename... Argv>
-        static int exec(void (*f)(FuncArgType...), lua_State* l, int,
+        static int exec(void (*f)(FuncArgType...), lua_State*, int,
                         const Argv&... argv)
         {
             f(argv...);
             return 0;
         }
 
+        template<typename FuncRetType, typename... FuncArgType, typename... Argv>
+        static int exec(const std::function<FuncRetType (FuncArgType...)>& f,
+                        lua_State* l, int, const Argv&... argv)
+        {
+            pushres(l, f(argv...));
+            return 1;
+        }
+
+        template<typename... FuncArgType, typename... Argv>
+        static int exec(const std::function<void (FuncArgType...)>& f,
+                        lua_State*, int, const Argv&... argv)
+        {
+            f(argv...);
+            return 0;
+        }
 
         template<typename T, typename FuncRetType, typename... FuncArgType, typename... Argv>
         static int exec(T* obj, FuncRetType (T::*f)(FuncArgType...), lua_State* l, int,
@@ -329,6 +344,15 @@ static int l_function(lua_State* l)
     int argoffset = lua_tonumber(l, lua_upvalueindex(1));
     auto func = (func_t)lua_touserdata(l, lua_upvalueindex(2));
     return FunctionCaller<sizeof...(FuncArgType)>::exec(func, l, argoffset);
+}
+
+template<typename FuncRetType, typename... FuncArgType>
+static int l_std_function(lua_State* l)
+{
+    int argoffset = lua_tonumber(l, lua_upvalueindex(1));
+    auto func = (std::function<FuncRetType (FuncArgType...)>*)
+        lua_touserdata(l, lua_upvalueindex(2));
+    return FunctionCaller<sizeof...(FuncArgType)>::exec(*func, l, argoffset);
 }
 
 template<typename T>
@@ -554,6 +578,10 @@ class LuaState {
         LuaFunction newfunction(FuncRetType (*)(FuncArgType...),
                                 const char* name = nullptr);
 
+        template<typename FuncRetType, typename... FuncArgType>
+        LuaFunction newfunction(const std::function<FuncRetType (FuncArgType...)>&,
+                                const char* name = nullptr);
+
         template<typename T, typename... Argv>
         LuaUserdata newuserdata(const char* name = nullptr,
                                 const Argv&... argv);
@@ -573,6 +601,15 @@ class LuaState {
         std::shared_ptr<lua_State> m_l;
 
     private:
+
+        template<typename FuncRetType, typename... FuncArgType>
+        static int std_function_destructor(lua_State* l)
+        {
+            typedef std::function<FuncRetType (FuncArgType...)> func_t;
+            auto ud = (func_t*)lua_touserdata(l, -1);
+            ud->~func_t();
+            return 0;
+        }
 
         bool setobject(const char* name, const LuaRefObject& lobj);
 
@@ -1010,6 +1047,40 @@ LuaFunction LuaState::newfunction(FuncRetType (*func)(FuncArgType...),
     lua_pushinteger(m_l.get(), 0); // argument offset
     lua_pushlightuserdata(m_l.get(), (void*)func);
     lua_pushcclosure(m_l.get(), l_function<FuncRetType, FuncArgType...>, 2);
+
+    LuaFunction lfunc(m_l, -1);
+
+    if (name)
+        lua_setglobal(m_l.get(), name);
+    else
+        lua_pop(m_l.get(), 1);
+
+    return lfunc;
+}
+
+template<typename FuncRetType, typename... FuncArgType>
+LuaFunction LuaState::newfunction(const std::function<FuncRetType (FuncArgType...)>& func,
+                                  const char* name)
+{
+    typedef std::function<FuncRetType (FuncArgType...)> func_t;
+
+    lua_pushinteger(m_l.get(), 0); // argument offset
+
+    auto ud = (func_t*)lua_newuserdata(m_l.get(), sizeof(func_t));
+    new (ud) func_t(func);
+
+    const std::string metatable(METATABLENAME(func_t));
+    luaL_getmetatable(m_l.get(), metatable.c_str());
+    if (lua_isnil(m_l.get(), -1)) {
+        lua_pop(m_l.get(), 1);
+        luaL_newmetatable(m_l.get(), metatable.c_str());
+
+        lua_pushcclosure(m_l.get(), std_function_destructor<FuncRetType, FuncArgType...>, 0);
+        lua_setfield(m_l.get(), -2, "__gc");
+    }
+    lua_setmetatable(m_l.get(), -2);
+
+    lua_pushcclosure(m_l.get(), l_std_function<FuncRetType, FuncArgType...>, 2);
 
     LuaFunction lfunc(m_l, -1);
 

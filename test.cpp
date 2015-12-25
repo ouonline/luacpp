@@ -74,9 +74,8 @@ static inline void test_function_with_return_value()
     LuaState l;
 
     vector<LuaObject> res;
-    typedef int (*func_t)(const char*);
 
-    func_t echo = [] (const char* msg) -> int {
+    std::function<int (const char*)> echo = [] (const char* msg) -> int {
         cout << msg;
         return 5;
     };
@@ -97,15 +96,15 @@ static inline void test_function_with_return_value()
         << "    res[1] -> " << res[1].tostring() << endl;
 }
 
+static inline void echo(const char* msg)
+{
+    cout << msg;
+}
+
 static inline void test_function_without_return_value()
 {
     LuaState l;
 
-    typedef void (*func_t)(const char*);
-
-    func_t echo = [] (const char* msg) -> void {
-        cout << msg;
-    };
     auto lfunc = l.newfunction(echo, "echo");
     lfunc.exec(0, nullptr, nullptr,
                "calling cpp function without return value from cpp\n");
