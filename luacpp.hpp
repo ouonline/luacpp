@@ -35,7 +35,7 @@
 
 namespace luacpp {
 
-#define METATABLENAME(T) (std::string(typeid(T).name()).append(".o_o").c_str())
+#define METATABLENAME(T) (std::string(typeid(T).name()).append(".o_o"))
 
 class LuaState;
 
@@ -330,9 +330,11 @@ class FunctionCaller<0> {
         template<typename T>
         static inline void pushres(lua_State* l, T* obj)
         {
+            static const std::string metatable(METATABLENAME(T));
+
             T** ud = (T**)lua_newuserdata(l, sizeof(T*));
             *ud = obj;
-            luaL_setmetatable(l, METATABLENAME(T));
+            luaL_setmetatable(l, metatable.c_str());
         }
 };
 
@@ -361,7 +363,7 @@ class LuaClass : protected LuaRefObject {
     public:
 
         LuaClass(const LuaClass<T>& lclass)
-            : LuaRefObject(lclass)
+            : LuaRefObject(lclass), m_metatable_name(METATABLENAME(T))
         {}
 
         LuaClass<T>& operator=(const LuaClass<T>& lclass)
@@ -391,7 +393,7 @@ class LuaClass : protected LuaRefObject {
         {
             typedef MemberFuncWrapper<FuncRetType, FuncArgType...> wrapper_t;
 
-            luaL_getmetatable(m_l.get(), METATABLENAME(T)); // metatable of userdata
+            luaL_getmetatable(m_l.get(), m_metatable_name.c_str()); // metatable of userdata
 
             auto wrapper = (wrapper_t*)lua_newuserdata(m_l.get(), sizeof(wrapper_t));
             wrapper->f = f;
@@ -409,7 +411,7 @@ class LuaClass : protected LuaRefObject {
         {
             typedef MemberFuncWrapper<FuncRetType, FuncArgType...> wrapper_t;
 
-            luaL_getmetatable(m_l.get(), METATABLENAME(T)); // metatable of userdata
+            luaL_getmetatable(m_l.get(), m_metatable_name.c_str()); // metatable of userdata
 
             auto wrapper = (wrapper_t*)lua_newuserdata(m_l.get(), sizeof(wrapper_t));
             wrapper->fc = f;
@@ -435,7 +437,7 @@ class LuaClass : protected LuaRefObject {
             lua_setfield(m_l.get(), -2, name);
 
             // can be used by instances
-            luaL_getmetatable(m_l.get(), METATABLENAME(T)); // metatable of userdata
+            luaL_getmetatable(m_l.get(), m_metatable_name.c_str()); // metatable of userdata
             lua_pushvalue(m_l.get(), -3); // the function
             lua_setfield(m_l.get(), -2, name);
 
@@ -446,16 +448,18 @@ class LuaClass : protected LuaRefObject {
 
     private:
 
+        const std::string m_metatable_name;
+
+    private:
+
         template<typename FuncRetType, typename... FuncArgType>
         union MemberFuncWrapper {
             FuncRetType (T::*f)(FuncArgType...);
             FuncRetType (T::*fc)(FuncArgType...) const;
         };
 
-    private:
-
         LuaClass(const char* name, const std::shared_ptr<lua_State>& l, int index)
-            : LuaRefObject(l, index)
+            : LuaRefObject(l, index), m_metatable_name(METATABLENAME(T))
         {
             // metatable for the class table
 
@@ -469,7 +473,7 @@ class LuaClass : protected LuaRefObject {
 
             // metatable for userdata
 
-            luaL_newmetatable(l.get(), METATABLENAME(T));
+            luaL_newmetatable(l.get(), m_metatable_name.c_str());
 
             lua_pushvalue(l.get(), -1);
             lua_setfield(l.get(), -2, "__index");
@@ -1063,13 +1067,13 @@ LuaFunction LuaState::newfunction(const std::function<FuncRetType (FuncArgType..
                                   const char* name)
 {
     typedef std::function<FuncRetType (FuncArgType...)> func_t;
+    static const std::string metatable(METATABLENAME(func_t));
 
     lua_pushinteger(m_l.get(), 0); // argument offset
 
     auto ud = (func_t*)lua_newuserdata(m_l.get(), sizeof(func_t));
     new (ud) func_t(func);
 
-    const std::string metatable(METATABLENAME(func_t));
     luaL_getmetatable(m_l.get(), metatable.c_str());
     if (lua_isnil(m_l.get(), -1)) {
         lua_pop(m_l.get(), 1);
@@ -1095,12 +1099,13 @@ LuaFunction LuaState::newfunction(const std::function<FuncRetType (FuncArgType..
 template<typename T, typename... Argv>
 LuaUserdata LuaState::newuserdata(const char* name, const Argv&... argv)
 {
-    luaL_getmetatable(m_l.get(), METATABLENAME(T));
+    static const std::string metatable(METATABLENAME(T));
+
+    luaL_getmetatable(m_l.get(), metatable.c_str());
     if (lua_isnil(m_l.get(), -1)) {
         lua_pop(m_l.get(), 1);
         throw std::runtime_error("LuaState::newuserdata(): type `"
-                                 + std::string(METATABLENAME(T))
-                                 + "` not found.");
+                                 + metatable + "` not found.");
     }
 
     T** ud = (T**)lua_newuserdata(m_l.get(), sizeof(T*));
@@ -1124,12 +1129,13 @@ LuaUserdata LuaState::newuserdata(const char* name, const Argv&... argv)
 template<typename T>
 LuaClass<T> LuaState::newclass(const char* name)
 {
-    luaL_getmetatable(m_l.get(), METATABLENAME(T));
+    static const std::string metatable(METATABLENAME(T));
+
+    luaL_getmetatable(m_l.get(), metatable.c_str());
     if (!lua_isnil(m_l.get(), -1)) {
         lua_pop(m_l.get(), 1);
-        throw std::runtime_error("import class `"
-                                 + std::string(METATABLENAME(T))
-                                 + "` more than once!");
+        throw std::runtime_error("import class `" + metatable +
+                                 "` more than once!");
     }
 
     lua_newtable(m_l.get());
