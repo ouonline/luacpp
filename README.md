@@ -138,9 +138,8 @@ int main(void)
     LuaState l;
 
     vector<LuaObject> res;
-    typedef int (*func_t)(const char*);
 
-    func_t echo = [] (const char* msg) -> int {
+    std::function<int (const char*)> echo = [] (const char* msg) -> int {
         cout << msg;
         return 5;
     };
@@ -155,12 +154,10 @@ int main(void)
 
     res.clear();
     l.dostring("function return2(a, b) return a, b end");
-    l.get("return2").tofunction().exec(2, &res, nullptr, 2, 3);
-    cout << "calling lua funciont from cpp:" << endl;
-    for (unsigned int i = 0; i < res.size(); ++i)
-        cout << "    res[" << i << "] -> " << res[i].tonumber() << endl;
-
-    return 0;
+    l.get("return2").tofunction().exec(2, &res, nullptr, 5, "ouonline");
+    cout << "calling lua funciont from cpp:" << endl
+        << "    res[0] -> " << res[0].tonumber() << endl
+        << "    res[1] -> " << res[1].tostring() << endl;
 }
 ```
 
@@ -598,11 +595,19 @@ LuaFunction newfunction(FuncRetType (*)(FuncArgType...),
 Creates a new function with function name `name`(if not NULL).
 
 ```c++
+template<typename FuncRetType, typename... FuncArgType>
+LuaFunction newfunction(const std::function<FuncRetType (FuncArgType...)>&,
+                        const char* name = nullptr);
+```
+
+Creates a new function with function name `name`(if not NULL).
+
+```c++
 template<typename T>
 LuaClass<T> newclass(const char* name = nullptr);
 ```
 
-Exports a new type `T` with the name `name`. If `T` is already exported, it throws a `std::runtime_error` exception.
+Exports a new type `T` with the name `name`. If `T` is already exported, the class is returned.
 
 ```c++
 template<typename T, typename... Argv>
