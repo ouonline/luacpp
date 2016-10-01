@@ -158,6 +158,8 @@ int main(void)
     cout << "calling lua funciont from cpp:" << endl
         << "    res[0] -> " << res[0].tonumber() << endl
         << "    res[1] -> " << res[1].tostring() << endl;
+
+    return 0;
 }
 ```
 
@@ -313,6 +315,8 @@ int main(void)
         .set("set", &TestClass::set);
     l.dostring("tc = TestClass('ouonline', 5); tc:set('in cpp: print test data from lua')");
     l.get("tc").touserdata().object<TestClass>()->print();
+
+    return 0;
 }
 ```
 
