@@ -168,7 +168,8 @@ class LuaFunction : public LuaRefObject {
         {}
 
         template<typename... Argv>
-        bool exec(int nresults = 0, std::vector<LuaObject>* res = nullptr,
+        bool exec(int nresults = 0,
+                  const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
                   std::string* errstr = nullptr, const Argv&... argv);
 
         LuaFunction& operator=(const LuaFunction& lfunc)
@@ -575,10 +576,10 @@ class LuaState {
         LuaClass<T> newclass(const char* name = nullptr);
 
         bool dostring(const char* chunk, int nresults = 0,
-                      std::vector<LuaObject>* res = nullptr,
+                      const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
                       std::string* errstr = nullptr);
         bool dofile(const char* script, int nresults = 0,
-                    std::vector<LuaObject>* res = nullptr,
+                    const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
                     std::string* errstr = nullptr);
 
     private:
@@ -917,7 +918,8 @@ bool LuaFunction::pusharg(int* argc, std::string* errstr,
 }
 
 template<typename... Argv>
-bool LuaFunction::exec(int nresults, std::vector<LuaObject>* res,
+bool LuaFunction::exec(int nresults,
+                       const std::function<bool (int n, const LuaObject&)>& resfunc,
                        std::string* errstr, const Argv&... argv)
 {
     pushself();
@@ -931,10 +933,11 @@ bool LuaFunction::exec(int nresults, std::vector<LuaObject>* res,
     bool ok = (lua_pcall(m_l.get(), sizeof...(Argv), nresults, 0) == 0);
     if (ok) {
         if (nresults > 0) {
-            if (res) {
-                res->reserve(res->size() + nresults);
-                for (int i = nresults; i > 0; --i)
-                    res->push_back(LuaObject(m_l, -i));
+            if (resfunc) {
+                for (int i = nresults; i > 0; --i) {
+                    if (!resfunc(nresults - i, LuaObject(m_l, -i)))
+                        break;
+                }
             }
 
             lua_pop(m_l.get(), nresults);
@@ -1160,17 +1163,18 @@ found:
 }
 
 bool LuaState::dostring(const char* chunk, int nresults,
-                        std::vector<LuaObject>* res,
+                        const std::function<bool (int, const LuaObject&)>& resfunc,
                         std::string* errstr)
 {
     bool ok = (luaL_dostring(m_l.get(), chunk) == 0);
 
     if (ok) {
         if (nresults > 0) {
-            if (res) {
-                res->reserve(res->size() + nresults);
-                for (int i = nresults; i > 0; --i)
-                    res->push_back(LuaObject(m_l, -i));
+            if (resfunc) {
+                for (int i = nresults; i > 0; --i) {
+                    if (!resfunc(nresults - i, LuaObject(m_l, -i)))
+                        break;
+                }
             }
 
             lua_pop(m_l.get(), nresults);
@@ -1186,17 +1190,18 @@ bool LuaState::dostring(const char* chunk, int nresults,
 }
 
 bool LuaState::dofile(const char* script, int nresults,
-                      std::vector<LuaObject>* res,
+                      const std::function<bool (int, const LuaObject&)>& resfunc,
                       std::string* errstr)
 {
     bool ok = (luaL_dofile(m_l.get(), script) == 0);
 
     if (ok) {
         if (nresults > 0) {
-            if (res) {
-                res->reserve(res->size() + nresults);
-                for (int i = nresults; i > 0; --i)
-                    res->push_back(LuaObject(m_l, -i));
+            if (resfunc) {
+                for (int i = nresults; i > 0; --i) {
+                    if (!resfunc(nresults - i, LuaObject(m_l, -i)))
+                        break;
+                }
             }
 
             lua_pop(m_l.get(), nresults);

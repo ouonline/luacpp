@@ -73,7 +73,19 @@ static inline void test_function_with_return_value()
 {
     LuaState l;
 
-    vector<LuaObject> res;
+    auto resiter1 = [] (int n, const LuaObject& lobj) -> bool {
+        cout << "output from resiter1: " << lobj.tostring() << endl;
+        return true;
+    };
+    auto resiter2 = [] (int n, const LuaObject& lobj) -> bool {
+        cout << "output from resiter2: ";
+        if (n == 0)
+            cout << lobj.tonumber() << endl;
+        else if (n == 1)
+            cout << lobj.tostring() << endl;
+
+        return true;
+    };
 
     std::function<int (const char*)> echo = [] (const char* msg) -> int {
         cout << msg;
@@ -81,19 +93,14 @@ static inline void test_function_with_return_value()
     };
     auto lfunc = l.newfunction(echo, "echo");
 
-    l.set("msg", "calling cpp function with return value from cpp");
-    lfunc.exec(1, &res, nullptr, l.get("msg"));
-    cout << ", return value -> " << res[0].tonumber() << endl;
+    l.set("msg", "calling cpp function with return value from cpp: ");
+    lfunc.exec(1, resiter1, nullptr, l.get("msg"));
 
-    l.dostring("res = echo('calling cpp function with return value from lua');"
-               "io.write(', return value -> ', res, '\\n')");
+    l.dostring("res = echo('calling cpp function with return value from lua: ');"
+               "io.write('return value -> ', res, '\\n')");
 
-    res.clear();
     l.dostring("function return2(a, b) return a, b end");
-    l.get("return2").tofunction().exec(2, &res, nullptr, 5, "ouonline");
-    cout << "calling lua funciont from cpp:" << endl
-        << "    res[0] -> " << res[0].tonumber() << endl
-        << "    res[1] -> " << res[1].tostring() << endl;
+    l.get("return2").tofunction().exec(2, resiter2, nullptr, 5, "ouonline");
 }
 
 static inline void echo(const char* msg)
@@ -251,13 +258,18 @@ static inline void test_dostring()
 {
     LuaState l;
     string errstr;
-    vector<LuaObject> res;
 
-    if (l.dostring("return 'ouonline', 5", 2, &res, &errstr)) {
-        cout << "get result:" << endl
-            << "res[0] -> " << res[0].tostring() << endl
-            << "res[1] -> " << res[1].tonumber() << endl;
-    } else {
+    auto resiter = [] (int n, const LuaObject& lobj) -> bool {
+        cout << "output from resiter: ";
+        if (n == 0)
+            cout << lobj.tostring() << endl;
+        else if (n == 1)
+            cout << lobj.tonumber() << endl;
+
+        return true;
+    };
+
+    if (!l.dostring("return 'ouonline', 5", 2, resiter, &errstr)) {
         cerr << "dostring() failed: " << errstr << endl;
     }
 }
@@ -266,29 +278,29 @@ static inline void test_misc()
 {
     LuaState l;
 
-    string var;
-    if (!l.dofile(__FILE__, 0, nullptr, &var))
-        cerr << "loading " << __FILE__ << " failed: " << var << endl;
+    string errstr;
+    if (!l.dofile(__FILE__, 0, nullptr, &errstr))
+        cerr << "loading " << __FILE__ << " failed: " << errstr << endl;
 }
 
 static struct {
     const char* name;
     void (*func)();
 } test_suite[] = {
-    {"number test", test_number},
-    {"nilobj test", test_nil},
-    {"string test", test_string},
-    {"table test", test_table},
-    {"function with return value test", test_function_with_return_value},
-    {"function without return value test", test_function_without_return_value},
-    {"class test", test_class},
-    {"class constructor test", test_class_constructor},
-    {"class member function test", test_class_member_function},
-    {"class static member function test", test_class_static_member_function},
-    {"userdata test 1", test_userdata_1},
-    {"userdata test 2", test_userdata_2},
-    {"dostring test", test_dostring},
-    {"misc test", test_misc},
+    {"test_number", test_number},
+    {"test_nil", test_nil},
+    {"test_string", test_string},
+    {"test_table", test_table},
+    {"test_function_with_return_value", test_function_with_return_value},
+    {"test_function_without_return_value", test_function_without_return_value},
+    {"test_class", test_class},
+    {"test_class_constructor", test_class_constructor},
+    {"test_class_member_function", test_class_member_function},
+    {"test_class_static_member_function", test_class_static_member_function},
+    {"test_userdata_1", test_userdata_1},
+    {"test_userdata_2", test_userdata_2},
+    {"test_dostring", test_dostring},
+    {"test_misc", test_misc},
     {nullptr, nullptr},
 };
 

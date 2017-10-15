@@ -137,7 +137,19 @@ int main(void)
 {
     LuaState l;
 
-    vector<LuaObject> res;
+    auto resiter1 = [] (int n, const LuaObject& lobj) -> bool {
+        cout << "output from resiter1: " << lobj.tostring() << endl;
+        return true;
+    };
+    auto resiter2 = [] (int n, const LuaObject& lobj) -> bool {
+        cout << "output from resiter2: ";
+        if (n == 0)
+            cout << lobj.tonumber() << endl;
+        else if (n == 1)
+            cout << lobj.tostring() << endl;
+
+        return true;
+    };
 
     std::function<int (const char*)> echo = [] (const char* msg) -> int {
         cout << msg;
@@ -145,19 +157,14 @@ int main(void)
     };
     auto lfunc = l.newfunction(echo, "echo");
 
-    l.set("msg", "calling cpp function with return value from cpp");
-    lfunc.exec(1, &res, nullptr, l.get("msg"));
-    cout << ", return value -> " << res[0].tonumber() << endl;
+    l.set("msg", "calling cpp function with return value from cpp: ");
+    lfunc.exec(1, resiter1, nullptr, l.get("msg"));
 
-    l.dostring("res = echo('calling cpp function with return value from lua');"
-               "io.write(', return value -> ', res, '\\n')");
+    l.dostring("res = echo('calling cpp function with return value from lua: ');"
+               "io.write('return value -> ', res, '\\n')");
 
-    res.clear();
     l.dostring("function return2(a, b) return a, b end");
-    l.get("return2").tofunction().exec(2, &res, nullptr, 5, "ouonline");
-    cout << "calling lua funciont from cpp:" << endl
-        << "    res[0] -> " << res[0].tonumber() << endl
-        << "    res[1] -> " << res[1].tostring() << endl;
+    l.get("return2").tofunction().exec(2, resiter2, nullptr, 5, "ouonline");
 
     return 0;
 }
@@ -165,7 +172,7 @@ int main(void)
 
 First we define a C++ function `echo` and set its name to be `echo` in the Lua environment using `LuaState::newfunction()`.
 
-`LuaFunction::exec()`, which takes as least 3 arguments, invokes the real function. The first argument is an integer `nresults`, the number of return values of this function. The second is a pointer to `std::vector<LuaObject>`, which is used to store return value(s). If it is `nullptr`, all return values are discarded. The third is a porinter to `std::string`, which is used to store error message. The rest of arguments, if any, are passed to the real function being called.
+`LuaFunction::exec()`, which takes as least 3 arguments, invokes the real function. The first argument is an integer `nresults`, the number of returned values of this function. The second is a function which is used to handle returned value(s). The third is a porinter to `std::string`, which is used to store error message. The rest of arguments, if any, are passed to the real function being called.
 
 [[back to top](#table-of-contents)]
 
@@ -457,11 +464,12 @@ Itarates the table with the callback function `func`.
 
 ```c++
 template<typename... Argv>
-bool exec(int nresults = 0, std::vector<LuaObject>* res = nullptr,
+bool exec(int nresults = 0,
+          const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
           std::string* errstr = nullptr, const Argv&... argv);
 ```
 
-Invokes the function with arguments `argv`. The function is expected to return `nresults` results, which are stored in `res` if it is not `nullptr`. If error occurs, error message is stored in `errstr`.
+Invokes the function with arguments `argv`. The function being invoked is expected to return `nresults` results, which are processed by `resfunc`. If error occurs, error message is stored in `errstr`.
 
 [[back to top](#table-of-contents)]
 
@@ -623,19 +631,19 @@ Creates a `LuaUserdata` of type `T` with the name `name`(if not NULL). Arguments
 
 ```c++
 bool dostring(const char* chunk, int nresults = 0,
-              std::vector<LuaObject>* res = nullptr,
+              const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
               std::string* errstr = nullptr);
 ```
 
-Evaluates the chunk `chunk`. Results are stored in `res`. If error occurs, error message is stored in `errstr`.
+Evaluates the chunk `chunk`, which is expected to return `nresults` results. Results are handled by `resfunc`. If error occurs, error message is stored in `errstr`.
 
 ```c++
 bool dofile(const char* script, int nresults = 0,
-            std::vector<LuaObject>* res = nullptr,
+            const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
             std::string* errstr = nullptr);
 ```
 
-Loads and evaluates the Lua script `script`. Results are stored in `res`. If error occurs, error message is stored in `errstr`.
+Loads and evaluates the Lua script `script`, which is expected to return `nresults` results. Results are handled by `resfunc`. If error occurs, error message is stored in `errstr`.
 
 [[back to top](#table-of-contents)]
 
