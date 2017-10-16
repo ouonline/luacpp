@@ -358,6 +358,66 @@ Returns the name of the object's type.
 `LuaObject`(inherits from `LuaRefObject`) represents an arbitrary item of Lua. You are expected to check the return value of `type()` before any of the following functions is called.
 
 ```c++
+bool isnil() const;
+```
+
+Tells whether this object is `nil`.
+
+```c++
+bool isbool() const;
+```
+
+Tells whether this object is a `bool` value.
+
+```c++
+bool isnumber() const;
+```
+
+Tells whether this object is a number.
+
+```c++
+bool isstring() const;
+```
+
+Tells whether this object is a string.
+
+```c++
+bool istable() const;
+```
+
+Tells whether this object is a table.
+
+```c++
+bool isfunction() const;
+```
+
+Tells whether this object is a function.
+
+```c++
+bool isuserdata() const;
+```
+
+Tells whether this object is a userdata.
+
+```c++
+bool isthread() const;
+```
+
+Tells whether this object is a thread.
+
+```c++
+bool islightuserdata() const;
+```
+
+Tells whether this object is a light userdata.
+
+```c++
+bool tobool() const;
+```
+
+Converts this object to a `bool` value.
+
+```c++
 std::string tostring() const;
 ```
 

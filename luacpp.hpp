@@ -27,11 +27,10 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 #include <functional>
 #include <stdexcept>
 
-#include <lua.hpp>
+#include "lua.hpp"
 
 namespace luacpp {
 
@@ -82,6 +81,17 @@ class LuaObject : public LuaRefObject {
             : LuaRefObject(lobj)
         {}
 
+        bool isnil() const { return type() == LUA_TNIL; }
+        bool isbool() const { return type() == LUA_TBOOLEAN; }
+        bool isnumber() const { return type() == LUA_TNUMBER; }
+        bool isstring() const { return type() == LUA_TSTRING; }
+        bool istable() const { return type() == LUA_TTABLE; }
+        bool isfunction() const { return type() == LUA_TFUNCTION; }
+        bool isuserdata() const { return type() == LUA_TUSERDATA; }
+        bool isthread() const { return type() == LUA_TTHREAD; }
+        bool islightuserdata() const { return type() == LUA_TLIGHTUSERDATA; }
+
+        bool tobool() const;
         std::string tostring() const;
         lua_Number tonumber() const;
         LuaTable totable() const;
@@ -191,7 +201,7 @@ class LuaFunction : public LuaRefObject {
         bool pusharg(const LuaFunction& lfunc);
         bool pusharg(const LuaUserdata& lud);
 
-        bool pusharg(int* argc, std::string* errstr) { return true; }
+        bool pusharg(int*, std::string*) { return true; }
 
         template<typename First, typename... Rest>
         bool pusharg(int* argc, std::string* errstr,
@@ -658,6 +668,11 @@ bool LuaRefObject::pushobject(const LuaRefObject& lobj)
 
 /* ------------------------------------------------------------------------- */
 
+bool LuaObject::tobool() const
+{
+    return lua_toboolean(m_l.get(), -1);
+}
+
 std::string LuaObject::tostring() const
 {
     const char* str;
@@ -668,7 +683,7 @@ std::string LuaObject::tostring() const
     std::string ret(str, len);
     lua_pop(m_l.get(), 1);
 
-    return ret;
+    return std::move(ret);
 }
 
 lua_Number LuaObject::tonumber() const

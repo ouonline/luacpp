@@ -6,7 +6,7 @@ else
     CXXFLAGS := -O2 -DNDEBUG
 endif
 
-CXXFLAGS := $(CXXFLAGS) -Wall -Werror -std=c++11
+CXXFLAGS := $(CXXFLAGS) -Wall -Werror -std=c++1z
 
 LUADIR := $(HOME)/workspace/lua
 

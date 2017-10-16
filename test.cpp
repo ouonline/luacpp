@@ -225,7 +225,7 @@ static inline void test_class_static_member_function()
         .set("s_echo", &TestClass::s_echo);
 
     bool ok = l.dostring("TestClass:s_echo('static member function is called without being instantiated');"
-                         "tc = TestClass('ouonline', 5);" // error: constructor missed
+                         "tc = TestClass('ouonline', 5);" // error: missing constructor
                          "tc:s_echo('static member function is called by an instance')",
                          0, nullptr, &errstr);
     if (!ok)
