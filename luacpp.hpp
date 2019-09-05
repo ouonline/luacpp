@@ -683,7 +683,7 @@ std::string LuaObject::tostring() const
     std::string ret(str, len);
     lua_pop(m_l.get(), 1);
 
-    return std::move(ret);
+    return ret;
 }
 
 lua_Number LuaObject::tonumber() const
