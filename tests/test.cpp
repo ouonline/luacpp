@@ -1,58 +1,55 @@
 #include <iostream>
-#include "luacpp.hpp"
+#include "lua-cpp/luacpp.h"
 using namespace luacpp;
 using namespace std;
 
-static inline void test_number()
-{
+static void test_number() {
     LuaState l;
 
     l.set("var", 5);
     auto lobj = l.get("var");
     cout << "var: type -> " << lobj.typestr()
-        << ", value = " << lobj.tonumber() << endl;
+         << ", value = " << lobj.tonumber() << endl;
 }
 
-static inline void test_nil()
-{
+static void test_nil() {
     LuaState l;
 
     auto lobj = l.get("nilobj");
     cout << "nilobj: type -> " << lobj.typestr() << endl;
 }
 
-static inline void test_string()
-{
+static void test_string() {
     LuaState l;
 
     string var("ouonline");
     l.set("var", var.c_str(), var.size());
     auto lobj = l.get("var");
     cout << "var: type -> " << lobj.typestr()
-        << ", value = " << lobj.tostring() << endl;
+         << ", value = " << lobj.tostring() << endl;
 }
 
-static inline void test_table()
-{
+static void test_table() {
     LuaState l;
 
     auto iterfunc = [] (const LuaObject& key, const LuaObject& value) -> bool {
         cout << "    "; // indention
-        if (key.type() == LUA_TNUMBER)
+        if (key.type() == LUA_TNUMBER) {
             cout << key.tonumber();
-        else if (key.type() == LUA_TSTRING)
+        } else if (key.type() == LUA_TSTRING) {
             cout << key.tostring();
-        else {
+        } else {
             cout << "unsupported key type -> " << key.typestr() << endl;
             return false;
         }
 
-        if (value.type() == LUA_TNUMBER)
+        if (value.type() == LUA_TNUMBER) {
             cout << " -> " << value.tonumber() << endl;
-        else if (value.type() == LUA_TSTRING)
+        } else if (value.type() == LUA_TSTRING) {
             cout << " -> " << value.tostring() << endl;
-        else
+        } else {
             cout << " -> unsupported iter value type: " << value.typestr() << endl;
+        }
 
         return true;
     };
@@ -69,20 +66,20 @@ static inline void test_table()
     ltable.foreach(iterfunc);
 }
 
-static inline void test_function_with_return_value()
-{
+static void test_function_with_return_value() {
     LuaState l;
 
-    auto resiter1 = [] (int n, const LuaObject& lobj) -> bool {
+    auto resiter1 = [] (int, const LuaObject& lobj) -> bool {
         cout << "output from resiter1: " << lobj.tostring() << endl;
         return true;
     };
     auto resiter2 = [] (int n, const LuaObject& lobj) -> bool {
         cout << "output from resiter2: ";
-        if (n == 0)
+        if (n == 0) {
             cout << lobj.tonumber() << endl;
-        else if (n == 1)
+        } else if (n == 1) {
             cout << lobj.tostring() << endl;
+        }
 
         return true;
     };
@@ -103,13 +100,11 @@ static inline void test_function_with_return_value()
     l.get("return2").tofunction().exec(2, resiter2, nullptr, 5, "ouonline");
 }
 
-static inline void echo(const char* msg)
-{
+static void echo(const char* msg) {
     cout << msg;
 }
 
-static inline void test_function_without_return_value()
-{
+static void test_function_without_return_value() {
     LuaState l;
 
     auto lfunc = l.newfunction(echo, "echo");
@@ -119,58 +114,43 @@ static inline void test_function_without_return_value()
     l.dostring("echo('calling cpp function without return value from lua\\n')");
 }
 
-class TestClass {
-
-    public:
-
-        TestClass()
-        {
-            cout << "TestClass::TestClass() is called without value." << endl;
+class TestClass final {
+public:
+    TestClass() {
+        cout << "TestClass::TestClass() is called without value." << endl;
+    }
+    TestClass(const char* msg, int x) {
+        if (msg) {
+            m_msg = msg;
         }
 
-        TestClass(const char* msg, int x)
-        {
-            if (msg)
-                m_msg = msg;
+        cout << "TestClass::TestClass() is called with string -> '"
+             << m_msg << "' and value -> " << x << "." << endl;
+    }
+    ~TestClass() {
+        cout << "TestClass::~TestClass() is called." << endl;
+    }
 
-            cout << "TestClass::TestClass() is called with string -> '"
-                << m_msg << "' and value -> " << x << "." << endl;
-        }
+    void set(const char* msg) { m_msg = msg; }
 
-        virtual ~TestClass()
-        {
-            cout << "TestClass::~TestClass() is called." << endl;
-        }
+    void print() const {
+        cout << "TestClass::print(): " << m_msg << endl;
+    }
+    void echo(const char* msg) const {
+        cout << "TestClass::echo(string): " << msg << endl;
+    }
+    void echo(int v) const {
+        cout << "TestClass::echo(int): " << v << endl;
+    }
+    static void s_echo(const char* msg) {
+        cout << "TestClass::s_echo(string): " << msg << endl;
+    }
 
-        void set(const char* msg) { m_msg = msg; }
-
-        void print() const
-        {
-            cout << "TestClass::print(): " << m_msg << endl;
-        }
-
-        void echo(const char* msg) const
-        {
-            cout << "TestClass::echo(string): " << msg << endl;
-        }
-
-        void echo(int v) const
-        {
-            cout << "TestClass::echo(int): " << v << endl;
-        }
-
-        static void s_echo(const char* msg)
-        {
-            cout << "TestClass::s_echo(string): " << msg << endl;
-        }
-
-    private:
-
-        string m_msg;
+private:
+    string m_msg;
 };
 
-static inline void test_class()
-{
+static void test_class() {
     LuaState l;
 
     l.newclass<TestClass>("TestClass")
@@ -188,8 +168,7 @@ static inline void test_class()
                "tc2:print()");
 }
 
-static inline void test_class_constructor()
-{
+static void test_class_constructor() {
     LuaState l;
 
     auto lclass = l.newclass<TestClass>("TestClass").setconstructor();
@@ -199,8 +178,7 @@ static inline void test_class_constructor()
     l.dostring("tc = TestClass('ouonline', 5)");
 }
 
-static inline void test_class_member_function()
-{
+static void test_class_member_function() {
     LuaState l;
 
     l.newclass<TestClass>("TestClass")
@@ -208,16 +186,14 @@ static inline void test_class_member_function()
         .set("set", &TestClass::set)
         .set("print", &TestClass::print)
         .set<void, const char*>("echo_str", &TestClass::echo) // overloaded function
-        .set<void, int>("echo_int", &TestClass::echo)
-        .set("s_echo", &TestClass::s_echo); // static member function
+        .set<void, int>("echo_int", &TestClass::echo);
 
     l.dostring("tc = TestClass();" // calling TestClass::TestClass(const char*, int) with default values provided by Lua
                "tc:set('content from lua'); tc:print();"
                "tc:echo_str('calling class member function from lua')");
 }
 
-static inline void test_class_static_member_function()
-{
+static void test_class_static_member_function() {
     LuaState l;
     string errstr;
 
@@ -227,13 +203,37 @@ static inline void test_class_static_member_function()
     bool ok = l.dostring("TestClass:s_echo('static member function is called without being instantiated');"
                          "tc = TestClass('ouonline', 5);" // error: missing constructor
                          "tc:s_echo('static member function is called by an instance')",
-                         0, nullptr, &errstr);
-    if (!ok)
+                         &errstr);
+    if (!ok) {
         cerr << "error: " << errstr << endl;
+    }
 }
 
-static inline void test_userdata_1()
-{
+static int test_print_all_str(lua_State* l) {
+    int argc = lua_gettop(l);
+    for (int i = 2; i <= argc; ++i) {
+        const char* s = lua_tostring(l, i);
+        cout << "arg[" << i - 2 << "] -> " << s << endl;
+    }
+    return 0;
+}
+
+static void test_class_common_lua_member_function() {
+    LuaState l;
+    string errstr;
+
+    auto lclass = l.newclass<TestClass>("TestClass")
+        .setconstructor<const char*, int>()
+        .set("print_all_str", &test_print_all_str);
+
+    bool ok = l.dostring("t = TestClass('a', 1); t:print_all_str('3', '5', 'ouonline', '1', '2')",
+                         &errstr);
+    if (!ok) {
+        cerr << "error: " << errstr << endl;
+    }
+}
+
+static void test_userdata_1() {
     LuaState l;
 
     l.newclass<TestClass>("TestClass")
@@ -243,8 +243,7 @@ static inline void test_userdata_1()
     l.dostring("tc:print()");
 }
 
-static inline void test_userdata_2()
-{
+static void test_userdata_2() {
     LuaState l;
 
     l.newclass<TestClass>("TestClass")
@@ -254,33 +253,33 @@ static inline void test_userdata_2()
     l.get("tc").touserdata().object<TestClass>()->print();
 }
 
-static inline void test_dostring()
-{
+static void test_dostring() {
     LuaState l;
     string errstr;
 
     auto resiter = [] (int n, const LuaObject& lobj) -> bool {
         cout << "output from resiter: ";
-        if (n == 0)
+        if (n == 0) {
             cout << lobj.tostring() << endl;
-        else if (n == 1)
+        } else if (n == 1) {
             cout << lobj.tonumber() << endl;
+        }
 
         return true;
     };
 
-    if (!l.dostring("return 'ouonline', 5", 2, resiter, &errstr)) {
+    if (!l.dostring("return 'ouonline', 5", &errstr, 2, resiter)) {
         cerr << "dostring() failed: " << errstr << endl;
     }
 }
 
-static inline void test_misc()
-{
+static void test_misc() {
     LuaState l;
 
     string errstr;
-    if (!l.dofile(__FILE__, 0, nullptr, &errstr))
+    if (!l.dofile(__FILE__, &errstr)) {
         cerr << "loading " << __FILE__ << " failed: " << errstr << endl;
+    }
 }
 
 static struct {
@@ -297,6 +296,7 @@ static struct {
     {"test_class_constructor", test_class_constructor},
     {"test_class_member_function", test_class_member_function},
     {"test_class_static_member_function", test_class_static_member_function},
+    {"test_class_common_lua_member_function", test_class_common_lua_member_function},
     {"test_userdata_1", test_userdata_1},
     {"test_userdata_2", test_userdata_2},
     {"test_dostring", test_dostring},
@@ -304,12 +304,11 @@ static struct {
     {nullptr, nullptr},
 };
 
-int main(void)
-{
+int main(void) {
     for (int i = 0; test_suite[i].func; ++i) {
         cout << "-------------------- "
-            << test_suite[i].name
-            << " --------------------" << endl;
+             << test_suite[i].name
+             << " --------------------" << endl;
         test_suite[i].func();
     }
 

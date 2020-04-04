@@ -523,7 +523,7 @@ Itarates the table with the callback function `func`.
 `LuaFunction`(inherits from `LuaRefObject`) represents the function type of Lua.
 
 ```c++
-template<typename... Argv>
+template<typename ... Argv>
 bool exec(int nresults = 0,
           const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
           std::string* errstr = nullptr, const Argv&... argv);
@@ -538,35 +538,41 @@ Invokes the function with arguments `argv`. The function being invoked is expect
 `LuaClass`(inherits from `LuaRefObject`) is used to export C++ classes and member functions to Lua. It does not support exporting member variables.
 
 ```c++
-template<typename... FuncArgType>
+template<typename ... FuncArgType>
 LuaClass<T>& setconstructor();
 ```
 
 Sets the class's constructor with argument type `FuncArgType` and return a reference of the class itself.
 
 ```c++
-template<typename FuncRetType, typename... FuncArgType>
+template<typename FuncRetType, typename ... FuncArgType>
 LuaClass<T>& set(const char* funcname,
                  FuncRetType (T::*func)(FuncArgType...));
 ```
 
-Exports the member function `func` to be a member function of this class,  with the function name `funcname`.
+Exports member function `func` to be a member function of this class, with the function name `funcname`.
 
 ```c++
-template<typename FuncRetType, typename... FuncArgType>
+template<typename FuncRetType, typename ... FuncArgType>
 LuaClass<T>& set(const char* funcname,
                  FuncRetType (T::*func)(FuncArgType...) const);
 ```
 
-Exports the member function `func`(with `const` qualifier) to be a member function of this class  with the function name `funcname`.
+Exports member function `func`(with `const` qualifier) to be a member function of this class with the function name `funcname`.
 
 ```c++
-template<typename FuncRetType, typename... FuncArgType>
+template<typename FuncRetType, typename ... FuncArgType>
 LuaClass<T>& set(const char* funcname,
                  FuncRetType (*func)(FuncArgType...));
 ```
 
-Exports the static member function `func` to be a member function of this class  with the function name `funcname`.
+Exports static member function `func` to be a member function of this class with the function name `funcname`.
+
+```c++
+LuaClass<T>& set(const char* funcname, int (*func)(lua_State*));
+```
+
+Exports a lua-style function `func` to be a member function of this class with function name `funcname`.
 
 [[back to top](#table-of-contents)]
 
@@ -659,7 +665,7 @@ LuaTable newtable(const char* name = nullptr);
 Creates a new table with table name `name`(if not NULL).
 
 ```c++
-template<typename FuncRetType, typename... FuncArgType>
+template<typename FuncRetType, typename ... FuncArgType>
 LuaFunction newfunction(FuncRetType (*)(FuncArgType...),
                         const char* name = nullptr);
 ```
@@ -667,7 +673,7 @@ LuaFunction newfunction(FuncRetType (*)(FuncArgType...),
 Creates a new function with function name `name`(if not NULL).
 
 ```c++
-template<typename FuncRetType, typename... FuncArgType>
+template<typename FuncRetType, typename ... FuncArgType>
 LuaFunction newfunction(const std::function<FuncRetType (FuncArgType...)>&,
                         const char* name = nullptr);
 ```
@@ -682,7 +688,7 @@ LuaClass<T> newclass(const char* name = nullptr);
 Exports a new type `T` with the name `name`. If `T` is already exported, the class is returned.
 
 ```c++
-template<typename T, typename... Argv>
+template<typename T, typename ... Argv>
 LuaUserdata newuserdata(const char* name = nullptr,
                         const Argv&... argv);
 ```
@@ -690,17 +696,15 @@ LuaUserdata newuserdata(const char* name = nullptr,
 Creates a `LuaUserdata` of type `T` with the name `name`(if not NULL). Arguments `argv` are passed to the constructor of `T` to create an instance. If `T` is not exported, it throws a `std::runtime_error` exception.
 
 ```c++
-bool dostring(const char* chunk, int nresults = 0,
-              const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
-              std::string* errstr = nullptr);
+bool dostring(const char* chunk, std::string* errstr = nullptr, int nresults = 0,
+              const std::function<bool (int, const LuaObject&)>& resfunc = nullptr);
 ```
 
 Evaluates the chunk `chunk`, which is expected to return `nresults` results. Results are handled by `resfunc`. If error occurs, error message is stored in `errstr`.
 
 ```c++
-bool dofile(const char* script, int nresults = 0,
-            const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
-            std::string* errstr = nullptr);
+bool dofile(const char* script, std::string* errstr = nullptr, int nresults = 0,
+            const std::function<bool (int, const LuaObject&)>& resfunc = nullptr);
 ```
 
 Loads and evaluates the Lua script `script`, which is expected to return `nresults` results. Results are handled by `resfunc`. If error occurs, error message is stored in `errstr`.
