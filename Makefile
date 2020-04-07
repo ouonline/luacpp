@@ -16,21 +16,14 @@ TARGET := libluacpp.a libluacpp.so
 
 all: $(TARGET)
 
-luacpp_OBJS := ./luacpp.cpp.luacpp.o
+luacpp_OBJS := luacpp.cpp.luacpp.o
 
 luacpp_INCLUDE := -I../../../lua
 
 luacpp_LIBS := ../../../lua/src/liblua.a -ldl -lm
 
-./luacpp.cpp.luacpp.o: ./luacpp.cpp
+luacpp.cpp.luacpp.o: luacpp.cpp
 	$(CXX) $(CXXFLAGS) $(luacpp_INCLUDE) -c $< -o $@
-
-.PHONY: luacpp_pre_process
-
-$(luacpp_OBJS): | luacpp_pre_process
-
-luacpp_pre_process:
-	$(MAKE) debug=$(debug) -C ../../../lua/src
 
 libluacpp.a: $(luacpp_OBJS)
 	$(AR) rc $@ $^

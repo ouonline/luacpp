@@ -16,24 +16,21 @@ TARGET := test_luacpp
 
 all: $(TARGET)
 
-test_luacpp_OBJS := ./test.cpp.test_luacpp.o
+.PHONY: __omake_dep__1
+
+__omake_dep__1:
+	$(MAKE) debug=$(debug) libluacpp.a -C ..
+
+test_luacpp_OBJS := test.cpp.test_luacpp.o
 
 test_luacpp_INCLUDE := -I../.. -I../../../../lua
 
 test_luacpp_LIBS := ../libluacpp.a ../../../../lua/src/liblua.a -ldl -lm
 
-./test.cpp.test_luacpp.o: ./test.cpp
+test.cpp.test_luacpp.o: test.cpp
 	$(CXX) $(CXXFLAGS) $(test_luacpp_INCLUDE) -c $< -o $@
 
-.PHONY: test_luacpp_pre_process
-
-$(test_luacpp_OBJS): | test_luacpp_pre_process
-
-test_luacpp_pre_process:
-	$(MAKE) debug=$(debug) -C ..
-	$(MAKE) debug=$(debug) -C ../../../../lua/src
-
-test_luacpp: $(test_luacpp_OBJS)
+test_luacpp: $(test_luacpp_OBJS) | __omake_dep__1
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(test_luacpp_LIBS)
 
 clean:
