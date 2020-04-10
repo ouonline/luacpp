@@ -26,7 +26,7 @@ luacpp_shared_OBJS := luacpp.cpp.omake_dep_0.o
 luacpp_shared_LIBS := ../../../lua/src/liblua.a -lm -ldl
 
 libluacpp_shared.so: $(luacpp_shared_OBJS)
-	$(CXX) $(CXXFLAGS) -shared -o $@ $^ $(luacpp_shared_LIBS)
+	$(CXX) $(CXXFLAGS) -fPIC -Wextra -Werror -Wall -shared -o $@ $^ $(luacpp_shared_LIBS)
 
 luacpp_static_OBJS := luacpp.cpp.omake_dep_0.o
 
