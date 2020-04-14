@@ -10,26 +10,29 @@ endif
 
 TARGET := test_luacpp
 
-.PHONY: all clean
+.PHONY: all clean distclean
 
 all: $(TARGET)
 
 .PHONY: omake_phony_0
-
 omake_phony_0:
 	$(MAKE) debug=$(debug) libluacpp_static.a -C ..
 
 omake_dep_0_INCLUDE := -I../../../../lua -I../..
 
 test.cpp.omake_dep_0.o: test.cpp
-	$(CXX) $(CXXFLAGS) -Wall -Werror -Wextra -fPIC $(omake_dep_0_INCLUDE) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -Wall -Werror -Wextra $(omake_dep_0_INCLUDE) -c $< -o $@
 
 test_luacpp_OBJS := test.cpp.omake_dep_0.o
 
 test_luacpp_LIBS := ../libluacpp_static.a ../../../../lua/src/liblua.a -ldl -lm
 
 test_luacpp: $(test_luacpp_OBJS) | omake_phony_0
-	$(CXX) $(CXXFLAGS) -fPIC -Wextra -Werror -Wall -o $@ $^ $(test_luacpp_LIBS)
+	$(CXX) $(CXXFLAGS) -Wextra -Werror -Wall -o $@ $^ $(test_luacpp_LIBS)
 
 clean:
 	rm -f $(TARGET) $(test_luacpp_OBJS)
+
+distclean:
+	$(MAKE) clean
+	$(MAKE) distclean -C ..

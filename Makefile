@@ -12,7 +12,7 @@ AR := ar
 
 TARGET := libluacpp_shared.so libluacpp_static.a
 
-.PHONY: all clean
+.PHONY: all clean distclean
 
 all: $(TARGET)
 
@@ -23,7 +23,7 @@ luacpp.cpp.omake_dep_0.o: luacpp.cpp
 
 luacpp_shared_OBJS := luacpp.cpp.omake_dep_0.o
 
-luacpp_shared_LIBS := ../../../lua/src/liblua.a -lm -ldl
+luacpp_shared_LIBS := ../../../lua/src/liblua.a
 
 libluacpp_shared.so: $(luacpp_shared_OBJS)
 	$(CXX) $(CXXFLAGS) -fPIC -Wextra -Werror -Wall -shared -o $@ $^ $(luacpp_shared_LIBS)
@@ -35,3 +35,6 @@ libluacpp_static.a: $(luacpp_static_OBJS)
 
 clean:
 	rm -f $(TARGET) $(luacpp_shared_OBJS) $(luacpp_static_OBJS)
+
+distclean:
+	$(MAKE) clean

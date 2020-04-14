@@ -91,13 +91,13 @@ static void test_function_with_return_value() {
     auto lfunc = l.newfunction(echo, "echo");
 
     l.set("msg", "calling cpp function with return value from cpp: ");
-    lfunc.exec(1, resiter1, nullptr, l.get("msg"));
+    lfunc.exec(nullptr, nullptr, resiter1, l.get("msg"));
 
     l.dostring("res = echo('calling cpp function with return value from lua: ');"
                "io.write('return value -> ', res, '\\n')");
 
     l.dostring("function return2(a, b) return a, b end");
-    l.get("return2").tofunction().exec(2, resiter2, nullptr, 5, "ouonline");
+    l.get("return2").tofunction().exec(nullptr, nullptr, resiter2, 5, "ouonline");
 }
 
 static void echo(const char* msg) {
@@ -268,7 +268,7 @@ static void test_dostring() {
         return true;
     };
 
-    if (!l.dostring("return 'ouonline', 5", &errstr, 2, resiter)) {
+    if (!l.dostring("return 'ouonline', 5", &errstr, nullptr, resiter)) {
         cerr << "dostring() failed: " << errstr << endl;
     }
 }

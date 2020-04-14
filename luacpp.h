@@ -130,9 +130,10 @@ public:
         : LuaRefObject(lfunc) {}
 
     template <typename ... Argv>
-    bool exec(int nresults = 0,
-              const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
-              std::string* errstr = nullptr, const Argv&... argv) {
+    bool exec(std::string* errstr = nullptr,
+              const std::function<bool (int nresults)>& before_proc = nullptr,
+              const std::function<bool (int i, const LuaObject&)>& proc = nullptr,
+              const Argv&... argv) {
         pushself();
 
         int argc = 0;
@@ -141,27 +142,7 @@ public:
             return false;
         }
 
-        bool ok = (lua_pcall(m_l.get(), sizeof...(Argv), nresults, 0) == 0);
-        if (ok) {
-            if (nresults > 0) {
-                if (resfunc) {
-                    for (int i = nresults; i > 0; --i) {
-                        if (!resfunc(nresults - i, LuaObject(m_l, -i))) {
-                            break;
-                        }
-                    }
-                }
-
-                lua_pop(m_l.get(), nresults);
-            }
-        } else {
-            if (errstr) {
-                *errstr = lua_tostring(m_l.get(), -1);
-            }
-            lua_pop(m_l.get(), 1);
-        }
-
-        return ok;
+        return invoke(sizeof...(Argv), errstr, before_proc, proc);
     }
 
     LuaFunction& operator=(const LuaFunction& lfunc) {
@@ -195,6 +176,10 @@ private:
         ++(*argc);
         return pusharg(argc, errstr, std::forward<const Rest&>(rest)...);
     }
+
+    bool invoke(int argc, std::string* errstr,
+                const std::function<bool (int)>& before_proc,
+                const std::function<bool (int, const LuaObject&)>& proc);
 
     friend class LuaState;
     friend class LuaObject;
@@ -603,7 +588,7 @@ public:
         static const std::string metatable(METATABLENAME(T));
 
         lua_State* l = m_l.get();
-        if (luaL_newmetatable(l, metatable.c_str()) == 0) {
+        if (luaL_newmetatable(l, metatable.c_str()) == LUA_OK) {
             lua_getfield(l, -1, "__host_class__");
             if (lua_istable(l, -1)) {
                 goto found;
@@ -647,10 +632,12 @@ public:
         return ret;
     }
 
-    bool dostring(const char* chunk, std::string* errstr = nullptr, int nresults = 0,
-                  const std::function<bool (int, const LuaObject&)>& resfunc = nullptr);
-    bool dofile(const char* script, std::string* errstr = nullptr, int nresults = 0,
-                const std::function<bool (int, const LuaObject&)>& resfunc = nullptr);
+    bool dostring(const char* chunk, std::string* errstr = nullptr,
+                  const std::function<bool (int nresults)>& before_proc = nullptr,
+                  const std::function<bool (int i, const LuaObject&)>& proc = nullptr);
+    bool dofile(const char* script, std::string* errstr = nullptr,
+                const std::function<bool (int nresults)>& before_proc = nullptr,
+                const std::function<bool (int i, const LuaObject&)>& proc = nullptr);
 
 private:
     std::shared_ptr<lua_State> m_l;

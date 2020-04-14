@@ -44,16 +44,16 @@ using namespace std;
 #include "luacpp.hpp"
 using namespace luacpp;
 
-int main(void)
-{
+int main(void) {
     LuaState l;
 
     l.set("msg", "Hello, luacpp from ouonline!");
     auto lobj = l.get("msg");
-    if (lobj.type() == LUA_TSTRING)
+    if (lobj.type() == LUA_TSTRING) {
         cout << "get msg -> " << lobj.tostring() << endl;
-    else
+    } else {
         cerr << "unknown object type -> " << lobj.typestr() << endl;
+    }
 
     return 0;
 }
@@ -76,27 +76,27 @@ using namespace std;
 #include "luacpp.hpp"
 using namespace luacpp;
 
-int main(void)
-{
+int main(void) {
     LuaState l;
 
     auto iterfunc = [] (const LuaObject& key, const LuaObject& value) -> bool {
         cout << "    "; // indention
-        if (key.type() == LUA_TNUMBER)
+        if (key.type() == LUA_TNUMBER) {
             cout << key.tonumber();
-        else if (key.type() == LUA_TSTRING)
+        } else if (key.type() == LUA_TSTRING) {
             cout << key.tostring();
-        else {
+        } else {
             cout << "unsupported key type -> " << key.typestr() << endl;
             return false;
         }
 
-        if (value.type() == LUA_TNUMBER)
+        if (value.type() == LUA_TNUMBER) {
             cout << " -> " << value.tonumber() << endl;
-        else if (value.type() == LUA_TSTRING)
+        } else if (value.type() == LUA_TSTRING) {
             cout << " -> " << value.tostring() << endl;
-        else
+        } else {
             cout << " -> unsupported iter value type: " << value.typestr() << endl;
+        }
 
         return true;
     };
@@ -133,8 +133,7 @@ using namespace std;
 #include "luacpp.hpp"
 using namespace luacpp;
 
-int main(void)
-{
+int main(void) {
     LuaState l;
 
     auto resiter1 = [] (int n, const LuaObject& lobj) -> bool {
@@ -143,10 +142,11 @@ int main(void)
     };
     auto resiter2 = [] (int n, const LuaObject& lobj) -> bool {
         cout << "output from resiter2: ";
-        if (n == 0)
+        if (n == 0) {
             cout << lobj.tonumber() << endl;
-        else if (n == 1)
+        } else if (n == 1) {
             cout << lobj.tostring() << endl;
+        }
 
         return true;
     };
@@ -158,13 +158,13 @@ int main(void)
     auto lfunc = l.newfunction(echo, "echo");
 
     l.set("msg", "calling cpp function with return value from cpp: ");
-    lfunc.exec(1, resiter1, nullptr, l.get("msg"));
+    lfunc.exec(nullptr, nullptr, resiter1, l.get("msg"));
 
     l.dostring("res = echo('calling cpp function with return value from lua: ');"
                "io.write('return value -> ', res, '\\n')");
 
     l.dostring("function return2(a, b) return a, b end");
-    l.get("return2").tofunction().exec(2, resiter2, nullptr, 5, "ouonline");
+    l.get("return2").tofunction().exec(nullptr, nullptr, resiter2, 5, "ouonline");
 
     return 0;
 }
@@ -172,7 +172,7 @@ int main(void)
 
 First we define a C++ function `echo` and set its name to be `echo` in the Lua environment using `LuaState::newfunction()`.
 
-`LuaFunction::exec()`, which takes as least 3 arguments, invokes the real function. The first argument is an integer `nresults`, the number of returned values of this function. The second is a function which is used to handle returned value(s). The third is a porinter to `std::string`, which is used to store error message. The rest of arguments, if any, are passed to the real function being called.
+`LuaFunction::exec()`, which takes as least 3 arguments, invokes the real function. See [LuaFunction](#luafunction) for more details.
 
 [[back to top](#table-of-contents)]
 
@@ -181,54 +181,40 @@ First we define a C++ function `echo` and set its name to be `echo` in the Lua e
 First we define a class `TestClass` for test:
 
 ```c++
-class TestClass {
-
-    public:
-
-        TestClass()
-        {
-            cout << "TestClass::TestClass() is called without value." << endl;
+class TestClass final {
+public:
+    TestClass() {
+        cout << "TestClass::TestClass() is called without value." << endl;
+    }
+    TestClass(const char* msg, int x) {
+        if (msg) {
+            m_msg = msg;
         }
 
-        TestClass(const char* msg, int x)
-        {
-            if (msg)
-                m_msg = msg;
+        cout << "TestClass::TestClass() is called with string -> '"
+             << m_msg << "' and value -> " << x << "." << endl;
+    }
+    ~TestClass() {
+        cout << "TestClass::~TestClass() is called." << endl;
+    }
 
-            cout << "TestClass::TestClass() is called with string -> '"
-                << m_msg << "' and value -> " << x << "." << endl;
-        }
+    void set(const char* msg) { m_msg = msg; }
 
-        virtual ~TestClass()
-        {
-            cout << "TestClass::~TestClass() is called." << endl;
-        }
+    void print() const {
+        cout << "TestClass::print(): " << m_msg << endl;
+    }
+    void echo(const char* msg) const {
+        cout << "TestClass::echo(string): " << msg << endl;
+    }
+    void echo(int v) const {
+        cout << "TestClass::echo(int): " << v << endl;
+    }
+    static void s_echo(const char* msg) {
+        cout << "TestClass::s_echo(string): " << msg << endl;
+    }
 
-        void set(const char* msg) { m_msg = msg; }
-
-        void print() const
-        {
-            cout << "TestClass::print(): " << m_msg << endl;
-        }
-
-        void echo(const char* msg) const
-        {
-            cout << "TestClass::echo(string): " << msg << endl;
-        }
-
-        void echo(int v) const
-        {
-            cout << "TestClass::echo(int): " << v << endl;
-        }
-
-        static void s_echo(const char* msg)
-        {
-            cout << "TestClass::s_echo(string): " << msg << endl;
-        }
-
-    private:
-
-        string m_msg;
+private:
+    string m_msg;
 };
 ```
 
@@ -241,8 +227,7 @@ using namespace std;
 #include "luacpp.hpp"
 using namespace luacpp;
 
-int main(void)
-{
+int main(void) {
     LuaState l;
 
     // NOTE: export only once
@@ -288,8 +273,7 @@ using namespace std;
 #include "luacpp.hpp"
 using namespace luacpp;
 
-int main(void)
-{
+int main(void) {
     LuaState l;
 
     l.newclass<TestClass>("TestClass")
@@ -313,8 +297,7 @@ using namespace std;
 #include "luacpp.hpp"
 using namespace luacpp;
 
-int main(void)
-{
+int main(void) {
     LuaState l;
 
     l.newclass<TestClass>("TestClass")
@@ -524,12 +507,13 @@ Itarates the table with the callback function `func`.
 
 ```c++
 template<typename ... Argv>
-bool exec(int nresults = 0,
-          const std::function<bool (int, const LuaObject&)>& resfunc = nullptr,
-          std::string* errstr = nullptr, const Argv&... argv);
+bool exec(std::string* errstr = nullptr,
+          const std::function<bool (int nresults)>& before_proc = nullptr,
+          const std::function<bool (int i, const LuaObject&)>& proc = nullptr,
+          const Argv&... argv);
 ```
 
-Invokes the function with arguments `argv`. The function being invoked is expected to return `nresults` results, which are processed by `resfunc`. If error occurs, error message is stored in `errstr`.
+Invokes the function with arguments `argv`. The first argument `errstr` is a string to receive a message if an error occurs. The second argument `before_proc`, which is a function taking the number of returned values as its argument, is used to do some prerequired jobs. The third argument `proc` is a function which is used to handle returned value(s). The rest of arguments `argv`, if any, are passed to the real function being called.
 
 [[back to top](#table-of-contents)]
 
@@ -550,7 +534,7 @@ LuaClass<T>& set(const char* funcname,
                  FuncRetType (T::*func)(FuncArgType...));
 ```
 
-Exports member function `func` to be a member function of this class, with the function name `funcname`.
+Exports member function `func` to be a member function of this class, with function name `funcname`.
 
 ```c++
 template<typename FuncRetType, typename ... FuncArgType>
@@ -558,7 +542,7 @@ LuaClass<T>& set(const char* funcname,
                  FuncRetType (T::*func)(FuncArgType...) const);
 ```
 
-Exports member function `func`(with `const` qualifier) to be a member function of this class with the function name `funcname`.
+Exports member function `func`(with `const` qualifier) to be a member function of this class with function name `funcname`.
 
 ```c++
 template<typename FuncRetType, typename ... FuncArgType>
@@ -566,7 +550,7 @@ LuaClass<T>& set(const char* funcname,
                  FuncRetType (*func)(FuncArgType...));
 ```
 
-Exports static member function `func` to be a member function of this class with the function name `funcname`.
+Exports static member function `func` to be a member function of this class with function name `funcname`.
 
 ```c++
 LuaClass<T>& set(const char* funcname, int (*func)(lua_State*));
@@ -696,18 +680,20 @@ LuaUserdata newuserdata(const char* name = nullptr,
 Creates a `LuaUserdata` of type `T` with the name `name`(if not NULL). Arguments `argv` are passed to the constructor of `T` to create an instance. If `T` is not exported, it throws a `std::runtime_error` exception.
 
 ```c++
-bool dostring(const char* chunk, std::string* errstr = nullptr, int nresults = 0,
-              const std::function<bool (int, const LuaObject&)>& resfunc = nullptr);
+bool dostring(const char* chunk, std::string* errstr = nullptr,
+              const std::function<bool (int nresults)>& before_proc = nullptr,
+              const std::function<bool (int i, const LuaObject&)>& resfunc = nullptr);
 ```
 
-Evaluates the chunk `chunk`, which is expected to return `nresults` results. Results are handled by `resfunc`. If error occurs, error message is stored in `errstr`.
+Evaluates the chunk `chunk`. The rest of arguments, `errstr`, `before_proc` and `proc`, have the same meaning as in `LuaFunction::exec()`.
 
 ```c++
-bool dofile(const char* script, std::string* errstr = nullptr, int nresults = 0,
-            const std::function<bool (int, const LuaObject&)>& resfunc = nullptr);
+bool dofile(const char* script, std::string* errstr = nullptr,
+            const std::function<bool (int nresults)>& before_proc = nullptr,
+            const std::function<bool (int i, const LuaObject&)>& proc = nullptr);
 ```
 
-Loads and evaluates the Lua script `script`, which is expected to return `nresults` results. Results are handled by `resfunc`. If error occurs, error message is stored in `errstr`.
+Loads and evaluates the Lua script `script`. The rest of arguments, `errstr`, `before_proc` and `proc`, have the same meaning as in `LuaFunction::exec()`.
 
 [[back to top](#table-of-contents)]
 
