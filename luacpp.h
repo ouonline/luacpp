@@ -16,18 +16,18 @@ class LuaState;
 
 class LuaRefObject {
 public:
-    int type() const { return m_type; }
-    const char* typestr() const { return lua_typename(m_l.get(), m_type); }
+    int GetType() const { return m_type; }
+    const char* GetTypeStr() const { return lua_typename(m_l.get(), m_type); }
 
 protected:
     LuaRefObject(const std::shared_ptr<lua_State>& l, int index);
     LuaRefObject(const LuaRefObject& lobj);
     virtual ~LuaRefObject();
 
-    void assign(const LuaRefObject& lobj);
+    void Assign(const LuaRefObject& lobj);
 
-    void pushself() const;
-    bool pushobject(const LuaRefObject& lobj);
+    void PushSelf() const;
+    bool PushObject(const LuaRefObject& lobj);
 
 protected:
     std::shared_ptr<lua_State> m_l;
@@ -40,31 +40,31 @@ private:
 
 class LuaTable;
 class LuaFunction;
-class LuaUserdata;
+class LuaUserData;
 
 class LuaObject : public LuaRefObject {
 public:
     LuaObject(const LuaObject& lobj) : LuaRefObject(lobj) {}
 
-    bool isnil() const { return type() == LUA_TNIL; }
-    bool isbool() const { return type() == LUA_TBOOLEAN; }
-    bool isnumber() const { return type() == LUA_TNUMBER; }
-    bool isstring() const { return type() == LUA_TSTRING; }
-    bool istable() const { return type() == LUA_TTABLE; }
-    bool isfunction() const { return type() == LUA_TFUNCTION; }
-    bool isuserdata() const { return type() == LUA_TUSERDATA; }
-    bool isthread() const { return type() == LUA_TTHREAD; }
-    bool islightuserdata() const { return type() == LUA_TLIGHTUSERDATA; }
+    bool IsNil() const { return GetType() == LUA_TNIL; }
+    bool IsBool() const { return GetType() == LUA_TBOOLEAN; }
+    bool IsNumber() const { return GetType() == LUA_TNUMBER; }
+    bool IsString() const { return GetType() == LUA_TSTRING; }
+    bool IsTable() const { return GetType() == LUA_TTABLE; }
+    bool IsFunction() const { return GetType() == LUA_TFUNCTION; }
+    bool IsUserData() const { return GetType() == LUA_TUSERDATA; }
+    bool IsThread() const { return GetType() == LUA_TTHREAD; }
+    bool IsLightUserData() const { return GetType() == LUA_TLIGHTUSERDATA; }
 
-    bool tobool() const;
-    std::string tostring() const;
-    lua_Number tonumber() const;
-    LuaTable totable() const;
-    LuaFunction tofunction() const;
-    LuaUserdata touserdata() const;
+    bool ToBool() const;
+    std::string ToString() const;
+    lua_Number ToNumber() const;
+    LuaTable ToTable() const;
+    LuaFunction ToFunctiong() const;
+    LuaUserData ToUserData() const;
 
     LuaObject& operator=(const LuaObject& lobj) {
-        assign(lobj);
+        Assign(lobj);
         return *this;
     }
 
@@ -82,32 +82,32 @@ public:
     LuaTable(const LuaTable& ltable)
         : LuaRefObject(ltable) {}
 
-    LuaObject get(int index) const;
-    LuaObject get(const char* name) const;
+    LuaObject Get(int index) const;
+    LuaObject Get(const char* name) const;
 
-    bool set(int index, const char* str);
-    bool set(int index, const char* str, size_t len);
-    bool set(int index, lua_Number);
+    bool Set(int index, const char* str);
+    bool Set(int index, const char* str, size_t len);
+    bool Set(int index, lua_Number);
     // fails only when LuaObject is not in the same LuaState
-    bool set(int index, const LuaObject& lobj);
-    bool set(int index, const LuaTable& ltable);
-    bool set(int index, const LuaFunction& lfunc);
-    bool set(int index, const LuaUserdata& lud);
+    bool Set(int index, const LuaObject& lobj);
+    bool Set(int index, const LuaTable& ltable);
+    bool Set(int index, const LuaFunction& lfunc);
+    bool Set(int index, const LuaUserData& lud);
 
-    bool set(const char* name, const char* str);
-    bool set(const char* name, const char* str, size_t len);
-    bool set(const char* name, lua_Number);
+    bool Set(const char* name, const char* str);
+    bool Set(const char* name, const char* str, size_t len);
+    bool Set(const char* name, lua_Number);
     // fails only when LuaObject is not in the same LuaState
-    bool set(const char* name, const LuaObject& lobj);
-    bool set(const char* name, const LuaTable& ltable);
-    bool set(const char* name, const LuaFunction& lfunc);
-    bool set(const char* name, const LuaUserdata& lud);
+    bool Set(const char* name, const LuaObject& lobj);
+    bool Set(const char* name, const LuaTable& ltable);
+    bool Set(const char* name, const LuaFunction& lfunc);
+    bool Set(const char* name, const LuaUserData& lud);
 
-    bool foreach(const std::function<bool (const LuaObject& key,
+    bool ForEach(const std::function<bool (const LuaObject& key,
                                            const LuaObject& value)>& func) const;
 
     LuaTable& operator=(const LuaTable& ltable) {
-        assign(ltable);
+        Assign(ltable);
         return *this;
     }
 
@@ -116,8 +116,8 @@ protected:
         : LuaRefObject(l, index) {}
 
 private:
-    bool setobject(int index, const LuaRefObject& lobj);
-    bool setobject(const char* name, const LuaRefObject& lobj);
+    bool SetObject(int index, const LuaRefObject& lobj);
+    bool SetObject(const char* name, const LuaRefObject& lobj);
 
     friend class LuaState;
     friend class LuaObject;
@@ -130,23 +130,23 @@ public:
         : LuaRefObject(lfunc) {}
 
     template <typename ... Argv>
-    bool exec(std::string* errstr = nullptr,
+    bool Exec(std::string* errstr = nullptr,
               const std::function<bool (int nresults)>& before_proc = nullptr,
               const std::function<bool (int i, const LuaObject&)>& proc = nullptr,
               const Argv&... argv) {
-        pushself();
+        PushSelf();
 
         int argc = 0;
-        if (!pusharg(&argc, errstr, std::forward<const Argv&>(argv)...)) {
+        if (!PushArg(&argc, errstr, std::forward<const Argv&>(argv)...)) {
             lua_pop(m_l.get(), argc + 1 /* self */);
             return false;
         }
 
-        return invoke(sizeof...(Argv), errstr, before_proc, proc);
+        return Invoke(sizeof...(Argv), errstr, before_proc, proc);
     }
 
     LuaFunction& operator=(const LuaFunction& lfunc) {
-        assign(lfunc);
+        Assign(lfunc);
         return *this;
     }
 
@@ -154,19 +154,19 @@ private:
     LuaFunction(const std::shared_ptr<lua_State>& l, size_t index)
         : LuaRefObject(l, index) {}
 
-    bool pusharg(const char* str);
-    bool pusharg(lua_Number);
-    bool pusharg(const LuaObject& lobj);
-    bool pusharg(const LuaTable& ltable);
-    bool pusharg(const LuaFunction& lfunc);
-    bool pusharg(const LuaUserdata& lud);
+    bool PushArg(const char* str);
+    bool PushArg(lua_Number);
+    bool PushArg(const LuaObject& lobj);
+    bool PushArg(const LuaTable& ltable);
+    bool PushArg(const LuaFunction& lfunc);
+    bool PushArg(const LuaUserData& lud);
 
-    bool pusharg(int*, std::string*) { return true; }
+    bool PushArg(int*, std::string*) { return true; }
 
     template <typename First, typename ... Rest>
-    bool pusharg(int* argc, std::string* errstr,
+    bool PushArg(int* argc, std::string* errstr,
                  const First& first, const Rest&... rest) {
-        if (!pusharg(first)) {
+        if (!PushArg(first)) {
             if (errstr) {
                 *errstr = "argv are not in the same LuaState";
             }
@@ -174,10 +174,10 @@ private:
         }
 
         ++(*argc);
-        return pusharg(argc, errstr, std::forward<const Rest&>(rest)...);
+        return PushArg(argc, errstr, std::forward<const Rest&>(rest)...);
     }
 
-    bool invoke(int argc, std::string* errstr,
+    bool Invoke(int argc, std::string* errstr,
                 const std::function<bool (int)>& before_proc,
                 const std::function<bool (int, const LuaObject&)>& proc);
 
@@ -190,17 +190,17 @@ template <uint32_t N>
 class FunctionCaller {
 public:
     template <typename FuncType, typename ... Argv>
-    static int exec(FuncType f, lua_State* l, int argoffset,
+    static int Exec(FuncType f, lua_State* l, int argoffset,
                     const Argv&... argv) {
-        return FunctionCaller<N - 1>::exec(f, l, argoffset,
+        return FunctionCaller<N - 1>::Exec(f, l, argoffset,
                                            FuncArg(l, N + argoffset),
                                            argv...);
     }
 
     template <typename T, typename FuncType, typename ... Argv>
-    static int exec(T* obj, FuncType f, lua_State* l, int argoffset,
+    static int Exec(T* obj, FuncType f, lua_State* l, int argoffset,
                     const Argv&... argv) {
-        return FunctionCaller<N - 1>::exec(obj, f, l, argoffset,
+        return FunctionCaller<N - 1>::Exec(obj, f, l, argoffset,
                                            FuncArg(l, N + argoffset),
                                            argv...);
     }
@@ -230,68 +230,68 @@ template <>
 class FunctionCaller<0> {
 public:
     template <typename FuncRetType, typename ... FuncArgType, typename ... Argv>
-    static int exec(FuncRetType (*f)(FuncArgType...), lua_State* l, int,
+    static int Exec(FuncRetType (*f)(FuncArgType...), lua_State* l, int,
                     const Argv&... argv) {
-        pushres(l, f(argv...));
+        PushRes(l, f(argv...));
         return 1;
     }
 
     template <typename ... FuncArgType, typename ... Argv>
-    static int exec(void (*f)(FuncArgType...), lua_State*, int,
+    static int Exec(void (*f)(FuncArgType...), lua_State*, int,
                     const Argv&... argv) {
         f(argv...);
         return 0;
     }
 
     template <typename FuncRetType, typename ... FuncArgType, typename ... Argv>
-    static int exec(const std::function<FuncRetType (FuncArgType...)>& f,
+    static int Exec(const std::function<FuncRetType (FuncArgType...)>& f,
                     lua_State* l, int, const Argv&... argv) {
-        pushres(l, f(argv...));
+        PushRes(l, f(argv...));
         return 1;
     }
 
     template <typename ... FuncArgType, typename ... Argv>
-    static int exec(const std::function<void (FuncArgType...)>& f,
+    static int Exec(const std::function<void (FuncArgType...)>& f,
                     lua_State*, int, const Argv&... argv) {
         f(argv...);
         return 0;
     }
 
     template <typename T, typename FuncRetType, typename ... FuncArgType, typename ... Argv>
-    static int exec(T* obj, FuncRetType (T::*f)(FuncArgType...), lua_State* l, int,
+    static int Exec(T* obj, FuncRetType (T::*f)(FuncArgType...), lua_State* l, int,
                     const Argv&... argv) {
-        pushres(l, (obj->*f)(argv...));
+        PushRes(l, (obj->*f)(argv...));
         return 1;
     }
 
     template <typename T, typename ... FuncArgType, typename ... Argv>
-    static int exec(T* obj, void (T::*f)(FuncArgType...), lua_State*, int,
+    static int Exec(T* obj, void (T::*f)(FuncArgType...), lua_State*, int,
                     const Argv&... argv) {
         (obj->*f)(argv...);
         return 0;
     }
 
     template <typename T, typename FuncRetType, typename ... FuncArgType, typename ... Argv>
-    static int exec(T* obj, FuncRetType (T::*f)(FuncArgType...) const, lua_State* l, int,
+    static int Exec(T* obj, FuncRetType (T::*f)(FuncArgType...) const, lua_State* l, int,
                     const Argv&... argv) {
-        pushres(l, (obj->*f)(argv...));
+        PushRes(l, (obj->*f)(argv...));
         return 1;
     }
 
     template <typename T, typename ... FuncArgType, typename ... Argv>
-    static int exec(T* obj, void (T::*f)(FuncArgType...) const, lua_State*, int,
+    static int Exec(T* obj, void (T::*f)(FuncArgType...) const, lua_State*, int,
                     const Argv&... argv) {
         (obj->*f)(argv...);
         return 0;
     }
 
 private:
-    static inline void pushres(lua_State* l, lua_Number n) {
+    static inline void PushRes(lua_State* l, lua_Number n) {
         lua_pushnumber(l, n);
     }
 
     template <typename T>
-    static inline void pushres(lua_State* l, T* obj) {
+    static inline void PushRes(lua_State* l, T* obj) {
         static const std::string metatable(METATABLENAME(T));
 
         T** ud = (T**)lua_newuserdata(l, sizeof(T*));
@@ -301,20 +301,20 @@ private:
 };
 
 template <typename FuncRetType, typename ... FuncArgType>
-static int l_function(lua_State* l) {
+static int GenericFunction(lua_State* l) {
     typedef FuncRetType (*func_t)(FuncArgType...);
 
     int argoffset = lua_tonumber(l, lua_upvalueindex(1));
     auto func = (func_t)lua_touserdata(l, lua_upvalueindex(2));
-    return FunctionCaller<sizeof...(FuncArgType)>::exec(func, l, argoffset);
+    return FunctionCaller<sizeof...(FuncArgType)>::Exec(func, l, argoffset);
 }
 
 template <typename FuncRetType, typename ... FuncArgType>
-static int l_std_function(lua_State* l) {
+static int GenericSTLFunction(lua_State* l) {
     int argoffset = lua_tonumber(l, lua_upvalueindex(1));
     auto func = (std::function<FuncRetType (FuncArgType...)>*)
         lua_touserdata(l, lua_upvalueindex(2));
-    return FunctionCaller<sizeof...(FuncArgType)>::exec(*func, l, argoffset);
+    return FunctionCaller<sizeof...(FuncArgType)>::Exec(*func, l, argoffset);
 }
 
 template <typename T>
@@ -324,17 +324,17 @@ public:
         : LuaRefObject(lclass), m_metatable_name(METATABLENAME(T)) {}
 
     LuaClass<T>& operator=(const LuaClass<T>& lclass) {
-        assign(lclass);
+        Assign(lclass);
         return *this;
     }
 
     template <typename ... FuncArgType>
-    LuaClass<T>& setconstructor() {
-        pushself();
+    LuaClass<T>& SetConstructor() {
+        PushSelf();
 
         lua_pushinteger(m_l.get(), 1); // argument offset
-        lua_pushlightuserdata(m_l.get(), (void*)(constructor<FuncArgType...>));
-        lua_pushcclosure(m_l.get(), l_function<T*, FuncArgType...>, 2);
+        lua_pushlightuserdata(m_l.get(), (void*)(ConstructorFunc<FuncArgType...>));
+        lua_pushcclosure(m_l.get(), GenericFunction<T*, FuncArgType...>, 2);
         lua_setfield(m_l.get(), -2, "__call");
 
         lua_pop(m_l.get(), 1);
@@ -344,14 +344,14 @@ public:
 
     // register common member function
     template <typename FuncRetType, typename ... FuncArgType>
-    LuaClass<T>& set(const char* name, FuncRetType (T::*f)(FuncArgType...)) {
+    LuaClass<T>& Set(const char* name, FuncRetType (T::*f)(FuncArgType...)) {
         typedef MemberFuncWrapper<FuncRetType, FuncArgType...> wrapper_t;
 
         luaL_getmetatable(m_l.get(), m_metatable_name.c_str()); // metatable of userdata
 
         auto wrapper = (wrapper_t*)lua_newuserdata(m_l.get(), sizeof(wrapper_t));
         wrapper->f = f;
-        lua_pushcclosure(m_l.get(), memberfunc<FuncRetType, FuncArgType...>, 1);
+        lua_pushcclosure(m_l.get(), MemberFunc<FuncRetType, FuncArgType...>, 1);
         lua_setfield(m_l.get(), -2, name);
 
         lua_pop(m_l.get(), 1);
@@ -361,14 +361,14 @@ public:
 
     // register member function with const qualifier
     template <typename FuncRetType, typename ... FuncArgType>
-    LuaClass<T>& set(const char* name, FuncRetType (T::*f)(FuncArgType...) const) {
+    LuaClass<T>& Set(const char* name, FuncRetType (T::*f)(FuncArgType...) const) {
         typedef MemberFuncWrapper<FuncRetType, FuncArgType...> wrapper_t;
 
         luaL_getmetatable(m_l.get(), m_metatable_name.c_str()); // metatable of userdata
 
         auto wrapper = (wrapper_t*)lua_newuserdata(m_l.get(), sizeof(wrapper_t));
         wrapper->fc = f;
-        lua_pushcclosure(m_l.get(), constmemberfunc<FuncRetType, FuncArgType...>, 1);
+        lua_pushcclosure(m_l.get(), ConstMemberFunc<FuncRetType, FuncArgType...>, 1);
         lua_setfield(m_l.get(), -2, name);
 
         lua_pop(m_l.get(), 1);
@@ -378,13 +378,13 @@ public:
 
     // register static member function
     template <typename FuncRetType, typename ... FuncArgType>
-    LuaClass<T>& set(const char* name, FuncRetType (*func)(FuncArgType...)) {
+    LuaClass<T>& Set(const char* name, FuncRetType (*func)(FuncArgType...)) {
         lua_pushinteger(m_l.get(), 1); // argument offset, skip `self` in argv[0]
         lua_pushlightuserdata(m_l.get(), (void*)func);
-        lua_pushcclosure(m_l.get(), l_function<FuncRetType, FuncArgType...>, 2);
+        lua_pushcclosure(m_l.get(), GenericFunction<FuncRetType, FuncArgType...>, 2);
 
         // can be used without being instantiated
-        pushself();
+        PushSelf();
         lua_pushvalue(m_l.get(), -2); // the function
         lua_setfield(m_l.get(), -2, name);
 
@@ -399,7 +399,7 @@ public:
     }
 
     // register common lua function
-    LuaClass<T>& set(const char* name, int (*func)(lua_State*)) {
+    LuaClass<T>& Set(const char* name, int (*func)(lua_State*)) {
         luaL_getmetatable(m_l.get(), m_metatable_name.c_str()); // metatable of userdata
         lua_pushcclosure(m_l.get(), func, 0);
         lua_setfield(m_l.get(), -2, name);
@@ -421,49 +421,49 @@ private:
         : LuaRefObject(l, index), m_metatable_name(METATABLENAME(T)) {}
 
     template <typename ... FuncArgType>
-    static T* constructor(FuncArgType... argv) {
+    static T* ConstructorFunc(FuncArgType... argv) {
         return new T(argv...);
     }
 
-    static int destructor(lua_State* l) {
+    static int DestructorFunc(lua_State* l) {
         T** ud = (T**)lua_touserdata(l, 1);
         delete *ud;
         return 0;
     }
 
     template <typename FuncRetType, typename ... FuncArgType>
-    static int memberfunc(lua_State* l) {
+    static int MemberFunc(lua_State* l) {
         T** ud = (T**)lua_touserdata(l, 1);
         auto wrapper = (MemberFuncWrapper<FuncRetType, FuncArgType...>*)
             lua_touserdata(l, lua_upvalueindex(1));
-        return FunctionCaller<sizeof...(FuncArgType)>::exec(*ud, wrapper->f, l, 1);
+        return FunctionCaller<sizeof...(FuncArgType)>::Exec(*ud, wrapper->f, l, 1);
     }
 
     template <typename FuncRetType, typename ... FuncArgType>
-    static int constmemberfunc(lua_State* l) {
+    static int ConstMemberFunc(lua_State* l) {
         T** ud = (T**)lua_touserdata(l, 1);
         auto wrapper = (MemberFuncWrapper<FuncRetType, FuncArgType...>*)
             lua_touserdata(l, lua_upvalueindex(1));
-        return FunctionCaller<sizeof...(FuncArgType)>::exec(*ud, wrapper->fc, l, 1);
+        return FunctionCaller<sizeof...(FuncArgType)>::Exec(*ud, wrapper->fc, l, 1);
     }
 
 private:
     friend class LuaState;
 };
 
-class LuaUserdata : public LuaRefObject {
+class LuaUserData : public LuaRefObject {
 public:
-    LuaUserdata(const LuaUserdata& lud)
+    LuaUserData(const LuaUserData& lud)
         : LuaRefObject(lud) {}
 
-    LuaUserdata& operator=(const LuaUserdata& lud) {
-        assign(lud);
+    LuaUserData& operator=(const LuaUserData& lud) {
+        Assign(lud);
         return *this;
     }
 
     template <typename T>
-    T* object() const {
-        pushself();
+    T* Get() const {
+        PushSelf();
         T** ud = (T**)lua_touserdata(m_l.get(), -1);
         T* ret = *ud;
         lua_pop(m_l.get(), 1);
@@ -472,7 +472,7 @@ public:
     }
 
 private:
-    LuaUserdata(const std::shared_ptr<lua_State>& l, int index)
+    LuaUserData(const std::shared_ptr<lua_State>& l, int index)
         : LuaRefObject(l, index) {}
 
     friend class LuaObject;
@@ -485,32 +485,32 @@ public:
         luaL_openlibs(m_l.get());
     }
 
-    lua_State* ptr() const { return m_l.get(); }
+    lua_State* GetRawPtr() const { return m_l.get(); }
 
-    LuaObject get(const char* name) const;
+    LuaObject Get(const char* name) const;
 
-    bool set(const char* name, const char* str);
-    bool set(const char* name, const char* str, size_t len);
-    bool set(const char* name, lua_Number);
+    bool Set(const char* name, const char* str);
+    bool Set(const char* name, const char* str, size_t len);
+    bool Set(const char* name, lua_Number);
     // fails only when LuaObject is not in the current LuaState
-    bool set(const char* name, const LuaObject& lobj);
-    bool set(const char* name, const LuaTable& ltable);
-    bool set(const char* name, const LuaFunction& lfunc);
-    bool set(const char* name, const LuaUserdata& lud);
+    bool Set(const char* name, const LuaObject& lobj);
+    bool Set(const char* name, const LuaTable& ltable);
+    bool Set(const char* name, const LuaFunction& lfunc);
+    bool Set(const char* name, const LuaUserData& lud);
 
     template <typename T>
-    bool set(const char* name, const LuaClass<T>& lclass) {
-        return setobject(name, lclass);
+    bool Set(const char* name, const LuaClass<T>& lclass) {
+        return SetObject(name, lclass);
     }
 
-    LuaTable newtable(const char* name = nullptr);
+    LuaTable CreateTable(const char* name = nullptr);
 
     template <typename FuncRetType, typename ... FuncArgType>
-    LuaFunction newfunction(FuncRetType (*func)(FuncArgType...),
-                            const char* name = nullptr) {
+    LuaFunction CreateFunction(FuncRetType (*func)(FuncArgType...),
+                               const char* name = nullptr) {
         lua_pushinteger(m_l.get(), 0); // argument offset
         lua_pushlightuserdata(m_l.get(), (void*)func);
-        lua_pushcclosure(m_l.get(), l_function<FuncRetType, FuncArgType...>, 2);
+        lua_pushcclosure(m_l.get(), GenericFunction<FuncRetType, FuncArgType...>, 2);
 
         LuaFunction lfunc(m_l, -1);
 
@@ -524,8 +524,8 @@ public:
     }
 
     template <typename FuncRetType, typename ... FuncArgType>
-    LuaFunction newfunction(const std::function<FuncRetType (FuncArgType...)>& func,
-                            const char* name = nullptr) {
+    LuaFunction CreateFunction(const std::function<FuncRetType (FuncArgType...)>& func,
+                               const char* name = nullptr) {
         typedef std::function<FuncRetType (FuncArgType...)> func_t;
         static const std::string metatable(METATABLENAME(func_t));
 
@@ -535,12 +535,12 @@ public:
         new (ud) func_t(func);
 
         if (luaL_newmetatable(m_l.get(), metatable.c_str()) != 0) {
-            lua_pushcclosure(m_l.get(), std_function_destructor<FuncRetType, FuncArgType...>, 0);
+            lua_pushcclosure(m_l.get(), GenericDestructor<FuncRetType, FuncArgType...>, 0);
             lua_setfield(m_l.get(), -2, "__gc");
         }
         lua_setmetatable(m_l.get(), -2);
 
-        lua_pushcclosure(m_l.get(), l_std_function<FuncRetType, FuncArgType...>, 2);
+        lua_pushcclosure(m_l.get(), GenericSTLFunction<FuncRetType, FuncArgType...>, 2);
 
         LuaFunction lfunc(m_l, -1);
 
@@ -554,14 +554,14 @@ public:
     }
 
     template <typename T, typename ... Argv>
-    LuaUserdata newuserdata(const char* name = nullptr,
-                            const Argv&... argv) {
+    LuaUserData CreateUserData(const char* name = nullptr,
+                               const Argv&... argv) {
         static const std::string metatable(METATABLENAME(T));
 
         luaL_getmetatable(m_l.get(), metatable.c_str());
         if (lua_isnil(m_l.get(), -1)) {
             lua_pop(m_l.get(), 1);
-            throw std::runtime_error("LuaState::newuserdata(): type `"
+            throw std::runtime_error("LuaState::CreateUserData(): type `"
                                      + metatable + "` not found.");
         }
 
@@ -571,7 +571,7 @@ public:
         lua_pushvalue(m_l.get(), -2); // the metatable
         lua_setmetatable(m_l.get(), -2);
 
-        LuaUserdata ret(m_l, -1);
+        LuaUserData ret(m_l, -1);
 
         if (name) {
             lua_setglobal(m_l.get(), name);
@@ -584,7 +584,7 @@ public:
     }
 
     template <typename T>
-    LuaClass<T> newclass(const char* name = nullptr) {
+    LuaClass<T> CreateClass(const char* name = nullptr) {
         static const std::string metatable(METATABLENAME(T));
 
         lua_State* l = m_l.get();
@@ -614,7 +614,7 @@ public:
         lua_pushvalue(l, -2);
         lua_setfield(l, -3, "__index");
 
-        lua_pushcfunction(l, LuaClass<T>::destructor);
+        lua_pushcfunction(l, LuaClass<T>::DestructorFunc);
         lua_setfield(l, -3, "__gc");
 
         lua_pushvalue(l, -1);
@@ -632,10 +632,10 @@ public:
         return ret;
     }
 
-    bool dostring(const char* chunk, std::string* errstr = nullptr,
+    bool DoString(const char* chunk, std::string* errstr = nullptr,
                   const std::function<bool (int nresults)>& before_proc = nullptr,
                   const std::function<bool (int i, const LuaObject&)>& proc = nullptr);
-    bool dofile(const char* script, std::string* errstr = nullptr,
+    bool DoFile(const char* script, std::string* errstr = nullptr,
                 const std::function<bool (int nresults)>& before_proc = nullptr,
                 const std::function<bool (int i, const LuaObject&)>& proc = nullptr);
 
@@ -644,16 +644,16 @@ private:
 
 private:
     template <typename FuncRetType, typename ... FuncArgType>
-    static int std_function_destructor(lua_State* l) {
+    static int GenericDestructor(lua_State* l) {
         typedef std::function<FuncRetType (FuncArgType...)> func_t;
         auto ud = (func_t*)lua_touserdata(l, -1);
         ud->~func_t();
         return 0;
     }
 
-    bool setobject(const char* name, const LuaRefObject& lobj);
+    bool SetObject(const char* name, const LuaRefObject& lobj);
 
-    // no copying
+private:
     LuaState(const LuaState& l);
     LuaState& operator=(const LuaState& l);
 };

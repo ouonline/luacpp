@@ -1,14 +1,12 @@
 project = CreateProject()
 
 dep = project:CreateDependency()
-dep:AddSourceFiles("*.cpp")
-dep:AddFlags("-Wall", "-Werror", "-Wextra", "-fPIC")
-dep:AddStaticLibrary("../../../lua/src", "lua")
+    :AddSourceFiles("*.cpp")
+    :AddFlags("-Wall", "-Werror", "-Wextra", "-fPIC")
+    :AddStaticLibrary("../../../lua/src", "lua")
 
-a = project:CreateStaticLibrary("luacpp_static")
-a:AddDependencies(dep)
+project:CreateStaticLibrary("luacpp_static"):AddDependencies(dep)
 
-so = project:CreateSharedLibrary("luacpp_shared")
-so:AddDependencies(dep)
+project:CreateSharedLibrary("luacpp_shared"):AddDependencies(dep)
 
 return project

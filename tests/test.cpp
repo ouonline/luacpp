@@ -6,27 +6,27 @@ using namespace std;
 static void test_number() {
     LuaState l;
 
-    l.set("var", 5);
-    auto lobj = l.get("var");
-    cout << "var: type -> " << lobj.typestr()
-         << ", value = " << lobj.tonumber() << endl;
+    l.Set("var", 5);
+    auto lobj = l.Get("var");
+    cout << "var: type -> " << lobj.GetTypeStr()
+         << ", value = " << lobj.ToNumber() << endl;
 }
 
 static void test_nil() {
     LuaState l;
 
-    auto lobj = l.get("nilobj");
-    cout << "nilobj: type -> " << lobj.typestr() << endl;
+    auto lobj = l.Get("nilobj");
+    cout << "nilobj: type -> " << lobj.GetTypeStr() << endl;
 }
 
 static void test_string() {
     LuaState l;
 
     string var("ouonline");
-    l.set("var", var.c_str(), var.size());
-    auto lobj = l.get("var");
-    cout << "var: type -> " << lobj.typestr()
-         << ", value = " << lobj.tostring() << endl;
+    l.Set("var", var.c_str(), var.size());
+    auto lobj = l.Get("var");
+    cout << "var: type -> " << lobj.GetTypeStr()
+         << ", value = " << lobj.ToString() << endl;
 }
 
 static void test_table() {
@@ -34,84 +34,84 @@ static void test_table() {
 
     auto iterfunc = [] (const LuaObject& key, const LuaObject& value) -> bool {
         cout << "    "; // indention
-        if (key.type() == LUA_TNUMBER) {
-            cout << key.tonumber();
-        } else if (key.type() == LUA_TSTRING) {
-            cout << key.tostring();
+        if (key.GetType() == LUA_TNUMBER) {
+            cout << key.ToNumber();
+        } else if (key.GetType() == LUA_TSTRING) {
+            cout << key.ToString();
         } else {
-            cout << "unsupported key type -> " << key.typestr() << endl;
+            cout << "unsupported key type -> " << key.GetTypeStr() << endl;
             return false;
         }
 
-        if (value.type() == LUA_TNUMBER) {
-            cout << " -> " << value.tonumber() << endl;
-        } else if (value.type() == LUA_TSTRING) {
-            cout << " -> " << value.tostring() << endl;
+        if (value.GetType() == LUA_TNUMBER) {
+            cout << " -> " << value.ToNumber() << endl;
+        } else if (value.GetType() == LUA_TSTRING) {
+            cout << " -> " << value.ToString() << endl;
         } else {
-            cout << " -> unsupported iter value type: " << value.typestr() << endl;
+            cout << " -> unsupported iter value type: " << value.GetTypeStr() << endl;
         }
 
         return true;
     };
 
     cout << "table1:" << endl;
-    l.dostring("var = {'mykey', value = 'myvalue', others = 'myothers'}");
-    l.get("var").totable().foreach(iterfunc);
+    l.DoString("var = {'mykey', value = 'myvalue', others = 'myothers'}");
+    l.Get("var").ToTable().ForEach(iterfunc);
 
     cout << "table2:" << endl;
-    auto ltable = l.newtable();
-    ltable.set("x", 5);
-    ltable.set("o", "ouonline");
-    ltable.set("t", ltable);
-    ltable.foreach(iterfunc);
+    auto ltable = l.CreateTable();
+    ltable.Set("x", 5);
+    ltable.Set("o", "ouonline");
+    ltable.Set("t", ltable);
+    ltable.ForEach(iterfunc);
 }
 
 static void test_function_with_return_value() {
     LuaState l;
 
     auto resiter1 = [] (int, const LuaObject& lobj) -> bool {
-        cout << "output from resiter1: " << lobj.tostring() << endl;
+        cout << "output from resiter1: " << lobj.ToString() << endl;
         return true;
     };
     auto resiter2 = [] (int n, const LuaObject& lobj) -> bool {
         cout << "output from resiter2: ";
         if (n == 0) {
-            cout << lobj.tonumber() << endl;
+            cout << lobj.ToNumber() << endl;
         } else if (n == 1) {
-            cout << lobj.tostring() << endl;
+            cout << lobj.ToString() << endl;
         }
 
         return true;
     };
 
-    std::function<int (const char*)> echo = [] (const char* msg) -> int {
+    std::function<int (const char*)> Echo = [] (const char* msg) -> int {
         cout << msg;
         return 5;
     };
-    auto lfunc = l.newfunction(echo, "echo");
+    auto lfunc = l.CreateFunction(Echo, "Echo");
 
-    l.set("msg", "calling cpp function with return value from cpp: ");
-    lfunc.exec(nullptr, nullptr, resiter1, l.get("msg"));
+    l.Set("msg", "calling cpp function with return value from cpp: ");
+    lfunc.Exec(nullptr, nullptr, resiter1, l.Get("msg"));
 
-    l.dostring("res = echo('calling cpp function with return value from lua: ');"
+    l.DoString("res = Echo('calling cpp function with return value from lua: ');"
                "io.write('return value -> ', res, '\\n')");
 
-    l.dostring("function return2(a, b) return a, b end");
-    l.get("return2").tofunction().exec(nullptr, nullptr, resiter2, 5, "ouonline");
+    l.DoString("function return2(a, b) return a, b end");
+    l.Get("return2").ToFunctiong().Exec(nullptr, nullptr, resiter2, 5, "ouonline");
 }
 
-static void echo(const char* msg) {
+static void Echo(const char* msg) {
     cout << msg;
 }
 
 static void test_function_without_return_value() {
     LuaState l;
 
-    auto lfunc = l.newfunction(echo, "echo");
-    lfunc.exec(0, nullptr, nullptr,
+    auto lfunc = l.CreateFunction(Echo, "Echo");
+    lfunc.Exec(0, nullptr, nullptr,
                "calling cpp function without return value from cpp\n");
 
-    l.dostring("echo('calling cpp function without return value from lua\\n')");
+    l.DoString("Echo('calling cpp function without return value from lua\\n')");
 }
 
 class TestClass final {
@@ -131,19 +131,19 @@ public:
         cout << "TestClass::~TestClass() is called." << endl;
     }
 
-    void set(const char* msg) { m_msg = msg; }
+    void Set(const char* msg) { m_msg = msg; }
 
-    void print() const {
-        cout << "TestClass::print(): " << m_msg << endl;
+    void Print() const {
+        cout << "TestClass::Print(): " << m_msg << endl;
     }
-    void echo(const char* msg) const {
-        cout << "TestClass::echo(string): " << msg << endl;
+    void Echo(const char* msg) const {
+        cout << "TestClass::Echo(string): " << msg << endl;
     }
-    void echo(int v) const {
-        cout << "TestClass::echo(int): " << v << endl;
+    void Echo(int v) const {
+        cout << "TestClass::Echo(int): " << v << endl;
     }
-    static void s_echo(const char* msg) {
-        cout << "TestClass::s_echo(string): " << msg << endl;
+    static void StaticEcho(const char* msg) {
+        cout << "TestClass::StaticEcho(string): " << msg << endl;
     }
 
 private:
@@ -153,14 +153,14 @@ private:
 static void test_class() {
     LuaState l;
 
-    l.newclass<TestClass>("TestClass")
-        .setconstructor<const char*, int>()
-        .set("set", &TestClass::set)
-        .set("print", &TestClass::print);
+    l.CreateClass<TestClass>("TestClass")
+        .SetConstructor<const char*, int>()
+        .Set("set", &TestClass::Set)
+        .Set("Print", &TestClass::Print);
 
-    l.newclass<TestClass>("TestClass2");
+    l.CreateClass<TestClass>("TestClass2");
 
-    l.dostring("tc1 = TestClass();"
+    l.DoString("tc1 = TestClass();"
                "tc1:set('test class 1');"
                "tc1:print();"
                "tc2 = TestClass2();"
@@ -171,25 +171,25 @@ static void test_class() {
 static void test_class_constructor() {
     LuaState l;
 
-    auto lclass = l.newclass<TestClass>("TestClass").setconstructor();
-    l.dostring("tc = TestClass()");
+    auto lclass = l.CreateClass<TestClass>("TestClass").SetConstructor();
+    l.DoString("tc = TestClass()");
 
-    lclass.setconstructor<const char*, int>();
-    l.dostring("tc = TestClass('ouonline', 5)");
+    lclass.SetConstructor<const char*, int>();
+    l.DoString("tc = TestClass('ouonline', 5)");
 }
 
 static void test_class_member_function() {
     LuaState l;
 
-    l.newclass<TestClass>("TestClass")
-        .setconstructor<const char*, int>()
-        .set("set", &TestClass::set)
-        .set("print", &TestClass::print)
-        .set<void, const char*>("echo_str", &TestClass::echo) // overloaded function
-        .set<void, int>("echo_int", &TestClass::echo);
+    l.CreateClass<TestClass>("TestClass")
+        .SetConstructor<const char*, int>()
+        .Set("set", &TestClass::Set)
+        .Set("Print", &TestClass::Print)
+        .Set<void, const char*>("echo_str", &TestClass::Echo) // overloaded function
+        .Set<void, int>("echo_int", &TestClass::Echo);
 
-    l.dostring("tc = TestClass();" // calling TestClass::TestClass(const char*, int) with default values provided by Lua
-               "tc:set('content from lua'); tc:print();"
+    l.DoString("tc = TestClass();" // calling TestClass::TestClass(const char*, int) with default values provided by Lua
+               "tc:set('content from lua'); tc:Print();"
                "tc:echo_str('calling class member function from lua')");
 }
 
@@ -197,10 +197,10 @@ static void test_class_static_member_function() {
     LuaState l;
     string errstr;
 
-    auto lclass = l.newclass<TestClass>("TestClass")
-        .set("s_echo", &TestClass::s_echo);
+    auto lclass = l.CreateClass<TestClass>("TestClass")
+        .Set("s_echo", &TestClass::StaticEcho);
 
-    bool ok = l.dostring("TestClass:s_echo('static member function is called without being instantiated');"
+    bool ok = l.DoString("TestClass:s_echo('static member function is called without being instantiated');"
                          "tc = TestClass('ouonline', 5);" // error: missing constructor
                          "tc:s_echo('static member function is called by an instance')",
                          &errstr);
@@ -222,11 +222,11 @@ static void test_class_common_lua_member_function() {
     LuaState l;
     string errstr;
 
-    auto lclass = l.newclass<TestClass>("TestClass")
-        .setconstructor<const char*, int>()
-        .set("print_all_str", &test_print_all_str);
+    auto lclass = l.CreateClass<TestClass>("TestClass")
+        .SetConstructor<const char*, int>()
+        .Set("print_all_str", &test_print_all_str);
 
-    bool ok = l.dostring("t = TestClass('a', 1); t:print_all_str('3', '5', 'ouonline', '1', '2')",
+    bool ok = l.DoString("t = TestClass('a', 1); t:print_all_str('3', '5', 'ouonline', '1', '2')",
                          &errstr);
     if (!ok) {
         cerr << "error: " << errstr << endl;
@@ -236,21 +236,21 @@ static void test_class_common_lua_member_function() {
 static void test_userdata_1() {
     LuaState l;
 
-    l.newclass<TestClass>("TestClass")
-        .setconstructor<const char*, int>()
-        .set("print", &TestClass::print);
-    l.newuserdata<TestClass>("tc", "ouonline", 5).object<TestClass>()->set("in lua: print test data from cpp");
-    l.dostring("tc:print()");
+    l.CreateClass<TestClass>("TestClass")
+        .SetConstructor<const char*, int>()
+        .Set("Print", &TestClass::Print);
+    l.CreateUserData<TestClass>("tc", "ouonline", 5).Get<TestClass>()->Set("in lua: Print test data from cpp");
+    l.DoString("tc:Print()");
 }
 
 static void test_userdata_2() {
     LuaState l;
 
-    l.newclass<TestClass>("TestClass")
-        .setconstructor<const char*, int>()
-        .set("set", &TestClass::set);
-    l.dostring("tc = TestClass('ouonline', 5); tc:set('in cpp: print test data from lua')");
-    l.get("tc").touserdata().object<TestClass>()->print();
+    l.CreateClass<TestClass>("TestClass")
+        .SetConstructor<const char*, int>()
+        .Set("set", &TestClass::Set);
+    l.DoString("tc = TestClass('ouonline', 5); tc:set('in cpp: Print test data from lua')");
+    l.Get("tc").ToUserData().Get<TestClass>()->Print();
 }
 
 static void test_dostring() {
@@ -260,16 +260,16 @@ static void test_dostring() {
     auto resiter = [] (int n, const LuaObject& lobj) -> bool {
         cout << "output from resiter: ";
         if (n == 0) {
-            cout << lobj.tostring() << endl;
+            cout << lobj.ToString() << endl;
         } else if (n == 1) {
-            cout << lobj.tonumber() << endl;
+            cout << lobj.ToNumber() << endl;
         }
 
         return true;
     };
 
-    if (!l.dostring("return 'ouonline', 5", &errstr, nullptr, resiter)) {
-        cerr << "dostring() failed: " << errstr << endl;
+    if (!l.DoString("return 'ouonline', 5", &errstr, nullptr, resiter)) {
+        cerr << "DoString() failed: " << errstr << endl;
     }
 }
 
@@ -277,7 +277,7 @@ static void test_misc() {
     LuaState l;
 
     string errstr;
-    if (!l.dofile(__FILE__, &errstr)) {
+    if (!l.DoFile(__FILE__, &errstr)) {
         cerr << "loading " << __FILE__ << " failed: " << errstr << endl;
     }
 }

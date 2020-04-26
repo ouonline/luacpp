@@ -24,7 +24,7 @@ LuaRefObject::~LuaRefObject() {
     luaL_unref(m_l.get(), LUA_REGISTRYINDEX, m_index);
 }
 
-void LuaRefObject::assign(const LuaRefObject& lobj) {
+void LuaRefObject::Assign(const LuaRefObject& lobj) {
     if (m_index != lobj.m_index || m_l != lobj.m_l) {
         luaL_unref(m_l.get(), LUA_REGISTRYINDEX, m_index);
 
@@ -36,11 +36,11 @@ void LuaRefObject::assign(const LuaRefObject& lobj) {
     }
 }
 
-void LuaRefObject::pushself() const {
+void LuaRefObject::PushSelf() const {
     lua_rawgeti(m_l.get(), LUA_REGISTRYINDEX, m_index);
 }
 
-bool LuaRefObject::pushobject(const LuaRefObject& lobj) {
+bool LuaRefObject::PushObject(const LuaRefObject& lobj) {
     if (m_l != lobj.m_l) {
         return false;
     }
@@ -51,15 +51,15 @@ bool LuaRefObject::pushobject(const LuaRefObject& lobj) {
 
 /* ------------------------------------------------------------------------- */
 
-bool LuaObject::tobool() const {
+bool LuaObject::ToBool() const {
     return lua_toboolean(m_l.get(), -1);
 }
 
-string LuaObject::tostring() const {
+string LuaObject::ToString() const {
     const char* str;
     size_t len;
 
-    pushself();
+    PushSelf();
     str = lua_tolstring(m_l.get(), -1, &len);
     string ret(str, len);
     lua_pop(m_l.get(), 1);
@@ -67,33 +67,33 @@ string LuaObject::tostring() const {
     return ret;
 }
 
-lua_Number LuaObject::tonumber() const {
-    pushself();
+lua_Number LuaObject::ToNumber() const {
+    PushSelf();
     lua_Number ret = lua_tonumber(m_l.get(), -1);
     lua_pop(m_l.get(), 1);
 
     return ret;
 }
 
-LuaTable LuaObject::totable() const {
-    pushself();
+LuaTable LuaObject::ToTable() const {
+    PushSelf();
     LuaTable ret(m_l, -1);
     lua_pop(m_l.get(), 1);
 
     return ret;
 }
 
-LuaFunction LuaObject::tofunction() const {
-    pushself();
+LuaFunction LuaObject::ToFunctiong() const {
+    PushSelf();
     LuaFunction ret(m_l, -1);
     lua_pop(m_l.get(), 1);
 
     return ret;
 }
 
-LuaUserdata LuaObject::touserdata() const {
-    pushself();
-    LuaUserdata ret(m_l, -1);
+LuaUserData LuaObject::ToUserData() const {
+    PushSelf();
+    LuaUserData ret(m_l, -1);
     lua_pop(m_l.get(), 1);
 
     return ret;
@@ -101,8 +101,8 @@ LuaUserdata LuaObject::touserdata() const {
 
 /* ------------------------------------------------------------------------- */
 
-LuaObject LuaTable::get(int index) const {
-    pushself();
+LuaObject LuaTable::Get(int index) const {
+    PushSelf();
     lua_rawgeti(m_l.get(), -1, index);
     LuaObject ret(m_l, -1);
     lua_pop(m_l.get(), 2);
@@ -110,8 +110,8 @@ LuaObject LuaTable::get(int index) const {
     return ret;
 }
 
-LuaObject LuaTable::get(const char* name) const {
-    pushself();
+LuaObject LuaTable::Get(const char* name) const {
+    PushSelf();
     lua_getfield(m_l.get(), -1, name);
     LuaObject ret(m_l, -1);
     lua_pop(m_l.get(), 2);
@@ -119,34 +119,34 @@ LuaObject LuaTable::get(const char* name) const {
     return ret;
 }
 
-bool LuaTable::set(int index, const char* str) {
-    pushself();
+bool LuaTable::Set(int index, const char* str) {
+    PushSelf();
     lua_pushstring(m_l.get(), str);
     lua_rawseti(m_l.get(), -2, index);
     lua_pop(m_l.get(), 1);
     return true;
 }
 
-bool LuaTable::set(int index, const char* str, size_t len) {
-    pushself();
+bool LuaTable::Set(int index, const char* str, size_t len) {
+    PushSelf();
     lua_pushlstring(m_l.get(), str, len);
     lua_rawseti(m_l.get(), -2, index);
     lua_pop(m_l.get(), 1);
     return true;
 }
 
-bool LuaTable::set(int index, lua_Number value) {
-    pushself();
+bool LuaTable::Set(int index, lua_Number value) {
+    PushSelf();
     lua_pushnumber(m_l.get(), value);
     lua_rawseti(m_l.get(), -2, index);
     lua_pop(m_l.get(), 1);
     return true;
 }
 
-bool LuaTable::setobject(int index, const LuaRefObject& lobj) {
-    pushself();
+bool LuaTable::SetObject(int index, const LuaRefObject& lobj) {
+    PushSelf();
 
-    bool ok = pushobject(lobj);
+    bool ok = PushObject(lobj);
     if (ok) {
         lua_rawseti(m_l.get(), -2, index);
     }
@@ -155,50 +155,50 @@ bool LuaTable::setobject(int index, const LuaRefObject& lobj) {
     return ok;
 }
 
-bool LuaTable::set(int index, const LuaObject& lobj) {
-    return setobject(index, lobj);
+bool LuaTable::Set(int index, const LuaObject& lobj) {
+    return SetObject(index, lobj);
 }
 
-bool LuaTable::set(int index, const LuaTable& ltable) {
-    return setobject(index, ltable);
+bool LuaTable::Set(int index, const LuaTable& ltable) {
+    return SetObject(index, ltable);
 }
 
-bool LuaTable::set(int index, const LuaFunction& lfunc) {
-    return setobject(index, lfunc);
+bool LuaTable::Set(int index, const LuaFunction& lfunc) {
+    return SetObject(index, lfunc);
 }
 
-bool LuaTable::set(int index, const LuaUserdata& lud) {
-    return setobject(index, lud);
+bool LuaTable::Set(int index, const LuaUserData& lud) {
+    return SetObject(index, lud);
 }
 
-bool LuaTable::set(const char* name, const char* str) {
-    pushself();
+bool LuaTable::Set(const char* name, const char* str) {
+    PushSelf();
     lua_pushstring(m_l.get(), str);
     lua_setfield(m_l.get(), -2, name);
     lua_pop(m_l.get(), 1);
     return true;
 }
 
-bool LuaTable::set(const char* name, const char* str, size_t len) {
-    pushself();
+bool LuaTable::Set(const char* name, const char* str, size_t len) {
+    PushSelf();
     lua_pushlstring(m_l.get(), str, len);
     lua_setfield(m_l.get(), -2, name);
     lua_pop(m_l.get(), 1);
     return true;
 }
 
-bool LuaTable::set(const char* name, lua_Number value) {
-    pushself();
+bool LuaTable::Set(const char* name, lua_Number value) {
+    PushSelf();
     lua_pushnumber(m_l.get(), value);
     lua_setfield(m_l.get(), -2, name);
     lua_pop(m_l.get(), 1);
     return true;
 }
 
-bool LuaTable::setobject(const char* name, const LuaRefObject& lobj) {
-    pushself();
+bool LuaTable::SetObject(const char* name, const LuaRefObject& lobj) {
+    PushSelf();
 
-    bool ok = pushobject(lobj);
+    bool ok = PushObject(lobj);
     if (ok) {
         lua_setfield(m_l.get(), -2, name);
     }
@@ -207,25 +207,25 @@ bool LuaTable::setobject(const char* name, const LuaRefObject& lobj) {
     return ok;
 }
 
-bool LuaTable::set(const char* name, const LuaObject& lobj) {
-    return setobject(name, lobj);
+bool LuaTable::Set(const char* name, const LuaObject& lobj) {
+    return SetObject(name, lobj);
 }
 
-bool LuaTable::set(const char* name, const LuaTable& ltable) {
-    return setobject(name, ltable);
+bool LuaTable::Set(const char* name, const LuaTable& ltable) {
+    return SetObject(name, ltable);
 }
 
-bool LuaTable::set(const char* name, const LuaFunction& lfunc) {
-    return setobject(name, lfunc);
+bool LuaTable::Set(const char* name, const LuaFunction& lfunc) {
+    return SetObject(name, lfunc);
 }
 
-bool LuaTable::set(const char* name, const LuaUserdata& lud) {
-    return setobject(name, lud);
+bool LuaTable::Set(const char* name, const LuaUserData& lud) {
+    return SetObject(name, lud);
 }
 
-bool LuaTable::foreach(const function<bool (const LuaObject& key,
+bool LuaTable::ForEach(const function<bool (const LuaObject& key,
                                             const LuaObject& value)>& func) const {
-    pushself();
+    PushSelf();
 
     lua_pushnil(m_l.get());
     while (lua_next(m_l.get(), -2) != 0) {
@@ -243,33 +243,33 @@ bool LuaTable::foreach(const function<bool (const LuaObject& key,
 
 /* ------------------------------------------------------------------------- */
 
-bool LuaFunction::pusharg(const char* str) {
+bool LuaFunction::PushArg(const char* str) {
     lua_pushstring(m_l.get(), str);
     return true;
 }
 
-bool LuaFunction::pusharg(lua_Number num) {
+bool LuaFunction::PushArg(lua_Number num) {
     lua_pushnumber(m_l.get(), num);
     return true;
 }
 
-bool LuaFunction::pusharg(const LuaObject& lobj) {
-    return pushobject(lobj);
+bool LuaFunction::PushArg(const LuaObject& lobj) {
+    return PushObject(lobj);
 }
 
-bool LuaFunction::pusharg(const LuaTable& ltable) {
-    return pushobject(ltable);
+bool LuaFunction::PushArg(const LuaTable& ltable) {
+    return PushObject(ltable);
 }
 
-bool LuaFunction::pusharg(const LuaFunction& lfunc) {
-    return pushobject(lfunc);
+bool LuaFunction::PushArg(const LuaFunction& lfunc) {
+    return PushObject(lfunc);
 }
 
-bool LuaFunction::pusharg(const LuaUserdata& lud) {
-    return pushobject(lud);
+bool LuaFunction::PushArg(const LuaUserData& lud) {
+    return PushObject(lud);
 }
 
-bool LuaFunction::invoke(int argc, string* errstr,
+bool LuaFunction::Invoke(int argc, string* errstr,
                          const function<bool (int)>& before_proc,
                          const function<bool (int, const LuaObject&)>& proc) {
     const int top = lua_gettop(m_l.get()) - argc - 1 /* the function itself */;
@@ -307,51 +307,51 @@ bool LuaFunction::invoke(int argc, string* errstr,
 
 /* ------------------------------------------------------------------------- */
 
-bool LuaState::set(const char* name, const char* str) {
+bool LuaState::Set(const char* name, const char* str) {
     lua_pushstring(m_l.get(), str);
     lua_setglobal(m_l.get(), name);
     return true;
 }
 
-bool LuaState::set(const char* name, const char* str, size_t len) {
+bool LuaState::Set(const char* name, const char* str, size_t len) {
     lua_pushlstring(m_l.get(), str, len);
     lua_setglobal(m_l.get(), name);
     return true;
 }
 
-bool LuaState::set(const char* name, lua_Number value) {
+bool LuaState::Set(const char* name, lua_Number value) {
     lua_pushnumber(m_l.get(), value);
     lua_setglobal(m_l.get(), name);
     return true;
 }
 
-bool LuaState::setobject(const char* name, const LuaRefObject& lobj) {
+bool LuaState::SetObject(const char* name, const LuaRefObject& lobj) {
     if (m_l != lobj.m_l) {
         return false;
     }
 
-    lobj.pushself();
+    lobj.PushSelf();
     lua_setglobal(m_l.get(), name);
     return true;
 }
 
-bool LuaState::set(const char* name, const LuaObject& lobj) {
-    return setobject(name, lobj);
+bool LuaState::Set(const char* name, const LuaObject& lobj) {
+    return SetObject(name, lobj);
 }
 
-bool LuaState::set(const char* name, const LuaTable& ltable) {
-    return setobject(name, ltable);
+bool LuaState::Set(const char* name, const LuaTable& ltable) {
+    return SetObject(name, ltable);
 }
 
-bool LuaState::set(const char* name, const LuaFunction& lfunc) {
-    return setobject(name, lfunc);
+bool LuaState::Set(const char* name, const LuaFunction& lfunc) {
+    return SetObject(name, lfunc);
 }
 
-bool LuaState::set(const char* name, const LuaUserdata& lud) {
-    return setobject(name, lud);
+bool LuaState::Set(const char* name, const LuaUserData& lud) {
+    return SetObject(name, lud);
 }
 
-LuaObject LuaState::get(const char* name) const {
+LuaObject LuaState::Get(const char* name) const {
     lua_getglobal(m_l.get(), name);
     LuaObject ret(m_l, -1);
     lua_pop(m_l.get(), 1);
@@ -359,7 +359,7 @@ LuaObject LuaState::get(const char* name) const {
     return ret;
 }
 
-LuaTable LuaState::newtable(const char* name) {
+LuaTable LuaState::CreateTable(const char* name) {
     lua_newtable(m_l.get());
     LuaTable ret(m_l, -1);
 
@@ -372,7 +372,7 @@ LuaTable LuaState::newtable(const char* name) {
     return ret;
 }
 
-bool LuaState::dostring(const char* chunk, string* errstr,
+bool LuaState::DoString(const char* chunk, string* errstr,
                         const function<bool (int)>& before_proc,
                         const function<bool (int, const LuaObject&)>& proc) {
     bool ok = (luaL_loadstring(m_l.get(), chunk) == LUA_OK);
@@ -385,12 +385,12 @@ bool LuaState::dostring(const char* chunk, string* errstr,
     }
 
     LuaFunction f(m_l, -1);
-    ok = f.exec(errstr, before_proc, proc);
+    ok = f.Exec(errstr, before_proc, proc);
     lua_pop(m_l.get(), 1); // function generated by luaL_loadstring()
     return ok;
 }
 
-bool LuaState::dofile(const char* script, string* errstr,
+bool LuaState::DoFile(const char* script, string* errstr,
                       const function<bool (int)>& before_proc,
                       const function<bool (int, const LuaObject&)>& proc) {
     bool ok = (luaL_loadfile(m_l.get(), script) == LUA_OK);
@@ -403,7 +403,7 @@ bool LuaState::dofile(const char* script, string* errstr,
     }
 
     LuaFunction f(m_l, -1);
-    ok = f.exec(errstr, before_proc, proc);
+    ok = f.Exec(errstr, before_proc, proc);
     lua_pop(m_l.get(), 1); // function generated by luaL_loadfile()
     return ok;
 }

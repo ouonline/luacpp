@@ -20,12 +20,12 @@ omake_phony_0:
 
 omake_dep_0_INCLUDE := -I../../../../lua -I../..
 
-test.cpp.omake_dep_0.o: test.cpp
+omake_dep_0.test.cpp.o: test.cpp
 	$(CXX) $(CXXFLAGS) -Wall -Werror -Wextra $(omake_dep_0_INCLUDE) -c $< -o $@
 
-test_luacpp_OBJS := test.cpp.omake_dep_0.o
+test_luacpp_OBJS := omake_dep_0.test.cpp.o
 
-test_luacpp_LIBS := ../libluacpp_static.a ../../../../lua/src/liblua.a -ldl -lm
+test_luacpp_LIBS := ../libluacpp_static.a ../../../../lua/src/liblua.a
 
 test_luacpp: $(test_luacpp_OBJS) | omake_phony_0
 	$(CXX) $(CXXFLAGS) -Wextra -Werror -Wall -o $@ $^ $(test_luacpp_LIBS)

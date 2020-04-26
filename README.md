@@ -12,7 +12,7 @@
     - [LuaTable](#luatable)
     - [LuaFunction](#luafunction)
     - [LuaClass](#luaclass)
-    - [LuaUserdata](#luauserdata)
+    - [LuaUserData](#luauserdata)
     - [LuaState](#luastate)
 * [FAQ](#faq)
 * [License](#license)
@@ -47,12 +47,12 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.set("msg", "Hello, luacpp from ouonline!");
-    auto lobj = l.get("msg");
-    if (lobj.type() == LUA_TSTRING) {
-        cout << "get msg -> " << lobj.tostring() << endl;
+    l.Set("msg", "Hello, luacpp from ouonline!");
+    auto lobj = l.Get("msg");
+    if (lobj.GetType() == LUA_TSTRING) {
+        cout << "get msg -> " << lobj.ToString() << endl;
     } else {
-        cerr << "unknown object type -> " << lobj.typestr() << endl;
+        cerr << "unknown object type -> " << lobj.GetTypeStr() << endl;
     }
 
     return 0;
@@ -61,9 +61,9 @@ int main(void) {
 
 In this example, we set the variable `msg`'s value to be a string "Hello, luacpp from ouonline!", then use the getter function to fetch its value and print it.
 
-`LuaState::set()`s are a series of overloaded functions, which can be used to set up various kinds of variables. Once the variable is set, its value is kept in the `LuaState` instance until it is modified again or the `LuaState` instance is destroyed.
+`LuaState::Set()`s are a series of overloaded functions, which can be used to set up various kinds of variables. Once the variable is set, its value is kept in the `LuaState` instance until it is modified again or the `LuaState` instance is destroyed.
 
-`LuaState::get()` is used to get a variable by its name. The value returned by `LuaState::get()` is a `LuaObject` instance, which can be converted to the proper type later. You'd better check the return value of `LuaObject::type()` before any conversions.
+`LuaState::Get()` is used to get a variable by its name. The value returned by `LuaState::Get()` is a `LuaObject` instance, which can be converted to the proper type later. You'd better check the return value of `LuaObject::GetType()` before any conversions.
 
 [[back to top](#table-of-contents)]
 
@@ -81,46 +81,46 @@ int main(void) {
 
     auto iterfunc = [] (const LuaObject& key, const LuaObject& value) -> bool {
         cout << "    "; // indention
-        if (key.type() == LUA_TNUMBER) {
-            cout << key.tonumber();
-        } else if (key.type() == LUA_TSTRING) {
-            cout << key.tostring();
+        if (key.GetType() == LUA_TNUMBER) {
+            cout << key.ToNumber();
+        } else if (key.GetType() == LUA_TSTRING) {
+            cout << key.ToString();
         } else {
-            cout << "unsupported key type -> " << key.typestr() << endl;
+            cout << "unsupported key type -> " << key.GetTypeStr() << endl;
             return false;
         }
 
-        if (value.type() == LUA_TNUMBER) {
-            cout << " -> " << value.tonumber() << endl;
-        } else if (value.type() == LUA_TSTRING) {
-            cout << " -> " << value.tostring() << endl;
+        if (value.GetType() == LUA_TNUMBER) {
+            cout << " -> " << value.ToNumber() << endl;
+        } else if (value.GetType() == LUA_TSTRING) {
+            cout << " -> " << value.ToString() << endl;
         } else {
-            cout << " -> unsupported iter value type: " << value.typestr() << endl;
+            cout << " -> unsupported iter value type: " << value.GetTypeStr() << endl;
         }
 
         return true;
     };
 
     cout << "table1:" << endl;
-    l.dostring("var = {'mykey', value = 'myvalue', others = 'myothers'}");
-    l.get("var").totable().foreach(iterfunc);
+    l.DoString("var = {'mykey', value = 'myvalue', others = 'myothers'}");
+    l.Get("var").ToTable().ForEach(iterfunc);
 
     cout << "table2:" << endl;
-    auto ltable = l.newtable();
-    ltable.set("x", 5);
-    ltable.set("o", "ouonline");
-    ltable.set("t", ltable);
-    ltable.foreach(iterfunc);
+    auto ltable = l.CreateTable();
+    ltable.Set("x", 5);
+    ltable.Set("o", "ouonline");
+    ltable.Set("t", ltable);
+    ltable.ForEach(iterfunc);
 
     return 0;
 }
 ```
 
-At first we use `LuaState::dostring()` to execute a chunk that creates a table named `var` with 3 fields.
+At first we use `LuaState::DoString()` to execute a chunk that creates a table named `var` with 3 fields.
 
-`LuaTable::foreach()` takes a callback function that is used to iterate each key-value pair in the table. If the callback function returns `false`, `LuaTable::foreach()` exits and returns `false`.
+`LuaTable::ForEach()` takes a callback function that is used to iterate each key-value pair in the table. If the callback function returns `false`, `LuaTable::ForEach()` exits and returns `false`.
 
-We can use `LuaState::newtable()` to create a new empty table and use `LuaState::set()` to set fields of this table. Like `LuaState::set()`, `LuaTable::set()`s are a series of overloaded functions used to handle various kinds of data types.
+We can use `LuaState::CreateTable()` to create a new empty table and use `LuaState::Set()` to set fields of this table. Like `LuaState::Set()`, `LuaTable::Set()`s are a series of overloaded functions used to handle various kinds of data types.
 
 [[back to top](#table-of-contents)]
 
@@ -137,15 +137,15 @@ int main(void) {
     LuaState l;
 
     auto resiter1 = [] (int n, const LuaObject& lobj) -> bool {
-        cout << "output from resiter1: " << lobj.tostring() << endl;
+        cout << "output from resiter1: " << lobj.ToString() << endl;
         return true;
     };
     auto resiter2 = [] (int n, const LuaObject& lobj) -> bool {
         cout << "output from resiter2: ";
         if (n == 0) {
-            cout << lobj.tonumber() << endl;
+            cout << lobj.ToNumber() << endl;
         } else if (n == 1) {
-            cout << lobj.tostring() << endl;
+            cout << lobj.ToString() << endl;
         }
 
         return true;
@@ -155,24 +155,24 @@ int main(void) {
         cout << msg;
         return 5;
     };
-    auto lfunc = l.newfunction(echo, "echo");
+    auto lfunc = l.CreateFunction(echo, "echo");
 
-    l.set("msg", "calling cpp function with return value from cpp: ");
-    lfunc.exec(nullptr, nullptr, resiter1, l.get("msg"));
+    l.Set("msg", "calling cpp function with return value from cpp: ");
+    lfunc.Exec(nullptr, nullptr, resiter1, l.Get("msg"));
 
-    l.dostring("res = echo('calling cpp function with return value from lua: ');"
+    l.DoString("res = echo('calling cpp function with return value from lua: ');"
                "io.write('return value -> ', res, '\\n')");
 
-    l.dostring("function return2(a, b) return a, b end");
-    l.get("return2").tofunction().exec(nullptr, nullptr, resiter2, 5, "ouonline");
+    l.DoString("function return2(a, b) return a, b end");
+    l.Get("return2").ToFunction().Exec(nullptr, nullptr, resiter2, 5, "ouonline");
 
     return 0;
 }
 ```
 
-First we define a C++ function `echo` and set its name to be `echo` in the Lua environment using `LuaState::newfunction()`.
+First we define a C++ function `echo` and set its name to be `echo` in the Lua environment using `LuaState::CreateFunction()`.
 
-`LuaFunction::exec()`, which takes as least 3 arguments, invokes the real function. See [LuaFunction](#luafunction) for more details.
+`LuaFunction::Exec()`, which takes as least 3 arguments, invokes the real function. See [LuaFunction](#luafunction) for more details.
 
 [[back to top](#table-of-contents)]
 
@@ -198,18 +198,18 @@ public:
         cout << "TestClass::~TestClass() is called." << endl;
     }
 
-    void set(const char* msg) { m_msg = msg; }
+    void Set(const char* msg) { m_msg = msg; }
 
-    void print() const {
+    void Print() const {
         cout << "TestClass::print(): " << m_msg << endl;
     }
-    void echo(const char* msg) const {
+    void Echo(const char* msg) const {
         cout << "TestClass::echo(string): " << msg << endl;
     }
-    void echo(int v) const {
+    void Echo(int v) const {
         cout << "TestClass::echo(int): " << v << endl;
     }
-    static void s_echo(const char* msg) {
+    static void StaticEcho(const char* msg) {
         cout << "TestClass::s_echo(string): " << msg << endl;
     }
 
@@ -231,25 +231,25 @@ int main(void) {
     LuaState l;
 
     // NOTE: export only once
-    auto lclass = l.newclass<TestClass>("TestClass").setconstructor();
+    auto lclass = l.CreateClass<TestClass>("TestClass").SetConstructor();
 
     cout << "--------------------------------------------" << endl;
-    l.dostring("tc = TestClass()");
+    l.DoString("tc = TestClass()");
 
     cout << "--------------------------------------------" << endl;
-    lclass.setconstructor<const char*, int>();
-    l.dostring("tc = TestClass('ouonline', 5)");
+    lclass.SetConstructor<const char*, int>();
+    l.DoString("tc = TestClass('ouonline', 5)");
 
     cout << "--------------------------------------------" << endl;
-    lclass.set("print", &TestClass::print)
-        .set<void, const char*>("echo_str", &TestClass::echo) // overloaded function
-        .set<void, int>("echo_int", &TestClass::echo);
-    l.dostring("tc = TestClass('ouonline', 5); tc:print();"
+    lclass.Set("print", &TestClass::print)
+        .Set<void, const char*>("echo_str", &TestClass::Echo) // overloaded function
+        .Set<void, int>("echo_int", &TestClass::Echo);
+    l.DoString("tc = TestClass('ouonline', 5); tc:print();"
                "tc:echo_str('calling class member function from lua')");
 
     cout << "--------------------------------------------" << endl;
-    lclass.set("s_echo", &TestClass::s_echo);
-    l.dostring("TestClass:s_echo('static member function is called without being instantiated');"
+    lclass.Set("s_echo", &TestClass::StaticEcho);
+    l.DoString("TestClass:s_echo('static member function is called without being instantiated');"
                "tc = TestClass(); tc:s_echo('static member function is called by an instance')");
 
     cout << "--------------------------------------------" << endl;
@@ -258,13 +258,13 @@ int main(void) {
 }
 ```
 
-`LuaState::newclass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. If the class is already exported, `LuaState::newclass()` throws a `std::runtime_error` exception.
+`LuaState::CreateClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. If the class is already exported, `LuaState::CreateClass()` throws a `std::runtime_error` exception.
 
-`LuaClass::set()` is a template function used to export member functions for this class.
+`LuaClass::Set()` is a template function used to export member functions for this class.
 
 Class member functions should be called with colon operator, in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
 
-The following program displays how to use `LuaUserdata` to exchange data between C++ and Lua.
+The following program displays how to use `LuaUserData` to exchange data between C++ and Lua.
 
 ```c++
 #include <iostream>
@@ -276,17 +276,17 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.newclass<TestClass>("TestClass")
-        .setconstructor<const char*, int>()
-        .set("print", &TestClass::print);
-    l.newuserdata<TestClass>("tc", "ouonline", 5).object<TestClass>()->set("in lua: print test data from cpp");
-    l.dostring("tc:print()");
+    l.CreateClass<TestClass>("TestClass")
+        .SetConstructor<const char*, int>()
+        .Set("print", &TestClass::Print);
+    l.CreateUserData<TestClass>("tc", "ouonline", 5).Get<TestClass>()->Set("in lua: print test data from cpp");
+    l.DoString("tc:print()");
 
     return 0;
 }
 ```
 
-We create a `LuaUserdata` object of type `TestClass` by calling `LuaClass::newuserdata()` and set its name to be `tc` in the Lua environment. Then we set its content to be a string, which is printed by calling `LuaState::dostring()`.
+We create a `LuaUserData` object of type `TestClass` by calling `LuaClass::CreateUserData()` and set its name to be `tc` in the Lua environment. Then we set its content to be a string, which is printed by calling `LuaState::DoString()`.
 
 The following example is similar to the previous one, except that we modify the object's content in the Lua environment but print it in C++.
 
@@ -300,11 +300,11 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.newclass<TestClass>("TestClass")
-        .setconstructor<const char*, int>()
-        .set("set", &TestClass::set);
-    l.dostring("tc = TestClass('ouonline', 5); tc:set('in cpp: print test data from lua')");
-    l.get("tc").touserdata().object<TestClass>()->print();
+    l.CreateClass<TestClass>("TestClass")
+        .SetConstructor<const char*, int>()
+        .Set("set", &TestClass::Set);
+    l.DoString("tc = TestClass('ouonline', 5); tc:set('in cpp: print test data from lua')");
+    l.Get("tc").ToUserData().object<TestClass>()->Print();
 
     return 0;
 }
@@ -323,13 +323,13 @@ This section describes all classes and functions provided by `lua-cpp`.
 `LuaRefObject` is an internal base class for various Lua types.
 
 ```c++
-int type() const;
+int GetType() const;
 ```
 
 Gets the type of this object. The return value is one of the following: `LUA_TNIL`, `LUA_TNUMBER`, `LUA_TBOOLEAN`, `LUA_TSTRING`, `LUA_TTABLE`, `LUA_TFUNCTION`, `LUA_TUSERDATA`, `LUA_TTHREAD`, and `LUA_TLIGHTUSERDATA`.
 
 ```c++
-const char* typestr() const;
+const char* GetTypeStr() const;
 ```
 
 Returns the name of the object's type.
@@ -338,97 +338,97 @@ Returns the name of the object's type.
 
 ## LuaObject
 
-`LuaObject`(inherits from `LuaRefObject`) represents an arbitrary item of Lua. You are expected to check the return value of `type()` before any of the following functions is called.
+`LuaObject`(inherits from `LuaRefObject`) represents an arbitrary item of Lua. You are expected to check the return value of `GetType()` before any of the following functions is called.
 
 ```c++
-bool isnil() const;
+bool IsNil() const;
 ```
 
 Tells whether this object is `nil`.
 
 ```c++
-bool isbool() const;
+bool IsBool() const;
 ```
 
 Tells whether this object is a `bool` value.
 
 ```c++
-bool isnumber() const;
+bool IsNumber() const;
 ```
 
 Tells whether this object is a number.
 
 ```c++
-bool isstring() const;
+bool IsString() const;
 ```
 
 Tells whether this object is a string.
 
 ```c++
-bool istable() const;
+bool IsTable() const;
 ```
 
 Tells whether this object is a table.
 
 ```c++
-bool isfunction() const;
+bool IsFunction() const;
 ```
 
 Tells whether this object is a function.
 
 ```c++
-bool isuserdata() const;
+bool IsUserData() const;
 ```
 
 Tells whether this object is a userdata.
 
 ```c++
-bool isthread() const;
+bool IsThread() const;
 ```
 
 Tells whether this object is a thread.
 
 ```c++
-bool islightuserdata() const;
+bool IsLightUserData() const;
 ```
 
 Tells whether this object is a light userdata.
 
 ```c++
-bool tobool() const;
+bool ToBool() const;
 ```
 
 Converts this object to a `bool` value.
 
 ```c++
-std::string tostring() const;
+std::string ToString() const;
 ```
 
 Converts this object to a `std::string` object.
 
 ```c++
-lua_Number tonumber() const;
+lua_Number ToNumber() const;
 ```
 
 Converts this object to a number.
 
 ```c++
-LuaTable totable() const;
+LuaTable ToTable() const;
 ```
 
 Converts this object to a `LuaTable` object.
 
 ```c++
-LuaFunction tofunction() const;
+LuaFunction ToFunction() const;
 ```
 
 Converts this object to a `LuaFunction` object.
 
 ```c++
-LuaUserdata touserdata() const;
+LuaUserData ToUserData() const;
 ```
 
-Converts this object to a `LuaUserdata` object.
+Converts this object to a `LuaUserData` object.
 
 [[back to top](#table-of-contents)]
 
@@ -437,63 +437,63 @@ Converts this object to a `LuaUserdata` object.
 `LuaTable`(inherits from `LuaRefObject`) represents the table type of Lua.
 
 ```c++
-LuaObject get(int index) const;
-LuaObject get(const char* name) const;
+LuaObject Get(int index) const;
+LuaObject Get(const char* name) const;
 ```
 
 Gets an object by its `index` or `name` in this table.
 
 ```c++
-bool set(int index, const char* str);
-bool set(const char* name, const char* str);
+bool Set(int index, const char* str);
+bool Set(const char* name, const char* str);
 ```
 
 Sets the value at `index` or `name` to be the string `str`.
 
 ```c++
-bool set(int index, const char* str, size_t len);
-bool set(const char* name, const char* str, size_t len)
+bool Set(int index, const char* str, size_t len);
+bool Set(const char* name, const char* str, size_t len)
 ```
 
 Sets the value at `index` or `name` to be the string `str` with length `len`.
 
 ```c++
-bool set(int index, lua_Number n);
-bool set(const char* name, lua_Number n);
+bool Set(int index, lua_Number n);
+bool Set(const char* name, lua_Number n);
 ```
 
 Sets the value at `index` or `name` to be the number `n`.
 
 ```c++
-bool set(int index, const LuaObject& lobj);
-bool set(const char* name, const LuaObject& lobj)
+bool Set(int index, const LuaObject& lobj);
+bool Set(const char* name, const LuaObject& lobj)
 ```
 
-Sets the value at `index` or `name` to be the object `lobj`. Note that `lobj` and this table **MUST** be generated by the same LuaState.
+Sets the value at `index` or `name` to be the object `lobj`. Note that `lobj` and this table **MUST** be created by the same LuaState.
 
 ```c++
-bool set(int index, const LuaTable& ltable);
-bool set(const char* name, const LuaTable& ltable);
+bool Set(int index, const LuaTable& ltable);
+bool Set(const char* name, const LuaTable& ltable);
 ```
 
-Sets the value at `index` or `name` to be the table `ltable`. Note that `ltable` and the host table **MUST** be generated by the same LuaState.
+Sets the value at `index` or `name` to be the table `ltable`. Note that `ltable` and the host table **MUST** be created by the same LuaState.
 
 ```c++
-bool set(int index, const LuaFunction& lfunc);
-bool set(const char* name, const LuaFunction& lfunc);
+bool Set(int index, const LuaFunction& lfunc);
+bool Set(const char* name, const LuaFunction& lfunc);
 ```
 
-Sets the value at `index` or `name` to be the function `lfunc`. Note that `lfunc` and the host table **MUST** be generated by the same LuaState.
+Sets the value at `index` or `name` to be the function `lfunc`. Note that `lfunc` and the host table **MUST** be created by the same LuaState.
 
 ```c++
-bool set(int index, const LuaUserdata& lud);
-bool set(const char* name, const LuaUserdata& lud);
+bool Set(int index, const LuaUserData& lud);
+bool Set(const char* name, const LuaUserData& lud);
 ```
 
-Sets the value at `index` or `name` to be a userdata `lud`. Note that `lud` and the host table **MUST** be generated by the same LuaState.
+Sets the value at `index` or `name` to be a userdata `lud`. Note that `lud` and the host table **MUST** be created by the same LuaState.
 
 ```c++
-bool foreach(const std::function<bool (const LuaObject& key,
+bool ForEach(const std::function<bool (const LuaObject& key,
                                        const LuaObject& value)>& func) const;
 ```
 
@@ -507,7 +507,7 @@ Itarates the table with the callback function `func`.
 
 ```c++
 template<typename ... Argv>
-bool exec(std::string* errstr = nullptr,
+bool Exec(std::string* errstr = nullptr,
           const std::function<bool (int nresults)>& before_proc = nullptr,
           const std::function<bool (int i, const LuaObject&)>& proc = nullptr,
           const Argv&... argv);
@@ -523,14 +523,14 @@ Invokes the function with arguments `argv`. The first argument `errstr` is a str
 
 ```c++
 template<typename ... FuncArgType>
-LuaClass<T>& setconstructor();
+LuaClass<T>& SetConstructor();
 ```
 
 Sets the class's constructor with argument type `FuncArgType` and return a reference of the class itself.
 
 ```c++
 template<typename FuncRetType, typename ... FuncArgType>
-LuaClass<T>& set(const char* funcname,
+LuaClass<T>& Set(const char* funcname,
                  FuncRetType (T::*func)(FuncArgType...));
 ```
 
@@ -538,7 +538,7 @@ Exports member function `func` to be a member function of this class, with funct
 
 ```c++
 template<typename FuncRetType, typename ... FuncArgType>
-LuaClass<T>& set(const char* funcname,
+LuaClass<T>& Set(const char* funcname,
                  FuncRetType (T::*func)(FuncArgType...) const);
 ```
 
@@ -546,27 +546,27 @@ Exports member function `func`(with `const` qualifier) to be a member function o
 
 ```c++
 template<typename FuncRetType, typename ... FuncArgType>
-LuaClass<T>& set(const char* funcname,
+LuaClass<T>& Set(const char* funcname,
                  FuncRetType (*func)(FuncArgType...));
 ```
 
 Exports static member function `func` to be a member function of this class with function name `funcname`.
 
 ```c++
-LuaClass<T>& set(const char* funcname, int (*func)(lua_State*));
+LuaClass<T>& Set(const char* funcname, int (*func)(lua_State*));
 ```
 
 Exports a lua-style function `func` to be a member function of this class with function name `funcname`.
 
 [[back to top](#table-of-contents)]
 
-## LuaUserdata
+## LuaUserData
 
-`LuaUserdata` (inherits from `LuaRefObject`) represents the userdata type in Lua.
+`LuaUserData` (inherits from `LuaRefObject`) represents the userdata type in Lua.
 
 ```c++
 template<typename T>
-T* object() const;
+T* Get() const;
 ```
 
 Gets the real data of type `T`.
@@ -582,118 +582,118 @@ LuaState();
 The constructor.
 
 ```c++
-lua_State* ptr() const;
+lua_State* GetRawPtr() const;
 ```
 
 Returns the `lua_State` pointer.
 
 ```c++
-LuaObject get(const char* name) const;
+LuaObject Get(const char* name) const;
 ```
 
 Gets an object by its name.
 
 ```c++
-bool set(const char* name, const char* str);
+bool Set(const char* name, const char* str);
 ```
 
 Sets the variable `name` to be the string `str`.
 
 ```c++
-bool set(const char* name, const char* str, size_t len);
+bool Set(const char* name, const char* str, size_t len);
 ```
 
 Sets the variable `name` to be the string `str` with length `len`.
 
 ```c++
-bool set(const char* name, lua_Number n);
+bool Set(const char* name, lua_Number n);
 ```
 
 Sets the variable `name` to be the number `n`.
 
 ```c++
-bool set(const char* name, const LuaObject& lobj);
+bool Set(const char* name, const LuaObject& lobj);
 ```
 
-Sets the variable `name` to be the object `lobj`. Note that `lobj` **MUST** be generated by this LuaState.
+Sets the variable `name` to be the object `lobj`. Note that `lobj` **MUST** be created by this LuaState.
 
 ```c++
-bool set(const char* name, const LuaTable& ltable);
+bool Set(const char* name, const LuaTable& ltable);
 ```
 
-Sets the variable `name` to be the table `ltable`. Note that `ltable` **MUST** be generated by this LuaState.
+Sets the variable `name` to be the table `ltable`. Note that `ltable` **MUST** be created by this LuaState.
 
 ```c++
-bool set(const char* name, const LuaFunction& lfunc);
+bool Set(const char* name, const LuaFunction& lfunc);
 ```
 
-Sets the variable `name` to be the function `lfunc`. Note that `lfunc` **MUST** be generated by this LuaState.
+Sets the variable `name` to be the function `lfunc`. Note that `lfunc` **MUST** be created by this LuaState.
 
 ```c++
-bool set(const char* name, const LuaUserdata& lud);
+bool Set(const char* name, const LuaUserData& lud);
 ```
 
-Sets the variable `name` to be the userdata `lud`. Note that `lud` **MUST** be generated by this LuaState.
+Sets the variable `name` to be the userdata `lud`. Note that `lud` **MUST** be created by this LuaState.
 
 ```c++
 template<typename T>
-bool set(const char* name, const LuaClass<T>& lclass);
+bool Set(const char* name, const LuaClass<T>& lclass);
 ```
 
-Sets the variable `name` to be the user-defined class `lclass`. Note that `lclass` **MUST** be generated by this LuaState.
+Sets the variable `name` to be the user-defined class `lclass`. Note that `lclass` **MUST** be created by this LuaState.
 
 ```c++
-LuaTable newtable(const char* name = nullptr);
+LuaTable CreateTable(const char* name = nullptr);
 ```
 
 Creates a new table with table name `name`(if not NULL).
 
 ```c++
 template<typename FuncRetType, typename ... FuncArgType>
-LuaFunction newfunction(FuncRetType (*)(FuncArgType...),
-                        const char* name = nullptr);
+LuaFunction CreateFunction(FuncRetType (*)(FuncArgType...),
+                           const char* name = nullptr);
 ```
 
 Creates a new function with function name `name`(if not NULL).
 
 ```c++
 template<typename FuncRetType, typename ... FuncArgType>
-LuaFunction newfunction(const std::function<FuncRetType (FuncArgType...)>&,
-                        const char* name = nullptr);
+LuaFunction CreateFunction(const std::function<FuncRetType (FuncArgType...)>&,
+                           const char* name = nullptr);
 ```
 
 Creates a new function with function name `name`(if not NULL).
 
 ```c++
 template<typename T>
-LuaClass<T> newclass(const char* name = nullptr);
+LuaClass<T> CreateClass(const char* name = nullptr);
 ```
 
 Exports a new type `T` with the name `name`. If `T` is already exported, the class is returned.
 
 ```c++
 template<typename T, typename ... Argv>
-LuaUserdata newuserdata(const char* name = nullptr,
-                        const Argv&... argv);
+LuaUserData CreateUserData(const char* name = nullptr,
+                           const Argv&... argv);
 ```
 
-Creates a `LuaUserdata` of type `T` with the name `name`(if not NULL). Arguments `argv` are passed to the constructor of `T` to create an instance. If `T` is not exported, it throws a `std::runtime_error` exception.
+Creates a `LuaUserData` of type `T` with the name `name`(if not NULL). Arguments `argv` are passed to the constructor of `T` to create an instance. If `T` is not exported, it throws a `std::runtime_error` exception.
 
 ```c++
-bool dostring(const char* chunk, std::string* errstr = nullptr,
+bool DoString(const char* chunk, std::string* errstr = nullptr,
               const std::function<bool (int nresults)>& before_proc = nullptr,
               const std::function<bool (int i, const LuaObject&)>& resfunc = nullptr);
 ```
 
-Evaluates the chunk `chunk`. The rest of arguments, `errstr`, `before_proc` and `proc`, have the same meaning as in `LuaFunction::exec()`.
+Evaluates the chunk `chunk`. The rest of arguments, `errstr`, `before_proc` and `proc`, have the same meaning as in `LuaFunction::Exec()`.
 
 ```c++
-bool dofile(const char* script, std::string* errstr = nullptr,
+bool DoFile(const char* script, std::string* errstr = nullptr,
             const std::function<bool (int nresults)>& before_proc = nullptr,
             const std::function<bool (int i, const LuaObject&)>& proc = nullptr);
 ```
 
-Loads and evaluates the Lua script `script`. The rest of arguments, `errstr`, `before_proc` and `proc`, have the same meaning as in `LuaFunction::exec()`.
+Loads and evaluates the Lua script `script`. The rest of arguments, `errstr`, `before_proc` and `proc`, have the same meaning as in `LuaFunction::Exec()`.
 
 [[back to top](#table-of-contents)]
 

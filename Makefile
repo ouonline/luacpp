@@ -18,17 +18,17 @@ all: $(TARGET)
 
 omake_dep_0_INCLUDE := -I../../../lua
 
-luacpp.cpp.omake_dep_0.o: luacpp.cpp
+omake_dep_0.luacpp.cpp.o: luacpp.cpp
 	$(CXX) $(CXXFLAGS) -Wall -Werror -Wextra -fPIC $(omake_dep_0_INCLUDE) -c $< -o $@
 
-luacpp_shared_OBJS := luacpp.cpp.omake_dep_0.o
+luacpp_shared_OBJS := omake_dep_0.luacpp.cpp.o
 
 luacpp_shared_LIBS := ../../../lua/src/liblua.a
 
 libluacpp_shared.so: $(luacpp_shared_OBJS)
 	$(CXX) $(CXXFLAGS) -fPIC -Wextra -Werror -Wall -shared -o $@ $^ $(luacpp_shared_LIBS)
 
-luacpp_static_OBJS := luacpp.cpp.omake_dep_0.o
+luacpp_static_OBJS := omake_dep_0.luacpp.cpp.o
 
 libluacpp_static.a: $(luacpp_static_OBJS)
 	$(AR) rc $@ $^
