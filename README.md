@@ -133,10 +133,23 @@ using namespace std;
 #include "luacpp.hpp"
 using namespace luacpp;
 
+class GenericFunctionHelper final : public LuaFunctionHelper {
+public:
+    GenericFunctionHelper(const std::function<bool (int, const LuaObject&)>& f)
+        : m_func(f) {}
+    bool BeforeProcess(int) override { return true; }
+    bool Process(int i, const LuaObject& lobj) override {
+        return m_func(i, lobj);
+    }
+    void AfterProcess() {}
+private:
+    std::function<bool (int, const LuaObject&)> m_func;
+};
+
 int main(void) {
     LuaState l;
 
-    auto resiter1 = [] (int n, const LuaObject& lobj) -> bool {
+    auto resiter1 = [] (int, const LuaObject& lobj) -> bool {
         cout << "output from resiter1: " << lobj.ToString() << endl;
         return true;
     };
@@ -151,28 +164,28 @@ int main(void) {
         return true;
     };
 
-    std::function<int (const char*)> echo = [] (const char* msg) -> int {
+    GenericFunctionHelper helper1(resiter1), helper2(resiter2);
+
+    std::function<int (const char*)> Echo = [] (const char* msg) -> int {
         cout << msg;
         return 5;
     };
-    auto lfunc = l.CreateFunction(echo, "echo");
+    auto lfunc = l.CreateFunction(Echo, "Echo");
 
     l.Set("msg", "calling cpp function with return value from cpp: ");
-    lfunc.Exec(nullptr, nullptr, resiter1, l.Get("msg"));
+    lfunc.Exec(nullptr, &helper1, l.Get("msg"));
 
-    l.DoString("res = echo('calling cpp function with return value from lua: ');"
+    l.DoString("res = Echo('calling cpp function with return value from lua: ');"
                "io.write('return value -> ', res, '\\n')");
 
     l.DoString("function return2(a, b) return a, b end");
-    l.Get("return2").ToFunction().Exec(nullptr, nullptr, resiter2, 5, "ouonline");
+    l.Get("return2").ToFunctiong().Exec(nullptr, &helper2, 5, "ouonline");
 
     return 0;
 }
 ```
 
-First we define a C++ function `echo` and set its name to be `echo` in the Lua environment using `LuaState::CreateFunction()`.
-
-`LuaFunction::Exec()`, which takes as least 3 arguments, invokes the real function. See [LuaFunction](#luafunction) for more details.
+First we define a C++ function `echo` and set its name to be `echo` in the Lua environment using `LuaState::CreateFunction()`. `LuaFunction::Exec()` invokes the real function. See [LuaFunction](#luafunction) for more details.
 
 [[back to top](#table-of-contents)]
 
@@ -506,14 +519,20 @@ Itarates the table with the callback function `func`.
 `LuaFunction`(inherits from `LuaRefObject`) represents the function type of Lua.
 
 ```c++
+class LuaFunctionHelper {
+public:
+    virtual ~LuaFunctionHelper() {}
+    virtual bool BeforeProcess(int nresults) = 0;
+    virtual bool Process(int i, const LuaObject&) = 0;
+    virtual void AfterProcess() = 0;
+};
+
 template<typename ... Argv>
-bool Exec(std::string* errstr = nullptr,
-          const std::function<bool (int nresults)>& before_proc = nullptr,
-          const std::function<bool (int i, const LuaObject&)>& proc = nullptr,
+bool Exec(std::string* errstr = nullptr, LuaFunctionHelper* helper = nullptr,
           const Argv&... argv);
 ```
 
-Invokes the function with arguments `argv`. The first argument `errstr` is a string to receive a message if an error occurs. The second argument `before_proc`, which is a function taking the number of returned values as its argument, is used to do some prerequired jobs. The third argument `proc` is a function which is used to handle returned value(s). The rest of arguments `argv`, if any, are passed to the real function being called.
+Invokes the function with arguments `argv`. The first argument `errstr` is a string to receive a message if an error occurs. The second argument `helper`, which points to an instance of `LuaFunctionHelper`, is used to handle result(s). The rest of arguments `argv`, if any, are passed to the real function being called. Note that the first argument `i` of `LuaFunctionHelper::Process()` counts from 0.
 
 [[back to top](#table-of-contents)]
 
@@ -681,19 +700,17 @@ Creates a `LuaUserData` of type `T` with the name `name`(if not NULL). Arguments
 
 ```c++
 bool DoString(const char* chunk, std::string* errstr = nullptr,
-              const std::function<bool (int nresults)>& before_proc = nullptr,
-              const std::function<bool (int i, const LuaObject&)>& resfunc = nullptr);
+              LuaFunctionHelper* helper = nullptr);
 ```
 
-Evaluates the chunk `chunk`. The rest of arguments, `errstr`, `before_proc` and `proc`, have the same meaning as in `LuaFunction::Exec()`.
+Evaluates the chunk `chunk`. The rest of arguments, `errstr` and `helper`, have the same meaning as in `LuaFunction::Exec()`.
 
 ```c++
 bool DoFile(const char* script, std::string* errstr = nullptr,
-            const std::function<bool (int nresults)>& before_proc = nullptr,
-            const std::function<bool (int i, const LuaObject&)>& proc = nullptr);
+            LuaFunctionHelper* helper = nullptr);
 ```
 
-Loads and evaluates the Lua script `script`. The rest of arguments, `errstr`, `before_proc` and `proc`, have the same meaning as in `LuaFunction::Exec()`.
+Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and `helper`, have the same meaning as in `LuaFunction::Exec()`.
 
 [[back to top](#table-of-contents)]
 

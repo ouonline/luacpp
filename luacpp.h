@@ -124,15 +124,21 @@ private:
     friend class LuaFunction;
 };
 
+class LuaFunctionHelper {
+public:
+    virtual ~LuaFunctionHelper() {}
+    virtual bool BeforeProcess(int nresults) = 0;
+    virtual bool Process(int i, const LuaObject&) = 0;
+    virtual void AfterProcess() = 0;
+};
+
 class LuaFunction : public LuaRefObject {
 public:
     LuaFunction(const LuaFunction& lfunc)
         : LuaRefObject(lfunc) {}
 
     template <typename ... Argv>
-    bool Exec(std::string* errstr = nullptr,
-              const std::function<bool (int nresults)>& before_proc = nullptr,
-              const std::function<bool (int i, const LuaObject&)>& proc = nullptr,
+    bool Exec(std::string* errstr = nullptr, LuaFunctionHelper* helper = nullptr,
               const Argv&... argv) {
         PushSelf();
 
@@ -142,7 +148,7 @@ public:
             return false;
         }
 
-        return Invoke(sizeof...(Argv), errstr, before_proc, proc);
+        return Invoke(sizeof...(Argv), errstr, helper);
     }
 
     LuaFunction& operator=(const LuaFunction& lfunc) {
@@ -177,9 +183,7 @@ private:
         return PushArg(argc, errstr, std::forward<const Rest&>(rest)...);
     }
 
-    bool Invoke(int argc, std::string* errstr,
-                const std::function<bool (int)>& before_proc,
-                const std::function<bool (int, const LuaObject&)>& proc);
+    bool Invoke(int argc, std::string* errstr, LuaFunctionHelper* helper);
 
     friend class LuaState;
     friend class LuaObject;
@@ -633,11 +637,10 @@ public:
     }
 
     bool DoString(const char* chunk, std::string* errstr = nullptr,
-                  const std::function<bool (int nresults)>& before_proc = nullptr,
-                  const std::function<bool (int i, const LuaObject&)>& proc = nullptr);
+                  LuaFunctionHelper* helper = nullptr);
+
     bool DoFile(const char* script, std::string* errstr = nullptr,
-                const std::function<bool (int nresults)>& before_proc = nullptr,
-                const std::function<bool (int i, const LuaObject&)>& proc = nullptr);
+                LuaFunctionHelper* helper = nullptr);
 
 private:
     std::shared_ptr<lua_State> m_l;

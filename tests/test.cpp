@@ -66,6 +66,19 @@ static void test_table() {
     ltable.ForEach(iterfunc);
 }
 
+class GenericFunctionHelper final : public LuaFunctionHelper {
+public:
+    GenericFunctionHelper(const std::function<bool (int, const LuaObject&)>& f)
+        : m_func(f) {}
+    bool BeforeProcess(int) override { return true; }
+    bool Process(int i, const LuaObject& lobj) override {
+        return m_func(i, lobj);
+    }
+    void AfterProcess() {}
+private:
+    std::function<bool (int, const LuaObject&)> m_func;
+};
+
 static void test_function_with_return_value() {
     LuaState l;
 
@@ -84,6 +97,8 @@ static void test_function_with_return_value() {
         return true;
     };
 
+    GenericFunctionHelper helper1(resiter1), helper2(resiter2);
+
     std::function<int (const char*)> Echo = [] (const char* msg) -> int {
         cout << msg;
         return 5;
@@ -91,13 +106,13 @@ static void test_function_with_return_value() {
     auto lfunc = l.CreateFunction(Echo, "Echo");
 
     l.Set("msg", "calling cpp function with return value from cpp: ");
-    lfunc.Exec(nullptr, nullptr, resiter1, l.Get("msg"));
+    lfunc.Exec(nullptr, &helper1, l.Get("msg"));
 
     l.DoString("res = Echo('calling cpp function with return value from lua: ');"
                "io.write('return value -> ', res, '\\n')");
 
     l.DoString("function return2(a, b) return a, b end");
-    l.Get("return2").ToFunctiong().Exec(nullptr, nullptr, resiter2, 5, "ouonline");
+    l.Get("return2").ToFunctiong().Exec(nullptr, &helper2, 5, "ouonline");
 }
 
 static void Echo(const char* msg) {
@@ -267,8 +282,9 @@ static void test_dostring() {
 
         return true;
     };
+    GenericFunctionHelper helper(resiter);
 
-    if (!l.DoString("return 'ouonline', 5", &errstr, nullptr, resiter)) {
+    if (!l.DoString("return 'ouonline', 5", &errstr, &helper)) {
         cerr << "DoString() failed: " << errstr << endl;
     }
 }
