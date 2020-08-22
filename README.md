@@ -244,7 +244,7 @@ int main(void) {
     LuaState l;
 
     // NOTE: export only once
-    auto lclass = l.CreateClass<TestClass>("TestClass").SetConstructor();
+    auto lclass = l.RegisterClass<TestClass>("TestClass").SetConstructor();
 
     cout << "--------------------------------------------" << endl;
     l.DoString("tc = TestClass()");
@@ -271,7 +271,7 @@ int main(void) {
 }
 ```
 
-`LuaState::CreateClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. If the class is already exported, `LuaState::CreateClass()` throws a `std::runtime_error` exception.
+`LuaState::RegisterClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. If the class is already exported, `LuaState::RegisterClass()` throws a `std::runtime_error` exception.
 
 `LuaClass::Set()` is a template function used to export member functions for this class.
 
@@ -289,7 +289,7 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.CreateClass<TestClass>("TestClass")
+    l.RegisterClass<TestClass>("TestClass")
         .SetConstructor<const char*, int>()
         .Set("print", &TestClass::Print);
     l.CreateUserData<TestClass>("tc", "ouonline", 5).Get<TestClass>()->Set("in lua: print test data from cpp");
@@ -313,7 +313,7 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.CreateClass<TestClass>("TestClass")
+    l.RegisterClass<TestClass>("TestClass")
         .SetConstructor<const char*, int>()
         .Set("set", &TestClass::Set);
     l.DoString("tc = TestClass('ouonline', 5); tc:set('in cpp: print test data from lua')");
@@ -685,7 +685,7 @@ Creates a new function with function name `name`(if not NULL).
 
 ```c++
 template<typename T>
-LuaClass<T> CreateClass(const char* name = nullptr);
+LuaClass<T> RegisterClass(const char* name = nullptr);
 ```
 
 Exports a new type `T` with the name `name`. If `T` is already exported, the class is returned.

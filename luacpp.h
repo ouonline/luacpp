@@ -588,14 +588,16 @@ public:
     }
 
     template <typename T>
-    LuaClass<T> CreateClass(const char* name = nullptr) {
+    LuaClass<T> RegisterClass(const char* name = nullptr) {
         static const std::string metatable(METATABLENAME(T));
 
         lua_State* l = m_l.get();
         if (luaL_newmetatable(l, metatable.c_str()) == LUA_OK) {
             lua_getfield(l, -1, "__host_class__");
             if (lua_istable(l, -1)) {
-                goto found;
+                lua_pop(l, 2);
+                throw std::runtime_error("class `" + metatable +
+                                         "`: already exists.");
             } else {
                 lua_pop(l, 2);
                 throw std::runtime_error("error class `" + metatable +
@@ -624,7 +626,6 @@ public:
         lua_pushvalue(l, -1);
         lua_setfield(l, -3, "__host_class__"); // the class itself
 
-    found:
         LuaClass<T> ret(m_l, -1);
         if (name) {
             lua_setglobal(l, name);

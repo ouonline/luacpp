@@ -168,21 +168,21 @@ private:
 static void test_class() {
     LuaState l;
 
-    l.CreateClass<TestClass>("TestClass")
+    l.RegisterClass<TestClass>("TestClass")
         .SetConstructor<const char*, int>()
         .Set("set", &TestClass::Set)
         .Set("print", &TestClass::Print);
 
-    l.CreateClass<TestClass>("TestClass2")
-        .Set("print", &TestClass::Print);
+    try {
+        l.RegisterClass<TestClass>("TestClass2");
+    } catch (const exception& e) {
+        cerr << "catch exception: " << e.what() << endl;
+    }
 
     string errmsg;
     bool ok = l.DoString("tc1 = TestClass();"
                          "tc1:set('test class 1');"
-                         "tc1:print();"
-                         "tc2 = TestClass2();"
-                         "tc2:set('duplicated test class 2');"
-                         "tc2:print()", &errmsg);
+                         "tc1:print();", &errmsg);
     if (!ok) {
         cerr << "error: " << errmsg << endl;
         exit(-1);
@@ -193,7 +193,7 @@ static void test_class_constructor() {
     LuaState l;
     string errmsg;
 
-    auto lclass = l.CreateClass<TestClass>("TestClass").SetConstructor();
+    auto lclass = l.RegisterClass<TestClass>("TestClass").SetConstructor();
     bool ok = l.DoString("tc = TestClass()", &errmsg);
     if (!ok) {
         cerr << "error: " << errmsg << endl;
@@ -211,7 +211,7 @@ static void test_class_constructor() {
 static void test_class_member_function() {
     LuaState l;
 
-    l.CreateClass<TestClass>("TestClass")
+    l.RegisterClass<TestClass>("TestClass")
         .SetConstructor<const char*, int>()
         .Set("set", &TestClass::Set)
         .Set("Print", &TestClass::Print)
@@ -227,7 +227,7 @@ static void test_class_static_member_function() {
     LuaState l;
     string errstr;
 
-    auto lclass = l.CreateClass<TestClass>("TestClass")
+    auto lclass = l.RegisterClass<TestClass>("TestClass")
         .Set("s_echo", &TestClass::StaticEcho);
 
     bool ok = l.DoString("TestClass:s_echo('static member function is called without being instantiated');"
@@ -252,7 +252,7 @@ static void test_class_common_lua_member_function() {
     LuaState l;
     string errstr;
 
-    auto lclass = l.CreateClass<TestClass>("TestClass")
+    auto lclass = l.RegisterClass<TestClass>("TestClass")
         .SetConstructor<const char*, int>()
         .Set("print_all_str", &test_print_all_str);
 
@@ -267,7 +267,7 @@ static void test_class_common_lua_member_function() {
 static void test_userdata_1() {
     LuaState l;
 
-    l.CreateClass<TestClass>("TestClass")
+    l.RegisterClass<TestClass>("TestClass")
         .SetConstructor<const char*, int>()
         .Set("Print", &TestClass::Print);
     l.CreateUserData<TestClass>("tc", "ouonline", 5).Get<TestClass>()->Set("in lua: Print test data from cpp");
@@ -277,7 +277,7 @@ static void test_userdata_1() {
 static void test_userdata_2() {
     LuaState l;
 
-    l.CreateClass<TestClass>("TestClass")
+    l.RegisterClass<TestClass>("TestClass")
         .SetConstructor<const char*, int>()
         .Set("set", &TestClass::Set);
     l.DoString("tc = TestClass('ouonline', 5); tc:set('in cpp: Print test data from lua')");
