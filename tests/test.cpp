@@ -116,17 +116,17 @@ static void test_function_with_return_value() {
 }
 
 static void Echo(const char* msg) {
-    cout << msg;
+    cout << msg << endl;
 }
 
 static void test_function_without_return_value() {
     LuaState l;
 
     auto lfunc = l.CreateFunction(Echo, "Echo");
-    lfunc.Exec(0, nullptr, nullptr,
-               "calling cpp function without return value from cpp\n");
+    lfunc.Exec(nullptr, nullptr,
+               "calling cpp function without return value from cpp");
 
-    l.DoString("Echo('calling cpp function without return value from lua\\n')");
+    l.DoString("Echo('calling cpp function without return value from lua')");
 }
 
 class TestClass final {
@@ -171,26 +171,41 @@ static void test_class() {
     l.CreateClass<TestClass>("TestClass")
         .SetConstructor<const char*, int>()
         .Set("set", &TestClass::Set)
-        .Set("Print", &TestClass::Print);
+        .Set("print", &TestClass::Print);
 
-    l.CreateClass<TestClass>("TestClass2");
+    l.CreateClass<TestClass>("TestClass2")
+        .Set("print", &TestClass::Print);
 
-    l.DoString("tc1 = TestClass();"
-               "tc1:set('test class 1');"
-               "tc1:print();"
-               "tc2 = TestClass2();"
-               "tc2:set('duplicated test class 2');"
-               "tc2:print()");
+    string errmsg;
+    bool ok = l.DoString("tc1 = TestClass();"
+                         "tc1:set('test class 1');"
+                         "tc1:print();"
+                         "tc2 = TestClass2();"
+                         "tc2:set('duplicated test class 2');"
+                         "tc2:print()", &errmsg);
+    if (!ok) {
+        cerr << "error: " << errmsg << endl;
+        exit(-1);
+    }
 }
 
 static void test_class_constructor() {
     LuaState l;
+    string errmsg;
 
     auto lclass = l.CreateClass<TestClass>("TestClass").SetConstructor();
-    l.DoString("tc = TestClass()");
+    bool ok = l.DoString("tc = TestClass()", &errmsg);
+    if (!ok) {
+        cerr << "error: " << errmsg << endl;
+        exit(-1);
+    }
 
     lclass.SetConstructor<const char*, int>();
-    l.DoString("tc = TestClass('ouonline', 5)");
+    ok = l.DoString("tc = TestClass('ouonline', 5)", &errmsg);
+    if (!ok) {
+        cerr << "error: " << errmsg << endl;
+        exit(-1);
+    }
 }
 
 static void test_class_member_function() {
@@ -245,6 +260,7 @@ static void test_class_common_lua_member_function() {
                          &errstr);
     if (!ok) {
         cerr << "error: " << errstr << endl;
+        exit(-1);
     }
 }
 
@@ -286,6 +302,7 @@ static void test_dostring() {
 
     if (!l.DoString("return 'ouonline', 5", &errstr, &helper)) {
         cerr << "DoString() failed: " << errstr << endl;
+        exit(-1);
     }
 }
 
@@ -295,6 +312,7 @@ static void test_misc() {
     string errstr;
     if (!l.DoFile(__FILE__, &errstr)) {
         cerr << "loading " << __FILE__ << " failed: " << errstr << endl;
+        exit(-1);
     }
 }
 
