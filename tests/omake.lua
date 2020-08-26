@@ -1,11 +1,9 @@
-project = CreateProject()
+project = Project()
 
-dep = project:CreateDependency()
-dep:AddSourceFiles("*.cpp")
-dep:AddFlags("-Wall", "-Werror", "-Wextra")
-dep:AddStaticLibrary("..", "luacpp_static")
-
-target = project:CreateBinary("test_luacpp")
-target:AddDependencies(dep)
+project:CreateBinary("test_luacpp"):AddDependencies(
+    project:CreateDependency()
+        :AddSourceFiles("*.cpp")
+        :AddFlags({"-Wall", "-Werror", "-Wextra"})
+        :AddStaticLibraries("..", "luacpp_static"))
 
 return project

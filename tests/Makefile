@@ -28,7 +28,7 @@ test_luacpp_OBJS := omake_dep_0.test.cpp.o
 test_luacpp_LIBS := ../libluacpp_static.a ../../../../lua/src/liblua.a
 
 test_luacpp: $(test_luacpp_OBJS) | omake_phony_0
-	$(CXX) $(CXXFLAGS) -Wextra -Werror -Wall -o $@ $^ $(test_luacpp_LIBS)
+	$(CXX) $(CXXFLAGS) -Wall -Werror -Wextra -o $@ $^ $(test_luacpp_LIBS)
 
 clean:
 	rm -f $(TARGET) $(test_luacpp_OBJS)
