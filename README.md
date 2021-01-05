@@ -527,9 +527,9 @@ public:
     virtual void AfterProcess() = 0;
 };
 
-template<typename ... Argv>
+template<typename... Argv>
 bool Exec(std::string* errstr = nullptr, LuaFunctionHelper* helper = nullptr,
-          const Argv&... argv);
+          Argv&&... argv);
 ```
 
 Invokes the function with arguments `argv`. The first argument `errstr` is a string to receive a message if an error occurs. The second argument `helper`, which points to an instance of `LuaFunctionHelper`, is used to handle result(s). The rest of arguments `argv`, if any, are passed to the real function being called. Note that the first argument `i` of `LuaFunctionHelper::Process()` counts from 0.
@@ -541,14 +541,14 @@ Invokes the function with arguments `argv`. The first argument `errstr` is a str
 `LuaClass`(inherits from `LuaRefObject`) is used to export C++ classes and member functions to Lua. It does not support exporting member variables.
 
 ```c++
-template<typename ... FuncArgType>
+template<typename... FuncArgType>
 LuaClass<T>& SetConstructor();
 ```
 
 Sets the class's constructor with argument type `FuncArgType` and return a reference of the class itself.
 
 ```c++
-template<typename FuncRetType, typename ... FuncArgType>
+template<typename FuncRetType, typename... FuncArgType>
 LuaClass<T>& Set(const char* funcname,
                  FuncRetType (T::*func)(FuncArgType...));
 ```
@@ -556,7 +556,7 @@ LuaClass<T>& Set(const char* funcname,
 Exports member function `func` to be a member function of this class, with function name `funcname`.
 
 ```c++
-template<typename FuncRetType, typename ... FuncArgType>
+template<typename FuncRetType, typename... FuncArgType>
 LuaClass<T>& Set(const char* funcname,
                  FuncRetType (T::*func)(FuncArgType...) const);
 ```
@@ -564,7 +564,7 @@ LuaClass<T>& Set(const char* funcname,
 Exports member function `func`(with `const` qualifier) to be a member function of this class with function name `funcname`.
 
 ```c++
-template<typename FuncRetType, typename ... FuncArgType>
+template<typename FuncRetType, typename... FuncArgType>
 LuaClass<T>& Set(const char* funcname,
                  FuncRetType (*func)(FuncArgType...));
 ```
@@ -668,7 +668,7 @@ LuaTable CreateTable(const char* name = nullptr);
 Creates a new table with table name `name`(if not NULL).
 
 ```c++
-template<typename FuncRetType, typename ... FuncArgType>
+template<typename FuncRetType, typename... FuncArgType>
 LuaFunction CreateFunction(FuncRetType (*)(FuncArgType...),
                            const char* name = nullptr);
 ```
@@ -676,7 +676,7 @@ LuaFunction CreateFunction(FuncRetType (*)(FuncArgType...),
 Creates a new function with function name `name`(if not NULL).
 
 ```c++
-template<typename FuncRetType, typename ... FuncArgType>
+template<typename FuncRetType, typename... FuncArgType>
 LuaFunction CreateFunction(const std::function<FuncRetType (FuncArgType...)>&,
                            const char* name = nullptr);
 ```
@@ -691,9 +691,9 @@ LuaClass<T> RegisterClass(const char* name = nullptr);
 Exports a new type `T` with the name `name`. If `T` is already exported, the class is returned.
 
 ```c++
-template<typename T, typename ... Argv>
+template<typename T, typename... Argv>
 LuaUserData CreateUserData(const char* name = nullptr,
-                           const Argv&... argv);
+                           Argv&&... argv);
 ```
 
 Creates a `LuaUserData` of type `T` with the name `name`(if not NULL). Arguments `argv` are passed to the constructor of `T` to create an instance. If `T` is not exported, it throws a `std::runtime_error` exception.

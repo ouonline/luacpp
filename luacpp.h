@@ -137,13 +137,13 @@ public:
     LuaFunction(const LuaFunction& lfunc)
         : LuaRefObject(lfunc) {}
 
-    template <typename ... Argv>
+    template <typename... Argv>
     bool Exec(std::string* errstr = nullptr, LuaFunctionHelper* helper = nullptr,
-              const Argv&... argv) {
+              Argv&&... argv) {
         PushSelf();
 
         int argc = 0;
-        if (!PushArg(&argc, errstr, std::forward<const Argv&>(argv)...)) {
+        if (!PushArg(&argc, errstr, std::forward<Argv>(argv)...)) {
             lua_pop(m_l.get(), argc + 1 /* self */);
             return false;
         }
@@ -169,10 +169,10 @@ private:
 
     bool PushArg(int*, std::string*) { return true; }
 
-    template <typename First, typename ... Rest>
-    bool PushArg(int* argc, std::string* errstr,
-                 const First& first, const Rest&... rest) {
-        if (!PushArg(first)) {
+    template <typename First, typename... Rest>
+    bool PushArg(int* argc, std::string* errstr, First&& first,
+                 Rest&&... rest) {
+        if (!PushArg(std::forward<First>(first))) {
             if (errstr) {
                 *errstr = "argv are not in the same LuaState";
             }
@@ -180,7 +180,7 @@ private:
         }
 
         ++(*argc);
-        return PushArg(argc, errstr, std::forward<const Rest&>(rest)...);
+        return PushArg(argc, errstr, std::forward<Rest>(rest)...);
     }
 
     bool Invoke(int argc, std::string* errstr, LuaFunctionHelper* helper);
@@ -193,20 +193,20 @@ private:
 template <uint32_t N>
 class FunctionCaller {
 public:
-    template <typename FuncType, typename ... Argv>
+    template <typename FuncType, typename... Argv>
     static int Exec(FuncType f, lua_State* l, int argoffset,
-                    const Argv&... argv) {
+                    Argv&&... argv) {
         return FunctionCaller<N - 1>::Exec(f, l, argoffset,
                                            FuncArg(l, N + argoffset),
-                                           argv...);
+                                           std::forward<Argv>(argv)...);
     }
 
-    template <typename T, typename FuncType, typename ... Argv>
+    template <typename T, typename FuncType, typename... Argv>
     static int Exec(T* obj, FuncType f, lua_State* l, int argoffset,
-                    const Argv&... argv) {
+                    Argv&&... argv) {
         return FunctionCaller<N - 1>::Exec(obj, f, l, argoffset,
                                            FuncArg(l, N + argoffset),
-                                           argv...);
+                                           std::forward<Argv>(argv)...);
     }
 
 private:
@@ -233,59 +233,59 @@ private:
 template <>
 class FunctionCaller<0> {
 public:
-    template <typename FuncRetType, typename ... FuncArgType, typename ... Argv>
+    template <typename FuncRetType, typename... FuncArgType, typename... Argv>
     static int Exec(FuncRetType (*f)(FuncArgType...), lua_State* l, int,
-                    const Argv&... argv) {
-        PushRes(l, f(argv...));
+                    Argv&&... argv) {
+        PushRes(l, f(std::forward<Argv>(argv)...));
         return 1;
     }
 
-    template <typename ... FuncArgType, typename ... Argv>
+    template <typename... FuncArgType, typename... Argv>
     static int Exec(void (*f)(FuncArgType...), lua_State*, int,
-                    const Argv&... argv) {
-        f(argv...);
+                    Argv&&... argv) {
+        f(std::forward<Argv>(argv)...);
         return 0;
     }
 
-    template <typename FuncRetType, typename ... FuncArgType, typename ... Argv>
+    template <typename FuncRetType, typename... FuncArgType, typename... Argv>
     static int Exec(const std::function<FuncRetType (FuncArgType...)>& f,
-                    lua_State* l, int, const Argv&... argv) {
-        PushRes(l, f(argv...));
+                    lua_State* l, int, Argv&&... argv) {
+        PushRes(l, f(std::forward<Argv>(argv)...));
         return 1;
     }
 
-    template <typename ... FuncArgType, typename ... Argv>
+    template <typename... FuncArgType, typename... Argv>
     static int Exec(const std::function<void (FuncArgType...)>& f,
-                    lua_State*, int, const Argv&... argv) {
-        f(argv...);
+                    lua_State*, int, Argv&&... argv) {
+        f(std::forward<Argv>(argv)...);
         return 0;
     }
 
-    template <typename T, typename FuncRetType, typename ... FuncArgType, typename ... Argv>
+    template <typename T, typename FuncRetType, typename... FuncArgType, typename... Argv>
     static int Exec(T* obj, FuncRetType (T::*f)(FuncArgType...), lua_State* l, int,
-                    const Argv&... argv) {
-        PushRes(l, (obj->*f)(argv...));
+                    Argv&&... argv) {
+        PushRes(l, (obj->*f)(std::forward<Argv>(argv)...));
         return 1;
     }
 
-    template <typename T, typename ... FuncArgType, typename ... Argv>
+    template <typename T, typename... FuncArgType, typename... Argv>
     static int Exec(T* obj, void (T::*f)(FuncArgType...), lua_State*, int,
-                    const Argv&... argv) {
-        (obj->*f)(argv...);
+                    Argv&&... argv) {
+        (obj->*f)(std::forward<Argv>(argv)...);
         return 0;
     }
 
-    template <typename T, typename FuncRetType, typename ... FuncArgType, typename ... Argv>
+    template <typename T, typename FuncRetType, typename... FuncArgType, typename... Argv>
     static int Exec(T* obj, FuncRetType (T::*f)(FuncArgType...) const, lua_State* l, int,
-                    const Argv&... argv) {
-        PushRes(l, (obj->*f)(argv...));
+                    Argv&&... argv) {
+        PushRes(l, (obj->*f)(std::forward<Argv>(argv)...));
         return 1;
     }
 
-    template <typename T, typename ... FuncArgType, typename ... Argv>
+    template <typename T, typename... FuncArgType, typename... Argv>
     static int Exec(T* obj, void (T::*f)(FuncArgType...) const, lua_State*, int,
-                    const Argv&... argv) {
-        (obj->*f)(argv...);
+                    Argv&&... argv) {
+        (obj->*f)(std::forward<Argv>(argv)...);
         return 0;
     }
 
@@ -304,7 +304,7 @@ private:
     }
 };
 
-template <typename FuncRetType, typename ... FuncArgType>
+template <typename FuncRetType, typename... FuncArgType>
 static int GenericFunction(lua_State* l) {
     typedef FuncRetType (*func_t)(FuncArgType...);
 
@@ -313,7 +313,7 @@ static int GenericFunction(lua_State* l) {
     return FunctionCaller<sizeof...(FuncArgType)>::Exec(func, l, argoffset);
 }
 
-template <typename FuncRetType, typename ... FuncArgType>
+template <typename FuncRetType, typename... FuncArgType>
 static int GenericSTLFunction(lua_State* l) {
     int argoffset = lua_tonumber(l, lua_upvalueindex(1));
     auto func = (std::function<FuncRetType (FuncArgType...)>*)
@@ -332,7 +332,7 @@ public:
         return *this;
     }
 
-    template <typename ... FuncArgType>
+    template <typename... FuncArgType>
     LuaClass<T>& SetConstructor() {
         PushSelf();
 
@@ -347,7 +347,7 @@ public:
     }
 
     // register common member function
-    template <typename FuncRetType, typename ... FuncArgType>
+    template <typename FuncRetType, typename... FuncArgType>
     LuaClass<T>& Set(const char* name, FuncRetType (T::*f)(FuncArgType...)) {
         typedef MemberFuncWrapper<FuncRetType, FuncArgType...> wrapper_t;
 
@@ -364,7 +364,7 @@ public:
     }
 
     // register member function with const qualifier
-    template <typename FuncRetType, typename ... FuncArgType>
+    template <typename FuncRetType, typename... FuncArgType>
     LuaClass<T>& Set(const char* name, FuncRetType (T::*f)(FuncArgType...) const) {
         typedef MemberFuncWrapper<FuncRetType, FuncArgType...> wrapper_t;
 
@@ -381,7 +381,7 @@ public:
     }
 
     // register static member function
-    template <typename FuncRetType, typename ... FuncArgType>
+    template <typename FuncRetType, typename... FuncArgType>
     LuaClass<T>& Set(const char* name, FuncRetType (*func)(FuncArgType...)) {
         lua_pushinteger(m_l.get(), 1); // argument offset, skip `self` in argv[0]
         lua_pushlightuserdata(m_l.get(), (void*)func);
@@ -415,7 +415,7 @@ private:
     const std::string m_metatable_name;
 
 private:
-    template <typename FuncRetType, typename ... FuncArgType>
+    template <typename FuncRetType, typename... FuncArgType>
     union MemberFuncWrapper {
         FuncRetType (T::*f)(FuncArgType...);
         FuncRetType (T::*fc)(FuncArgType...) const;
@@ -424,9 +424,9 @@ private:
     LuaClass(const std::shared_ptr<lua_State>& l, int index)
         : LuaRefObject(l, index), m_metatable_name(METATABLENAME(T)) {}
 
-    template <typename ... FuncArgType>
-    static T* ConstructorFunc(FuncArgType... argv) {
-        return new T(argv...);
+    template <typename... FuncArgType>
+    static T* ConstructorFunc(FuncArgType&&... argv) {
+        return new T(std::forward<FuncArgType>(argv)...);
     }
 
     static int DestructorFunc(lua_State* l) {
@@ -435,7 +435,7 @@ private:
         return 0;
     }
 
-    template <typename FuncRetType, typename ... FuncArgType>
+    template <typename FuncRetType, typename... FuncArgType>
     static int MemberFunc(lua_State* l) {
         T** ud = (T**)lua_touserdata(l, 1);
         auto wrapper = (MemberFuncWrapper<FuncRetType, FuncArgType...>*)
@@ -443,7 +443,7 @@ private:
         return FunctionCaller<sizeof...(FuncArgType)>::Exec(*ud, wrapper->f, l, 1);
     }
 
-    template <typename FuncRetType, typename ... FuncArgType>
+    template <typename FuncRetType, typename... FuncArgType>
     static int ConstMemberFunc(lua_State* l) {
         T** ud = (T**)lua_touserdata(l, 1);
         auto wrapper = (MemberFuncWrapper<FuncRetType, FuncArgType...>*)
@@ -509,7 +509,7 @@ public:
 
     LuaTable CreateTable(const char* name = nullptr);
 
-    template <typename FuncRetType, typename ... FuncArgType>
+    template <typename FuncRetType, typename... FuncArgType>
     LuaFunction CreateFunction(FuncRetType (*func)(FuncArgType...),
                                const char* name = nullptr) {
         lua_pushinteger(m_l.get(), 0); // argument offset
@@ -527,7 +527,7 @@ public:
         return lfunc;
     }
 
-    template <typename FuncRetType, typename ... FuncArgType>
+    template <typename FuncRetType, typename... FuncArgType>
     LuaFunction CreateFunction(const std::function<FuncRetType (FuncArgType...)>& func,
                                const char* name = nullptr) {
         typedef std::function<FuncRetType (FuncArgType...)> func_t;
@@ -557,9 +557,8 @@ public:
         return lfunc;
     }
 
-    template <typename T, typename ... Argv>
-    LuaUserData CreateUserData(const char* name = nullptr,
-                               const Argv&... argv) {
+    template <typename T, typename... Argv>
+    LuaUserData CreateUserData(const char* name = nullptr, Argv&&... argv) {
         static const std::string metatable(METATABLENAME(T));
 
         luaL_getmetatable(m_l.get(), metatable.c_str());
@@ -570,7 +569,7 @@ public:
         }
 
         T** ud = (T**)lua_newuserdata(m_l.get(), sizeof(T*));
-        *ud = new T(argv...);
+        *ud = new T(std::forward<Argv>(argv)...);
 
         lua_pushvalue(m_l.get(), -2); // the metatable
         lua_setmetatable(m_l.get(), -2);
@@ -647,7 +646,7 @@ private:
     std::shared_ptr<lua_State> m_l;
 
 private:
-    template <typename FuncRetType, typename ... FuncArgType>
+    template <typename FuncRetType, typename... FuncArgType>
     static int GenericDestructor(lua_State* l) {
         typedef std::function<FuncRetType (FuncArgType...)> func_t;
         auto ud = (func_t*)lua_touserdata(l, -1);
