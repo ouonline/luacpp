@@ -21,9 +21,23 @@
 
 # Overview
 
-`lua-cpp` is a C++ library aiming at simplifying the use of Lua API. It is compatible with Lua 5.2.3(or above) and needs C++11 support.
+`lua-cpp` is a C++ library aiming at simplifying the use of Lua API. It is compatible with Lua 5.2.3(or above) and needs C++14 support.
 
-To use `lua-cpp`, all you need to do is to include the header file `luacpp.hpp` and import classes and functions in the namespace `luacpp`.
+[[back to top](#table-of-contents)]
+
+-----
+
+# Building from Source
+
+Prerequisites
+
+* GCC >= 4.9 with c++14 support
+* CMake >= 3.10
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -DLUA_INCLUDE_DIRS=/path/to/lua/include/dir -DLUA_LIBRARIES=/path/to/lua/libs ..
+make -j
+```
 
 [[back to top](#table-of-contents)]
 
@@ -50,7 +64,8 @@ int main(void) {
     l.Set("msg", "Hello, luacpp from ouonline!");
     auto lobj = l.Get("msg");
     if (lobj.GetType() == LUA_TSTRING) {
-        cout << "get msg -> " << lobj.ToString() << endl;
+        auto str_ref = lobj.ToString();
+        cout << "get msg -> " << string(str_ref.base, str_ref.size) << endl;
     } else {
         cerr << "unknown object type -> " << lobj.GetTypeStr() << endl;
     }
@@ -84,7 +99,8 @@ int main(void) {
         if (key.GetType() == LUA_TNUMBER) {
             cout << key.ToNumber();
         } else if (key.GetType() == LUA_TSTRING) {
-            cout << key.ToString();
+            auto str_ref = key.ToString();
+            cout << string(str_ref.base, str_ref.size);
         } else {
             cout << "unsupported key type -> " << key.GetTypeStr() << endl;
             return false;
@@ -93,7 +109,8 @@ int main(void) {
         if (value.GetType() == LUA_TNUMBER) {
             cout << " -> " << value.ToNumber() << endl;
         } else if (value.GetType() == LUA_TSTRING) {
-            cout << " -> " << value.ToString() << endl;
+            auto str_ref = value.ToString();
+            cout << " -> " << string(str_ref.base, str_ref.size) << endl;
         } else {
             cout << " -> unsupported iter value type: " << value.GetTypeStr() << endl;
         }
@@ -133,24 +150,12 @@ using namespace std;
 #include "luacpp.hpp"
 using namespace luacpp;
 
-class GenericFunctionHelper final : public LuaFunctionHelper {
-public:
-    GenericFunctionHelper(const std::function<bool (int, const LuaObject&)>& f)
-        : m_func(f) {}
-    bool BeforeProcess(int) override { return true; }
-    bool Process(int i, const LuaObject& lobj) override {
-        return m_func(i, lobj);
-    }
-    void AfterProcess() {}
-private:
-    std::function<bool (int, const LuaObject&)> m_func;
-};
-
 int main(void) {
     LuaState l;
 
     auto resiter1 = [] (int, const LuaObject& lobj) -> bool {
-        cout << "output from resiter1: " << lobj.ToString() << endl;
+        auto str_ref = lobj.ToString();
+        cout << "output from resiter1: " << string(str_ref.base, str_ref.size) << endl;
         return true;
     };
     auto resiter2 = [] (int n, const LuaObject& lobj) -> bool {
@@ -158,28 +163,28 @@ int main(void) {
         if (n == 0) {
             cout << lobj.ToNumber() << endl;
         } else if (n == 1) {
-            cout << lobj.ToString() << endl;
+            auto str_ref = lobj.ToString();
+            cout << string(str_ref.base, str_ref.size) << endl;
         }
 
         return true;
     };
 
-    GenericFunctionHelper helper1(resiter1), helper2(resiter2);
-
     std::function<int (const char*)> Echo = [] (const char* msg) -> int {
-        cout << msg;
+        cout << "in std::function Echo(str): '" << msg << "'" << endl;
         return 5;
     };
-    auto lfunc = l.CreateFunction(Echo, "Echo");
+    l.Set("Echo", Echo);
+    auto lfunc = l.Get("Echo").ToFunction();
 
     l.Set("msg", "calling cpp function with return value from cpp: ");
-    lfunc.Exec(nullptr, &helper1, l.Get("msg"));
+    lfunc.Exec(resiter1, nullptr, l.Get("msg"));
 
     l.DoString("res = Echo('calling cpp function with return value from lua: ');"
                "io.write('return value -> ', res, '\\n')");
 
     l.DoString("function return2(a, b) return a, b end");
-    l.Get("return2").ToFunctiong().Exec(nullptr, &helper2, 5, "ouonline");
+    l.Get("return2").ToFunction().Exec(resiter2, nullptr, 5, "ouonline");
 
     return 0;
 }
@@ -191,39 +196,41 @@ First we define a C++ function `echo` and set its name to be `echo` in the Lua e
 
 ## Exporting and Using User-defined Types
 
-First we define a class `TestClass` for test:
+First we define a class `ClassDemo` for test:
 
 ```c++
-class TestClass final {
+class ClassDemo final {
 public:
-    TestClass() {
-        cout << "TestClass::TestClass() is called without value." << endl;
+    ClassDemo() {
+        cout << "ClassDemo::ClassDemo() is called without value." << endl;
     }
-    TestClass(const char* msg, int x) {
+    ClassDemo(const char* msg, int x) {
+        cout << "ClassDemo::ClassDemo() is called with string -> '"
+             << m_msg << "' and int -> " << x << "." << endl;
+
         if (msg) {
             m_msg = msg;
         }
-
-        cout << "TestClass::TestClass() is called with string -> '"
-             << m_msg << "' and value -> " << x << "." << endl;
     }
-    ~TestClass() {
-        cout << "TestClass::~TestClass() is called." << endl;
+    ~ClassDemo() {
+        cout << "ClassDemo::~ClassDemo() is called." << endl;
     }
 
-    void Set(const char* msg) { m_msg = msg; }
-
+    void Set(const char* msg) {
+        cout << "ClassDemo()::Set(msg): '" << msg << "'" << endl;
+        m_msg = msg;
+    }
     void Print() const {
-        cout << "TestClass::print(): " << m_msg << endl;
+        cout << "ClassDemo::Print(msg): '" << m_msg << "'" << endl;
     }
     void Echo(const char* msg) const {
-        cout << "TestClass::echo(string): " << msg << endl;
+        cout << "ClassDemo::Echo(string): '" << msg << "'" << endl;
     }
     void Echo(int v) const {
-        cout << "TestClass::echo(int): " << v << endl;
+        cout << "ClassDemo::Echo(int): " << v << endl;
     }
     static void StaticEcho(const char* msg) {
-        cout << "TestClass::s_echo(string): " << msg << endl;
+        cout << "ClassDemo::StaticEcho(string): '" << msg << "'" << endl;
     }
 
 private:
@@ -243,27 +250,27 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    // NOTE: export only once
-    auto lclass = l.RegisterClass<TestClass>("TestClass").SetConstructor();
+    auto lclass = l.RegisterClass<ClassDemo>("ClassDemo");
 
     cout << "--------------------------------------------" << endl;
-    l.DoString("tc = TestClass()");
+    lclass.SetConstructor();
+    l.DoString("tc = ClassDemo()");
 
     cout << "--------------------------------------------" << endl;
     lclass.SetConstructor<const char*, int>();
-    l.DoString("tc = TestClass('ouonline', 5)");
+    l.DoString("tc = ClassDemo('ouonline', 5)");
 
     cout << "--------------------------------------------" << endl;
-    lclass.Set("print", &TestClass::print)
-        .Set<void, const char*>("echo_str", &TestClass::Echo) // overloaded function
-        .Set<void, int>("echo_int", &TestClass::Echo);
-    l.DoString("tc = TestClass('ouonline', 5); tc:print();"
+    lclass.SetMemberFunction("print", &ClassDemo::Print)
+        .SetMemberFunction<void, const char*>("echo_str", &ClassDemo::Echo) // overloaded function
+        .SetMemberFunction<void, int>("echo_int", &ClassDemo::Echo);
+    l.DoString("tc = ClassDemo('ouonline', 5); tc:print();"
                "tc:echo_str('calling class member function from lua')");
 
     cout << "--------------------------------------------" << endl;
-    lclass.Set("s_echo", &TestClass::StaticEcho);
-    l.DoString("TestClass:s_echo('static member function is called without being instantiated');"
-               "tc = TestClass(); tc:s_echo('static member function is called by an instance')");
+    lclass.SetStaticFunction("s_echo", &ClassDemo::StaticEcho);
+    l.DoString("ClassDemo:s_echo('static member function is called without being instantiated');"
+               "tc = ClassDemo(); tc:s_echo('static member function is called by an instance')");
 
     cout << "--------------------------------------------" << endl;
 
@@ -271,11 +278,11 @@ int main(void) {
 }
 ```
 
-`LuaState::RegisterClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. If the class is already exported, `LuaState::RegisterClass()` throws a `std::runtime_error` exception.
+`LuaState::RegisterClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. You can register different names with the same c++ class.
 
-`LuaClass::Set()` is a template function used to export member functions for this class.
+`LuaClass::SetMemberFunction()` is a template function used to export member functions for this class. `LuaClass::SetStaticFunction()` is used to export static member functions. Both member functions and staic member functions can be C-style functions and `std::function`s.
 
-Class member functions should be called with colon operator, in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
+Class member functions should be called with colon operator in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
 
 The following program displays how to use `LuaUserData` to exchange data between C++ and Lua.
 
@@ -289,17 +296,17 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.RegisterClass<TestClass>("TestClass")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .SetConstructor<const char*, int>()
-        .Set("print", &TestClass::Print);
-    l.CreateUserData<TestClass>("tc", "ouonline", 5).Get<TestClass>()->Set("in lua: print test data from cpp");
+        .SetMemberFunction("print", &ClassDemo::Print);
+    l.CreateUserData("ClassDemo", "tc", "ouonline", 5).Get<ClassDemo>()->Set("in lua: Print test data from cpp");
     l.DoString("tc:print()");
 
     return 0;
 }
 ```
 
-We create a `LuaUserData` object of type `TestClass` by calling `LuaClass::CreateUserData()` and set its name to be `tc` in the Lua environment. Then we set its content to be a string, which is printed by calling `LuaState::DoString()`.
+We create a `LuaUserData` object of type `ClassDemo` by calling `LuaClass::CreateUserData()` and set its name to be `tc` in the Lua environment. Then we set its content to be a string, which is printed by calling `LuaState::DoString()`.
 
 The following example is similar to the previous one, except that we modify the object's content in the Lua environment but print it in C++.
 
@@ -313,11 +320,11 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.RegisterClass<TestClass>("TestClass")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .SetConstructor<const char*, int>()
-        .Set("set", &TestClass::Set);
-    l.DoString("tc = TestClass('ouonline', 5); tc:set('in cpp: print test data from lua')");
-    l.Get("tc").ToUserData().object<TestClass>()->Print();
+        .SetMemberFunction("set", &ClassDemo::Set);
+    l.DoString("tc = ClassDemo('ouonline', 3); tc:set('in cpp: Print test data from lua')");
+    l.Get("tc").ToUserData().Get<ClassDemo>()->Print();
 
     return 0;
 }
@@ -336,6 +343,12 @@ This section describes all classes and functions provided by `lua-cpp`.
 `LuaRefObject` is an internal base class for various Lua types.
 
 ```c++
+LuaRefObject(const std::shared_ptr<lua_State>& l, int index);
+```
+
+Creates a `LuaRefObject` with the object located in `index` of the lua_State `l`.
+
+```c++
 int GetType() const;
 ```
 
@@ -347,11 +360,23 @@ const char* GetTypeStr() const;
 
 Returns the name of the object's type.
 
+```c++
+void PushSelf() const;
+```
+
+Pushes self to the top of the stack. This function is usually used by internal functions.
+
 [[back to top](#table-of-contents)]
 
 ## LuaObject
 
 `LuaObject`(inherits from `LuaRefObject`) represents an arbitrary item of Lua. You are expected to check the return value of `GetType()` before any of the following functions is called.
+
+```c++
+LuaObject(const std::shared_ptr<lua_State>& l, int index) : LuaRefObject(l, index) {}
+```
+
+Creates a `LuaObject` with the object located in `index` of the lua_State `l`.
 
 ```c++
 bool IsNil() const;
@@ -414,16 +439,23 @@ bool ToBool() const;
 Converts this object to a `bool` value.
 
 ```c++
-std::string ToString() const;
+LuaStringRef ToString() const;
 ```
 
-Converts this object to a `std::string` object.
+Converts this object to a `LuaStringRef` object, which only contains address and size of the string.
+
+```c++
+template <typename T>
+T ToInteger() const;
+```
+
+Converts this object to an integer.
 
 ```c++
 lua_Number ToNumber() const;
 ```
 
-Converts this object to a number.
+Converts this object to a (floating point) number.
 
 ```c++
 LuaTable ToTable() const;
@@ -450,6 +482,12 @@ Converts this object to a `LuaUserData` object.
 `LuaTable`(inherits from `LuaRefObject`) represents the table type of Lua.
 
 ```c++
+LuaTable(const std::shared_ptr<lua_State>& l, int index);
+```
+
+Creates a `LuaTable` with the table located in `index` of the lua_State `l`.
+
+```c++
 LuaObject Get(int index) const;
 LuaObject Get(const char* name) const;
 ```
@@ -457,53 +495,32 @@ LuaObject Get(const char* name) const;
 Gets an object by its `index` or `name` in this table.
 
 ```c++
-bool Set(int index, const char* str);
-bool Set(const char* name, const char* str);
+void Set(int index, const char* str);
+void Set(const char* name, const char* str);
 ```
 
 Sets the value at `index` or `name` to be the string `str`.
 
 ```c++
-bool Set(int index, const char* str, size_t len);
-bool Set(const char* name, const char* str, size_t len)
+void Set(int index, const char* str, size_t len);
+void Set(const char* name, const char* str, size_t len)
 ```
 
 Sets the value at `index` or `name` to be the string `str` with length `len`.
 
 ```c++
-bool Set(int index, lua_Number n);
-bool Set(const char* name, lua_Number n);
+void Set(int index, lua_Number n);
+void Set(const char* name, lua_Number n);
 ```
 
 Sets the value at `index` or `name` to be the number `n`.
 
 ```c++
-bool Set(int index, const LuaObject& lobj);
-bool Set(const char* name, const LuaObject& lobj)
+void Set(int index, const LuaRefObject& lobj);
+void Set(const char* name, const LuaRefObject& lobj)
 ```
 
 Sets the value at `index` or `name` to be the object `lobj`. Note that `lobj` and this table **MUST** be created by the same LuaState.
-
-```c++
-bool Set(int index, const LuaTable& ltable);
-bool Set(const char* name, const LuaTable& ltable);
-```
-
-Sets the value at `index` or `name` to be the table `ltable`. Note that `ltable` and the host table **MUST** be created by the same LuaState.
-
-```c++
-bool Set(int index, const LuaFunction& lfunc);
-bool Set(const char* name, const LuaFunction& lfunc);
-```
-
-Sets the value at `index` or `name` to be the function `lfunc`. Note that `lfunc` and the host table **MUST** be created by the same LuaState.
-
-```c++
-bool Set(int index, const LuaUserData& lud);
-bool Set(const char* name, const LuaUserData& lud);
-```
-
-Sets the value at `index` or `name` to be a userdata `lud`. Note that `lud` and the host table **MUST** be created by the same LuaState.
 
 ```c++
 bool ForEach(const std::function<bool (const LuaObject& key,
@@ -519,26 +536,30 @@ Itarates the table with the callback function `func`.
 `LuaFunction`(inherits from `LuaRefObject`) represents the function type of Lua.
 
 ```c++
-class LuaFunctionHelper {
-public:
-    virtual ~LuaFunctionHelper() {}
-    virtual bool BeforeProcess(int nresults) = 0;
-    virtual bool Process(int i, const LuaObject&) = 0;
-    virtual void AfterProcess() = 0;
-};
-
-template<typename... Argv>
-bool Exec(std::string* errstr = nullptr, LuaFunctionHelper* helper = nullptr,
-          Argv&&... argv);
+LuaFunction(const std::shared_ptr<lua_State>& l, size_t index);
 ```
 
-Invokes the function with arguments `argv`. The first argument `errstr` is a string to receive a message if an error occurs. The second argument `helper`, which points to an instance of `LuaFunctionHelper`, is used to handle result(s). The rest of arguments `argv`, if any, are passed to the real function being called. Note that the first argument `i` of `LuaFunctionHelper::Process()` counts from 0.
+Creates a `LuaFunction` with the table located in `index` of the lua_State `l`.
+
+```c++
+template <typename... Argv>
+bool Exec(const std::function<bool (int i, const LuaObject&)>& callback = nullptr,
+          std::string* errstr = nullptr, Argv&&... argv);
+```
+
+Invokes the function with arguments `argv`. `callback` is a callback function used to handle result(s). Note that the first argument `i` of `callback` counts from 0. `errstr` is a string to receive a message if an error occurs. The rest of arguments `argv`, if any, are passed to the real function being called.
 
 [[back to top](#table-of-contents)]
 
 ## LuaClass
 
 `LuaClass`(inherits from `LuaRefObject`) is used to export C++ classes and member functions to Lua. It does not support exporting member variables.
+
+```c++
+LuaClass(const std::shared_ptr<lua_State>& lp, int index, int gc_table_ref);
+```
+
+Creates a `LuaClass` with the table located in `index` of the lua_State `l`. `gc_table_ref` is a reference created by `luaL_ref` and points to a metatable which is used to destroy `DestructorObject`.
 
 ```c++
 template<typename... FuncArgType>
@@ -548,40 +569,58 @@ LuaClass<T>& SetConstructor();
 Sets the class's constructor with argument type `FuncArgType` and return a reference of the class itself.
 
 ```c++
-template<typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& Set(const char* funcname,
-                 FuncRetType (T::*func)(FuncArgType...));
+/** member function */
+template <typename FuncRetType, typename... FuncArgType>
+LuaClass<T>& SetMemberFunction(const char* name, FuncRetType (T::*f)(FuncArgType...));
+
+/** member function with const qualifier */
+template <typename FuncRetType, typename... FuncArgType>
+LuaClass<T>& SetMemberFunction(const char* name, FuncRetType (T::*f)(FuncArgType...) const);
+
+/** std::function member function */
+template <typename FuncRetType, typename... FuncArgType>
+LuaClass<T>& SetMemberFunction(const char* name, const std::function<FuncRetType (FuncArgType...)>& f);
+
+/** c-style member function */
+template <typename FuncRetType, typename... FuncArgType>
+LuaClass<T>& SetMemberFunction(const char* name, FuncRetType (*f)(FuncArgType...));
+
+/** lua-style member function */
+LuaClass<T>& SetMemberFunction(const char* name, int (*f)(lua_State* l));
 ```
 
-Exports member function `func` to be a member function of this class, with function name `funcname`.
+Exports function `f` to be a member function of this class and `name` as the exported function name in Lua.
 
 ```c++
-template<typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& Set(const char* funcname,
-                 FuncRetType (T::*func)(FuncArgType...) const);
+/** std::function static member function */
+template <typename FuncRetType, typename... FuncArgType>
+LuaClass<T>& SetStaticFunction(const char* name, const std::function<FuncRetType (FuncArgType...)>& f);
+
+/** C-style static member function */
+template <typename FuncRetType, typename... FuncArgType>
+LuaClass<T>& SetStaticFunction(const char* name, FuncRetType (*f)(FuncArgType...));
+
+/** lambda static member function */
+template <typename FuncType>
+LuaClass<T>& SetStaticFunction(const char* name, const FuncType& f);
+
+/** lua-style static member function */
+LuaClass<T>& SetStaticFunction(const char* name, int (*f)(lua_State* l));
 ```
 
-Exports member function `func`(with `const` qualifier) to be a member function of this class with function name `funcname`.
-
-```c++
-template<typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& Set(const char* funcname,
-                 FuncRetType (*func)(FuncArgType...));
-```
-
-Exports static member function `func` to be a member function of this class with function name `funcname`.
-
-```c++
-LuaClass<T>& Set(const char* funcname, int (*func)(lua_State*));
-```
-
-Exports a lua-style function `func` to be a member function of this class with function name `funcname`.
+Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua.
 
 [[back to top](#table-of-contents)]
 
 ## LuaUserData
 
 `LuaUserData` (inherits from `LuaRefObject`) represents the userdata type in Lua.
+
+```c++
+LuaUserData(const std::shared_ptr<lua_State>& l, int index);
+```
+
+Creates a `LuaUserData` with the object located in `index` of the lua_State `l`.
 
 ```c++
 template<typename T>
@@ -613,53 +652,28 @@ LuaObject Get(const char* name) const;
 Gets an object by its name.
 
 ```c++
-bool Set(const char* name, const char* str);
+void Set(const char* name, const char* str);
 ```
 
 Sets the variable `name` to be the string `str`.
 
 ```c++
-bool Set(const char* name, const char* str, size_t len);
+void Set(const char* name, const char* str, size_t len);
 ```
 
 Sets the variable `name` to be the string `str` with length `len`.
 
 ```c++
-bool Set(const char* name, lua_Number n);
+void Set(const char* name, lua_Number n);
 ```
 
 Sets the variable `name` to be the number `n`.
 
 ```c++
-bool Set(const char* name, const LuaObject& lobj);
+void Set(const char* name, const LuaRefObject& lobj);
 ```
 
 Sets the variable `name` to be the object `lobj`. Note that `lobj` **MUST** be created by this LuaState.
-
-```c++
-bool Set(const char* name, const LuaTable& ltable);
-```
-
-Sets the variable `name` to be the table `ltable`. Note that `ltable` **MUST** be created by this LuaState.
-
-```c++
-bool Set(const char* name, const LuaFunction& lfunc);
-```
-
-Sets the variable `name` to be the function `lfunc`. Note that `lfunc` **MUST** be created by this LuaState.
-
-```c++
-bool Set(const char* name, const LuaUserData& lud);
-```
-
-Sets the variable `name` to be the userdata `lud`. Note that `lud` **MUST** be created by this LuaState.
-
-```c++
-template<typename T>
-bool Set(const char* name, const LuaClass<T>& lclass);
-```
-
-Sets the variable `name` to be the user-defined class `lclass`. Note that `lclass` **MUST** be created by this LuaState.
 
 ```c++
 LuaTable CreateTable(const char* name = nullptr);
@@ -668,49 +682,48 @@ LuaTable CreateTable(const char* name = nullptr);
 Creates a new table with table name `name`(if not NULL).
 
 ```c++
-template<typename FuncRetType, typename... FuncArgType>
-LuaFunction CreateFunction(FuncRetType (*)(FuncArgType...),
-                           const char* name = nullptr);
+/** c-style function */
+template <typename FuncRetType, typename... FuncArgType>
+void CreateFunction(const char* name, FuncRetType (*f)(FuncArgType...));
+
+/** std::function */
+template <typename FuncRetType, typename... FuncArgType>
+void CreateFunction(const char* name, const std::function<FuncRetType (FuncArgType...)>& f);
+
+/** lambda function */
+template <typename FuncType>
+void CreateFunction(const char* name, const FuncType& f);
 ```
 
-Creates a new function with function name `name`(if not NULL).
-
-```c++
-template<typename FuncRetType, typename... FuncArgType>
-LuaFunction CreateFunction(const std::function<FuncRetType (FuncArgType...)>&,
-                           const char* name = nullptr);
-```
-
-Creates a new function with function name `name`(if not NULL).
+Creates a function object from `f` with `name`.
 
 ```c++
 template<typename T>
-LuaClass<T> RegisterClass(const char* name = nullptr);
+LuaClass<T> RegisterClass(const char* name);
 ```
 
-Exports a new type `T` with the name `name`. If `T` is already exported, the class is returned.
+Exports a new type `T` with the name `name`. If `name` is already exported, the class is returned.
 
 ```c++
-template<typename T, typename... Argv>
-LuaUserData CreateUserData(const char* name = nullptr,
-                           Argv&&... argv);
+template<typename... Argv>
+LuaUserData CreateUserData(const char* classname, const char* name = nullptr, Argv&&... argv);
 ```
 
-Creates a `LuaUserData` of type `T` with the name `name`(if not NULL). Arguments `argv` are passed to the constructor of `T` to create an instance. If `T` is not exported, it throws a `std::runtime_error` exception.
+Creates a `LuaUserData` of type `classname` with the name `name`. The arguments `argv` are passed to the constructor of `T` to create an instance. If `classname` is not exported, a `nil` object is returned.
 
 ```c++
 bool DoString(const char* chunk, std::string* errstr = nullptr,
-              LuaFunctionHelper* helper = nullptr);
+              const std::function<bool (int, const LuaObject&)>& callback = nullptr);
 ```
 
-Evaluates the chunk `chunk`. The rest of arguments, `errstr` and `helper`, have the same meaning as in `LuaFunction::Exec()`.
+Evaluates the chunk `chunk`. The rest of arguments, `errstr` and `callback`, have the same meaning as in `LuaFunction::Exec()`.
 
 ```c++
 bool DoFile(const char* script, std::string* errstr = nullptr,
-            LuaFunctionHelper* helper = nullptr);
+            const std::function<bool (int, const LuaObject&)>& callback = nullptr);
 ```
 
-Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and `helper`, have the same meaning as in `LuaFunction::Exec()`.
+Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and `callback`, have the same meaning as in `LuaFunction::Exec()`.
 
 [[back to top](#table-of-contents)]
 
@@ -719,8 +732,6 @@ Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and
 # FAQ
 
 * The `lua_State` object inside each `LuaState` instance is handled by `std::shared_ptr`, so all objects can be passed around freely.
-* Arguments of user-defined types of exported C++ functions must be passed by pointer.
-* Only numbers and dynamic allocated objects can be returned from exported C++ functions.
 * Class member functions should be called with colon operator, in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
 
 [[back to top](#table-of-contents)]
