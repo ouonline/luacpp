@@ -1,7 +1,11 @@
 #ifndef __LUA_CPP_LUA_REF_OBJECT_H__
 #define __LUA_CPP_LUA_REF_OBJECT_H__
 
-#include "lua.hpp"
+extern "C" {
+#include "lua.h"
+#include "lauxlib.h"
+}
+
 #include <memory>
 
 namespace luacpp {
@@ -50,9 +54,6 @@ public:
         lua_rawgeti(m_l.get(), LUA_REGISTRYINDEX, m_index);
     }
 
-protected:
-    std::shared_ptr<lua_State> m_l;
-
 private:
     void MoveFunc(LuaRefObject&& rhs) {
         m_l = std::move(rhs.m_l);
@@ -62,6 +63,9 @@ private:
         rhs.m_index = 0;
         rhs.m_type = LUA_TNIL;
     }
+
+protected:
+    std::shared_ptr<lua_State> m_l;
 
 private:
     size_t m_index;

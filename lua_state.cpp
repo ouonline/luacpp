@@ -5,6 +5,23 @@ using namespace std;
 
 namespace luacpp {
 
+LuaState::LuaState(lua_State* l, bool is_owner) {
+    if (is_owner) {
+        m_l = shared_ptr<lua_State>(l, lua_close);
+        luaL_openlibs(l);
+    } else {
+        m_l = shared_ptr<lua_State>(l, DummyDeleter<lua_State>);
+    }
+
+    SetupGcTable();
+}
+
+LuaState::~LuaState() {
+    if (m_l.get()) { // not moved
+        luaL_unref(m_l.get(), LUA_REGISTRYINDEX, m_gc_table_ref);
+    }
+}
+
 LuaObject LuaState::Get(const char* name) const {
     lua_getglobal(m_l.get(), name);
     LuaObject ret(m_l, -1);

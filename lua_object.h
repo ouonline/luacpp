@@ -22,7 +22,7 @@ public:
     bool IsNil() const {
         return GetType() == LUA_TNIL;
     }
-    bool IsBool() const {
+    bool IsBoolean() const {
         return GetType() == LUA_TBOOLEAN;
     }
     bool IsNumber() const {

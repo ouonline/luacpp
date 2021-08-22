@@ -1,13 +1,13 @@
 #ifndef __LUA_CPP_FUNC_UTILS_H__
 #define __LUA_CPP_FUNC_UTILS_H__
 
-#include "lua_ref_object.h"
-#include <string>
 #include <memory>
 #include <functional>
-#include <typeinfo>
 
 namespace luacpp {
+
+template <typename T>
+static void DummyDeleter(T*) {}
 
 /* -------------------------------------------------------------------------- */
 
@@ -58,12 +58,13 @@ public:
     }
 
     // LUA_TUSERDATA and LUA_TLIGHTUSERDATA
-    operator void* () const {
-        return lua_touserdata(m_l, m_index);
+    template <typename T>
+    operator T* () const {
+        return (T*)lua_touserdata(m_l, m_index);
     }
 
     operator LuaRefObject () const {
-        return LuaRefObject(std::shared_ptr<lua_State>(m_l, [] (lua_State*) -> void {}), m_index);
+        return LuaRefObject(std::shared_ptr<lua_State>(m_l, DummyDeleter<lua_State>), m_index);
     }
 
 private:
@@ -116,8 +117,9 @@ static inline void PushValue(lua_State* l, const char* arg) {
 }
 
 // LUA_TLIGHTUSERDATA
-static inline void PushValue(lua_State* l, void* arg) {
-    lua_pushlightuserdata(l, arg);
+template <typename T>
+static inline void PushValue(lua_State* l, T* arg) {
+    lua_pushlightuserdata(l, (void*)arg);
 }
 
 static inline void PushValue(lua_State* l, const LuaRefObject& obj) {
@@ -141,14 +143,14 @@ struct FunctionTraits final : public FunctionTraits<decltype(&FuncType::operator
 
 template <typename ClassType, typename FuncRetType, typename... FuncArgType>
 struct FunctionTraits<FuncRetType(ClassType::*)(FuncArgType...) const> {
-    using result_type = FuncRetType;
+    using ret_type = FuncRetType;
     using arg_tuple = std::tuple<FuncArgType...>;
     static constexpr auto argc = sizeof...(FuncArgType);
 };
 
 template <typename FuncType, std::size_t... Is, typename TraitsType>
 static auto LambdaToFuncImpl(const FuncType& f, const std::index_sequence<Is...>&, const TraitsType&) {
-    return std::function<typename TraitsType::result_type (std::tuple_element_t<Is, typename TraitsType::arg_tuple>...)>(f);
+    return std::function<typename TraitsType::ret_type (std::tuple_element_t<Is, typename TraitsType::arg_tuple>...)>(f);
 }
 
 template <typename FuncType>
@@ -160,8 +162,7 @@ static auto Lambda2Func(const FuncType& f) {
 /* -------------------------------------------------------------------------- */
 
 template <uint32_t N>
-class FunctionCaller final {
-public:
+struct FunctionCaller final {
     template <typename FuncType, typename... Argv>
     static int Exec(const FuncType& f, lua_State* l, int argoffset, Argv&&... argv) {
         return FunctionCaller<N - 1>::Exec(f, l, argoffset,
@@ -175,15 +176,10 @@ public:
                                            ValueConverter(l, N + argoffset),
                                            std::forward<Argv>(argv)...);
     }
-
-private:
-    lua_State* m_l;
-    int m_index;
 };
 
 template <>
-class FunctionCaller<0> final {
-public:
+struct FunctionCaller<0> final {
     template <typename FuncRetType, typename... FuncArgType, typename... Argv>
     static int Exec(FuncRetType (*f)(FuncArgType...), lua_State* l, int, Argv&&... argv) {
         PushValue(l, f(std::forward<Argv>(argv)...));
@@ -243,11 +239,10 @@ struct DestructorObject {
     virtual ~DestructorObject() {}
 };
 
-template <typename FuncType>
-struct FunctionWrapper final : public DestructorObject {
-    FunctionWrapper(int argoff, const FuncType& ff) : argoffset(argoff), func(ff) {}
-    int argoffset;
-    FuncType func;
+template <typename ValueType>
+struct ValueWrapper final : public DestructorObject {
+    ValueWrapper(const ValueType& v) : value(v) {}
+    ValueType value;
 };
 
 template <typename T>
@@ -260,43 +255,9 @@ static int GenericDestructor(lua_State* l) {
 /** FuncType may be a C-style function or a std::function or a callable object */
 template <typename FuncType, typename FuncRetType, typename... FuncArgType>
 static int GenericFunction(lua_State* l) {
-    auto wrapper = (FunctionWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(1));
-    return FunctionCaller<sizeof...(FuncArgType)>::Exec(wrapper->func, l, wrapper->argoffset);
-}
-
-template <typename FuncType, typename FuncRetType, typename... FuncArgType>
-static void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset, const FuncType& f) {
-    typedef FunctionWrapper<FuncType> WrapperType;
-
-    auto wrapper = (WrapperType*)lua_newuserdata(l, sizeof(WrapperType));
-    new (wrapper) WrapperType(argoffset, f);
-
-    // destructor
-    lua_rawgeti(l, LUA_REGISTRYINDEX, gc_table_ref);
-    lua_setmetatable(l, -2);
-
-    lua_pushcclosure(l, GenericFunction<FuncType, FuncRetType, FuncArgType...>, 1);
-}
-
-template <typename T, typename FuncType, typename FuncRetType, typename... FuncArgType>
-static int MemberFunction(lua_State* l) {
-    auto ud = (T*)lua_touserdata(l, 1);
-    auto wrapper = (FunctionWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(1));
-    return FunctionCaller<sizeof...(FuncArgType)>::Exec(ud, wrapper->func, l, wrapper->argoffset);
-}
-
-template <typename T, typename FuncType, typename FuncRetType, typename... FuncArgType>
-static void CreateMemberFunction(lua_State* l, int gc_table_ref, const FuncType& f) {
-    typedef FunctionWrapper<FuncType> WrapperType;
-
-    auto wrapper = (WrapperType*)lua_newuserdata(l, sizeof(WrapperType));
-    new (wrapper) WrapperType(1, f);
-
-    // destructor
-    lua_rawgeti(l, LUA_REGISTRYINDEX, gc_table_ref);
-    lua_setmetatable(l, -2);
-
-    lua_pushcclosure(l, MemberFunction<T, FuncType, FuncRetType, FuncArgType...>, 1);
+    auto argoffset = lua_tointeger(l, lua_upvalueindex(1));
+    auto wrapper = (ValueWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
+    return FunctionCaller<sizeof...(FuncArgType)>::Exec(wrapper->value, l, argoffset);
 }
 
 }

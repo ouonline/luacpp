@@ -14,7 +14,7 @@
     - [LuaClass](#luaclass)
     - [LuaUserData](#luauserdata)
     - [LuaState](#luastate)
-* [FAQ](#faq)
+* [Notes](#notes)
 * [License](#license)
 
 -----
@@ -31,8 +31,9 @@
 
 Prerequisites
 
+* Lua >= 5.2
 * GCC >= 4.9 with c++14 support
-* CMake >= 3.10
+* CMake >= 3.10 (optional)
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Release -DLUA_INCLUDE_DIRS=/path/to/lua/include/dir -DLUA_LIBRARIES=/path/to/lua/libs ..
@@ -49,7 +50,7 @@ This section is a brief introduction of some APIs. Examples can also be found in
 
 ## Setting and Getting Variables
 
-Let's start with a simple example, the famous `Hello, world!` program:
+Let's start with a simple example, the famous `Hello, world!`:
 
 ```c++
 #include <iostream>
@@ -95,7 +96,7 @@ int main(void) {
     LuaState l;
 
     auto iterfunc = [] (const LuaObject& key, const LuaObject& value) -> bool {
-        cout << "    "; // indention
+        cout << "    ";
         if (key.GetType() == LUA_TNUMBER) {
             cout << key.ToNumber();
         } else if (key.GetType() == LUA_TSTRING) {
@@ -170,12 +171,10 @@ int main(void) {
         return true;
     };
 
-    std::function<int (const char*)> Echo = [] (const char* msg) -> int {
+    auto lfunc = l.CreateFunction([] (const char* msg) -> int {
         cout << "in std::function Echo(str): '" << msg << "'" << endl;
         return 5;
-    };
-    l.Set("Echo", Echo);
-    auto lfunc = l.Get("Echo").ToFunction();
+    }, "Echo");
 
     l.Set("msg", "calling cpp function with return value from cpp: ");
     lfunc.Exec(resiter1, nullptr, l.Get("msg"));
@@ -206,7 +205,7 @@ public:
     }
     ClassDemo(const char* msg, int x) {
         cout << "ClassDemo::ClassDemo() is called with string -> '"
-             << m_msg << "' and int -> " << x << "." << endl;
+             << msg << "' and int -> " << x << "." << endl;
 
         if (msg) {
             m_msg = msg;
@@ -233,12 +232,17 @@ public:
         cout << "ClassDemo::StaticEcho(string): '" << msg << "'" << endl;
     }
 
+    int m_value;
+    static const int st_value;
+
 private:
     string m_msg;
 };
+
+const int ClassDemo::st_value = 5;
 ```
 
-Then we see how to export this class to the Lua environment.
+Then we see how to export this class to the Lua environment:
 
 ```c++
 #include <iostream>
@@ -250,25 +254,27 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    auto lclass = l.RegisterClass<ClassDemo>("ClassDemo");
+    auto lclass = l.CreateClass<ClassDemo>("ClassDemo");
 
     cout << "--------------------------------------------" << endl;
-    lclass.SetConstructor();
+    lclass.DefConstructor();
     l.DoString("tc = ClassDemo()");
 
     cout << "--------------------------------------------" << endl;
-    lclass.SetConstructor<const char*, int>();
+    lclass.DefConstructor<const char*, int>();
     l.DoString("tc = ClassDemo('ouonline', 5)");
 
     cout << "--------------------------------------------" << endl;
-    lclass.SetMemberFunction("print", &ClassDemo::Print)
-        .SetMemberFunction<void, const char*>("echo_str", &ClassDemo::Echo) // overloaded function
-        .SetMemberFunction<void, int>("echo_int", &ClassDemo::Echo);
+    lclass.DefMember("print", &ClassDemo::Print)
+        .DefMember<void, const char*>("echo_str", &ClassDemo::Echo) // overloaded function
+        .DefMember<void, int>("echo_int", &ClassDemo::Echo)
+        .DefMember("m_value", &ClassDemo::m_value) // default is READWRITE
+        .DefStatic("st_value", &ClassDemo::st_value, luacpp::READ);
     l.DoString("tc = ClassDemo('ouonline', 5); tc:print();"
                "tc:echo_str('calling class member function from lua')");
 
     cout << "--------------------------------------------" << endl;
-    lclass.SetStaticFunction("s_echo", &ClassDemo::StaticEcho);
+    lclass.DefStatic("s_echo", &ClassDemo::StaticEcho);
     l.DoString("ClassDemo:s_echo('static member function is called without being instantiated');"
                "tc = ClassDemo(); tc:s_echo('static member function is called by an instance')");
 
@@ -278,13 +284,13 @@ int main(void) {
 }
 ```
 
-`LuaState::RegisterClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. You can register different names with the same c++ class.
+`LuaState::CreateClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. You can register different names with the same c++ class.
 
-`LuaClass::SetMemberFunction()` is a template function used to export member functions for this class. `LuaClass::SetStaticFunction()` is used to export static member functions. Both member functions and staic member functions can be C-style functions and `std::function`s.
+`LuaClass::DefMember()` is a template function used to export member functions for this class. `LuaClass::DefStatic()` is used to export static member functions. Both member functions and staic member functions can be C-style functions or `std::function`s.
 
 Class member functions should be called with colon operator in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
 
-The following program displays how to use `LuaUserData` to exchange data between C++ and Lua.
+The following snippet displays how to use `LuaUserData` to exchange data between C++ and Lua:
 
 ```c++
 #include <iostream>
@@ -296,9 +302,9 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.RegisterClass<ClassDemo>("ClassDemo")
-        .SetConstructor<const char*, int>()
-        .SetMemberFunction("print", &ClassDemo::Print);
+    l.CreateClass<ClassDemo>("ClassDemo")
+        .DefConstructor<const char*, int>()
+        .DefMember("print", &ClassDemo::Print);
     l.CreateUserData("ClassDemo", "tc", "ouonline", 5).Get<ClassDemo>()->Set("in lua: Print test data from cpp");
     l.DoString("tc:print()");
 
@@ -320,9 +326,9 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.RegisterClass<ClassDemo>("ClassDemo")
-        .SetConstructor<const char*, int>()
-        .SetMemberFunction("set", &ClassDemo::Set);
+    l.CreateClass<ClassDemo>("ClassDemo")
+        .DefConstructor<const char*, int>()
+        .DefMember("set", &ClassDemo::Set);
     l.DoString("tc = ClassDemo('ouonline', 3); tc:set('in cpp: Print test data from lua')");
     l.Get("tc").ToUserData().Get<ClassDemo>()->Print();
 
@@ -563,7 +569,7 @@ Creates a `LuaClass` with the table located in `index` of the lua_State `l`. `gc
 
 ```c++
 template<typename... FuncArgType>
-LuaClass<T>& SetConstructor();
+LuaClass<T>& DefConstructor();
 ```
 
 Sets the class's constructor with argument type `FuncArgType` and return a reference of the class itself.
@@ -571,44 +577,64 @@ Sets the class's constructor with argument type `FuncArgType` and return a refer
 ```c++
 /** member function */
 template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& SetMemberFunction(const char* name, FuncRetType (T::*f)(FuncArgType...));
+LuaClass<T>& DefMember(const char* name, FuncRetType (T::*f)(FuncArgType...));
 
 /** member function with const qualifier */
 template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& SetMemberFunction(const char* name, FuncRetType (T::*f)(FuncArgType...) const);
+LuaClass<T>& DefMember(const char* name, FuncRetType (T::*f)(FuncArgType...) const);
 
 /** std::function member function */
 template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& SetMemberFunction(const char* name, const std::function<FuncRetType (FuncArgType...)>& f);
+LuaClass<T>& DefMember(const char* name, const std::function<FuncRetType (FuncArgType...)>& f);
+
+/** lambda member function */
+template <typename FuncType>
+LuaClass& DefMember(const char* name, const FuncType& f);
 
 /** c-style member function */
 template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& SetMemberFunction(const char* name, FuncRetType (*f)(FuncArgType...));
+LuaClass<T>& DefMember(const char* name, FuncRetType (*f)(FuncArgType...));
 
 /** lua-style member function */
-LuaClass<T>& SetMemberFunction(const char* name, int (*f)(lua_State* l));
+LuaClass<T>& DefMember(const char* name, int (*f)(lua_State* l));
 ```
 
 Exports function `f` to be a member function of this class and `name` as the exported function name in Lua.
 
 ```c++
+/** property */
+template <typename PropertyType>
+LuaClass& DefMember(const char* name, PropertyType T::* mptr, uint32_t permission = READWRITE);
+```
+
+Exports a member pointed by `mptr` as a member `name` of this class in Lua.
+
+```c++
 /** std::function static member function */
 template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& SetStaticFunction(const char* name, const std::function<FuncRetType (FuncArgType...)>& f);
+LuaClass<T>& DefStatic(const char* name, const std::function<FuncRetType (FuncArgType...)>& f);
 
 /** C-style static member function */
 template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& SetStaticFunction(const char* name, FuncRetType (*f)(FuncArgType...));
+LuaClass<T>& DefStatic(const char* name, FuncRetType (*f)(FuncArgType...));
 
 /** lambda static member function */
 template <typename FuncType>
-LuaClass<T>& SetStaticFunction(const char* name, const FuncType& f);
+LuaClass<T>& DefStatic(const char* name, const FuncType& f);
 
 /** lua-style static member function */
-LuaClass<T>& SetStaticFunction(const char* name, int (*f)(lua_State* l));
+LuaClass<T>& DefStatic(const char* name, int (*f)(lua_State* l));
 ```
 
 Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua.
+
+```c++
+/** static property */
+template <typename PropertyType>
+LuaClass& DefStatic(const char* name, PropertyType* ptr, uint32_t permission = READWRITE);
+```
+
+Exports a static member pointed by `ptr` as a member `name` of this class in Lua.
 
 [[back to top](#table-of-contents)]
 
@@ -634,7 +660,7 @@ Gets the real data of type `T`.
 ## LuaState
 
 ```c++
-LuaState();
+LuaState(lua_State* l, bool is_owner);
 ```
 
 The constructor.
@@ -684,22 +710,22 @@ Creates a new table with table name `name`(if not NULL).
 ```c++
 /** c-style function */
 template <typename FuncRetType, typename... FuncArgType>
-void CreateFunction(const char* name, FuncRetType (*f)(FuncArgType...));
+LuaFunction CreateFunction(FuncRetType (*f)(FuncArgType...), const char* name = nullptr);
 
 /** std::function */
 template <typename FuncRetType, typename... FuncArgType>
-void CreateFunction(const char* name, const std::function<FuncRetType (FuncArgType...)>& f);
+LuaFunction CreateFunction(const std::function<FuncRetType (FuncArgType...)>& f, const char* name = nullptr);
 
 /** lambda function */
 template <typename FuncType>
-void CreateFunction(const char* name, const FuncType& f);
+LuaFunction CreateFunction(const FuncType& f, const char* name = nullptr);
 ```
 
-Creates a function object from `f` with `name`.
+Creates a function object from `f` with `name`(if any).
 
 ```c++
 template<typename T>
-LuaClass<T> RegisterClass(const char* name);
+LuaClass<T> CreateClass(const char* name);
 ```
 
 Exports a new type `T` with the name `name`. If `name` is already exported, the class is returned.
@@ -729,15 +755,12 @@ Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and
 
 -----
 
-# FAQ
+# Notes
 
-* The `lua_State` object inside each `LuaState` instance is handled by `std::shared_ptr`, so all objects can be passed around freely.
-* Class member functions should be called with colon operator, in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
-
-[[back to top](#table-of-contents)]
+* Currently `luacpp` doesn't support passing and returning values by reference. Only bool/int/float/pointer/LuaRefObject are supported. You should export functions with supported types.
 
 -----
 
 # License
 
-This program is distributed under the MIT License.
+This project is distributed under the MIT License.
