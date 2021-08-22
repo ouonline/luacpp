@@ -131,7 +131,7 @@ private:
         PushSelf();
         lua_getmetatable(l, -1);
         PushMetatable();
-        CreateGenericFunction<FuncType, FuncRetType, FuncArgType...>(l, m_gc_table_ref, 0, f);
+        CreateGenericFunction<FuncType, FuncRetType, FuncArgType...>(l, m_gc_table_ref, 1, f);
 
         lua_pushvalue(l, -1);
         lua_setfield(l, -3, name);

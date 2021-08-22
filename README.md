@@ -254,7 +254,7 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    auto lclass = l.CreateClass<ClassDemo>("ClassDemo");
+    auto lclass = l.RegisterClass<ClassDemo>("ClassDemo");
 
     cout << "--------------------------------------------" << endl;
     lclass.DefConstructor();
@@ -284,7 +284,7 @@ int main(void) {
 }
 ```
 
-`LuaState::CreateClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. You can register different names with the same c++ class.
+`LuaState::RegisterClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. You can register different names with the same c++ class.
 
 `LuaClass::DefMember()` is a template function used to export member functions for this class. `LuaClass::DefStatic()` is used to export static member functions. Both member functions and staic member functions can be C-style functions or `std::function`s.
 
@@ -302,7 +302,7 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("print", &ClassDemo::Print);
     l.CreateUserData("ClassDemo", "tc", "ouonline", 5).Get<ClassDemo>()->Set("in lua: Print test data from cpp");
@@ -326,7 +326,7 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("set", &ClassDemo::Set);
     l.DoString("tc = ClassDemo('ouonline', 3); tc:set('in cpp: Print test data from lua')");
@@ -725,7 +725,7 @@ Creates a function object from `f` with `name`(if any).
 
 ```c++
 template<typename T>
-LuaClass<T> CreateClass(const char* name);
+LuaClass<T> RegisterClass(const char* name);
 ```
 
 Exports a new type `T` with the name `name`. If `name` is already exported, the class is returned.
@@ -757,6 +757,7 @@ Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and
 
 # Notes
 
+* Class member functions should be called with colon operator, in the form of `object:func(...)`, to ensure the object itself is the first argument passed to func. Otherwise you need to do it manually, like `object.func(object, ...)`.
 * Currently `luacpp` doesn't support passing and returning values by reference. Only bool/int/float/pointer/LuaRefObject are supported. You should export functions with supported types.
 
 -----

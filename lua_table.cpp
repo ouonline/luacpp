@@ -45,6 +45,14 @@ void LuaTable::Set(int index, lua_Number value) {
     lua_pop(l, 1);
 }
 
+void LuaTable::Set(int index, const LuaRefObject& lobj) {
+    auto l = m_l.get();
+    PushSelf();
+    lobj.PushSelf();
+    lua_rawseti(l, -2, index);
+    lua_pop(l, 1);
+}
+
 void LuaTable::Set(const char* name, const char* str) {
     auto l = m_l.get();
     PushSelf();
@@ -66,14 +74,6 @@ void LuaTable::Set(const char* name, lua_Number value) {
     PushSelf();
     lua_pushnumber(l, value);
     lua_setfield(l, -2, name);
-    lua_pop(l, 1);
-}
-
-void LuaTable::Set(int index, const LuaRefObject& lobj) {
-    auto l = m_l.get();
-    PushSelf();
-    lobj.PushSelf();
-    lua_rawseti(l, -2, index);
     lua_pop(l, 1);
 }
 

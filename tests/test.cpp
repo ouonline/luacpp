@@ -180,7 +180,7 @@ int ClassDemo::st_value = 12;
 static void TestClass() {
     LuaState l(luaL_newstate(), true);
 
-    auto lclass = l.CreateClass<ClassDemo>("ClassDemo");
+    auto lclass = l.RegisterClass<ClassDemo>("ClassDemo");
     lclass.DefConstructor<const char*, int>()
         .DefMember("set", &ClassDemo::Set)
         .DefMember("print", &ClassDemo::Print);
@@ -196,7 +196,7 @@ static void TestClass() {
 static void TestClassConstructor() {
     LuaState l(luaL_newstate(), true);
 
-    auto lclass = l.CreateClass<ClassDemo>("ClassDemo");
+    auto lclass = l.RegisterClass<ClassDemo>("ClassDemo");
 
     lclass.DefConstructor();
     bool ok = l.DoString("tc = ClassDemo()");
@@ -214,7 +214,7 @@ struct Point final {
 
 static void TestClassProperty() {
     LuaState l(luaL_newstate(), true);
-    auto lclass = l.CreateClass<Point>("Point");
+    auto lclass = l.RegisterClass<Point>("Point");
     lclass.DefConstructor();
 
     lclass.DefMember("x", &Point::x).DefMember("y", &Point::y);
@@ -242,7 +242,7 @@ static inline void CMemberPrint(ClassDemo*, const char* msg) {
 static void TestClassMemberFunction() {
     LuaState l(luaL_newstate(), true);
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .DefConstructor()
         .DefMember("set", &ClassDemo::Set)
         .DefMember("print", &ClassDemo::Print)
@@ -270,7 +270,7 @@ static void TestClassMemberFunction() {
 static void TestClassStaticProperty() {
     LuaState l(luaL_newstate(), true);
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .DefStatic("st_value", &ClassDemo::st_value);
 
     bool ok = l.DoString("vvv = ClassDemo.st_value");
@@ -288,7 +288,7 @@ static void TestClassStaticProperty() {
 static void TestClassPropertyReadWrite() {
     LuaState l(luaL_newstate(), true);
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .DefStatic("st_value", &ClassDemo::st_value, luacpp::WRITE);
 
     bool ok = l.DoString("vvv = ClassDemo.st_value");
@@ -300,7 +300,7 @@ static void TestClassPropertyReadWrite() {
 static void TestClassStaticMemberFunction() {
     LuaState l(luaL_newstate(), true);
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefStatic("s_echo", &ClassDemo::StaticEcho)
         .DefStatic("s_print", GenericPrint)
@@ -330,7 +330,7 @@ static int PrintAllStr(lua_State* l) {
 static void TestClassLuaMemberFunction() {
     LuaState l(luaL_newstate(), true);
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("print_all_str", &PrintAllStr);
 
@@ -341,7 +341,7 @@ static void TestClassLuaMemberFunction() {
 static void TestClassLuaStaticMemberFunction() {
     LuaState l(luaL_newstate(), true);
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefStatic("print_all_str", &PrintAllStr);
 
@@ -357,7 +357,7 @@ static void TestClassLuaStaticMemberFunction() {
 static void TestUserdata1() {
     LuaState l(luaL_newstate(), true);
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("get_object_addr", [](ClassDemo* obj) -> ClassDemo* {
             return obj;
@@ -377,7 +377,7 @@ static void TestUserdata1() {
 static void TestUserdata2() {
     LuaState l(luaL_newstate(), true);
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    l.RegisterClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("set", &ClassDemo::Set);
     l.DoString("tc = ClassDemo('ouonline', 3); tc:set('in cpp: Print test data from lua')");

@@ -115,7 +115,7 @@ public:
     }
 
     template <typename T>
-    LuaClass<T> CreateClass(const char* name = nullptr) {
+    LuaClass<T> RegisterClass(const char* name = nullptr) {
         lua_State* l = m_l.get();
         lua_newtable(l);
         LuaClass<T> ret(m_l, -1, m_gc_table_ref);
