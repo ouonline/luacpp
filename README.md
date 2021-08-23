@@ -61,7 +61,7 @@ using namespace luacpp;
 int main(void) {
     LuaState l;
 
-    l.Set("msg", "Hello, luacpp from ouonline!");
+    l.CreateObject("Hello, luacpp from ouonline!", "msg");
     auto lobj = l.Get("msg");
     if (lobj.Type() == LUA_TSTRING) {
         auto buf = lobj.ToBufferRef();
@@ -76,7 +76,7 @@ int main(void) {
 
 In this example, we set the variable `msg`'s value to be a string "Hello, luacpp from ouonline!", then use the getter function to fetch its value and print it.
 
-`LuaState::Set()`s are a series of overloaded functions, which can be used to set up various kinds of variables. Once the variable is set, its value is kept in the `LuaState` instance until it is modified again or the `LuaState` instance is destroyed.
+`LuaState::CreateObject()`s are a series of overloaded functions, which can be used to set up various kinds of variables. Once the variable is set, its value is kept in the `LuaState` instance until it is modified again or the `LuaState` instance is destroyed.
 
 `LuaState::Get()` is used to get a variable by its name. The value returned by `LuaState::Get()` is a `LuaObject` instance, which can be converted to the proper type later. You'd better check the return value of `LuaObject::Type()` before any conversions.
 
@@ -137,7 +137,7 @@ At first we use `LuaState::DoString()` to execute a chunk that creates a table n
 
 `LuaTable::ForEach()` takes a callback function that is used to iterate each key-value pair in the table. If the callback function returns `false`, `LuaTable::ForEach()` exits and returns `false`.
 
-We can use `LuaState::CreateTable()` to create a new empty table and use `LuaState::Set()` to set fields of this table. Like `LuaState::Set()`, `LuaTable::Set()`s are a series of overloaded functions used to handle various kinds of data types.
+We can use `LuaState::CreateTable()` to create a new empty table and use `LuaTable::Set()` to set fields of this table. `LuaTable::Set()`s are a series of overloaded functions used to handle various kinds of data types.
 
 [[back to top](#table-of-contents)]
 
@@ -175,7 +175,7 @@ int main(void) {
         return 5;
     }, "Echo");
 
-    l.Set("msg", "calling cpp function with return value from cpp: ");
+    l.CreateObject("calling cpp function with return value from cpp: ", "msg");
     lfunc.Exec(resiter1, nullptr, l.Get("msg"));
 
     l.DoString("res = Echo('calling cpp function with return value from lua: ');"
@@ -605,40 +605,40 @@ lua_State* GetRawPtr() const;
 Returns the `lua_State` pointer.
 
 ```c++
-LuaObject Get(const char* name) const;
-```
-
-Gets an object by its name.
-
-```c++
-void Set(const char* name, const char* str);
-```
-
-Sets the variable `name` to be the string `str`.
-
-```c++
-void Set(const char* name, const char* str, uint64_t len);
-```
-
-Sets the variable `name` to be the string `str` with length `len`.
-
-```c++
-void Set(const char* name, lua_Number n);
-```
-
-Sets the variable `name` to be the number `n`.
-
-```c++
 void Set(const char* name, const LuaObject& lobj);
 ```
 
 Sets the variable `name` to be the object `lobj`. Note that `lobj` **MUST** be created by this LuaState.
 
 ```c++
+LuaObject Get(const char* name) const;
+```
+
+Gets an object by its name.
+
+```c++
+LuaObject CreateObject(const char* str, const char* name = nullptr);
+```
+
+Sets the variable `name`(if present) to be the string `str` and returns that object.
+
+```c++
+LuaObject CreateObject(const char* str, uint64_t len, const char* name = nullptr);
+```
+
+Sets the variable `name`(if present) to be a string pointed by `str` with length `len` and returns that object.
+
+```c++
+LuaObject CreateObject(lua_Number value, const char* name = nullptr);
+```
+
+Sets the variable `name`(if present) to be the number `n` and returns that object.
+
+```c++
 LuaTable CreateTable(const char* name = nullptr);
 ```
 
-Creates a new table with table name `name`(if not NULL).
+Creates a new table with table name `name`(if present).
 
 ```c++
 /** c-style function */
@@ -654,14 +654,14 @@ template <typename FuncType>
 LuaFunction CreateFunction(const FuncType& f, const char* name = nullptr);
 ```
 
-Creates a function object from `f` with `name`(if any).
+Creates a function object from `f` with `name`(if present).
 
 ```c++
 template<typename T>
 LuaClass<T> CreateClass(const char* name);
 ```
 
-Exports a new type `T` with the name `name`. If `name` is already exported, the class is returned.
+Exports a new type `T` with the name `name`. If `name` is already exported, that class is returned.
 
 ```c++
 template<typename... Argv>

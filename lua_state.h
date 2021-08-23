@@ -28,11 +28,11 @@ public:
     }
 
     LuaObject Get(const char* name) const;
-
-    void Set(const char* name, const char* str);
-    void Set(const char* name, const char* str, uint64_t len);
-    void Set(const char* name, lua_Number value);
     void Set(const char* name, const LuaObject& lobj);
+
+    LuaObject CreateObject(const char* str, const char* name = nullptr);
+    LuaObject CreateObject(const char* str, uint64_t len, const char* name = nullptr);
+    LuaObject CreateObject(lua_Number value, const char* name = nullptr);
 
     LuaTable CreateTable(const char* name = nullptr);
 

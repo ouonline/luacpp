@@ -32,24 +32,45 @@ LuaObject LuaState::Get(const char* name) const {
     return ret;
 }
 
-void LuaState::Set(const char* name, const char* str) {
-    lua_pushstring(m_l.get(), str);
-    lua_setglobal(m_l.get(), name);
-}
-
-void LuaState::Set(const char* name, const char* str, uint64_t len) {
-    lua_pushlstring(m_l.get(), str, len);
-    lua_setglobal(m_l.get(), name);
-}
-
-void LuaState::Set(const char* name, lua_Number value) {
-    lua_pushnumber(m_l.get(), value);
-    lua_setglobal(m_l.get(), name);
-}
-
 void LuaState::Set(const char* name, const LuaObject& lobj) {
     lobj.PushSelf();
     lua_setglobal(m_l.get(), name);
+}
+
+LuaObject LuaState::CreateObject(const char* str, const char* name) {
+    auto l = m_l.get();
+    lua_pushstring(l, str);
+    LuaObject ret(l, -1);
+    if (name) {
+        lua_setglobal(m_l.get(), name);
+    } else {
+        lua_pop(l, 1);
+    }
+    return ret;
+}
+
+LuaObject LuaState::CreateObject(const char* str, uint64_t len, const char* name) {
+    auto l = m_l.get();
+    lua_pushlstring(l, str, len);
+    LuaObject ret(l, -1);
+    if (name) {
+        lua_setglobal(l, name);
+    } else {
+        lua_pop(l, 1);
+    }
+    return ret;
+}
+
+LuaObject LuaState::CreateObject(lua_Number value, const char* name) {
+    auto l = m_l.get();
+    lua_pushnumber(l, value);
+    LuaObject ret(l, -1);
+    if (name) {
+        lua_setglobal(l, name);
+    } else {
+        lua_pop(l, 1);
+    }
+    return ret;
 }
 
 LuaTable LuaState::CreateTable(const char* name) {

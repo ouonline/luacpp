@@ -11,8 +11,7 @@ static void TestSetGet() {
     LuaState l(luaL_newstate(), true);
     const int value = 5;
 
-    l.Set("var", value);
-    auto lobj = l.Get("var");
+    auto lobj = l.CreateObject(value);
     assert(lobj.Type() == LUA_TNUMBER);
     assert(lobj.ToNumber() == value);
 }
@@ -27,12 +26,16 @@ static void TestNil() {
 static void TestString() {
     LuaState l(luaL_newstate(), true);
 
-    string var("ouonline");
-    l.Set("var", var.c_str(), var.size());
-    auto lobj = l.Get("var");
+    const string var("ouonline");
+    auto lobj = l.CreateObject(var.c_str(), var.size(), "var");
     assert(lobj.Type() == LUA_TSTRING);
+
     auto buf = lobj.ToBufferRef();
     assert(string(buf.base, buf.size) == var);
+
+    auto lobj2 = l.Get("var");
+    auto buf2 = lobj2.ToBufferRef();
+    assert(string(buf2.base, buf2.size) == var);
 }
 
 static void TestTable() {
@@ -90,7 +93,7 @@ static void TestFunctionWithReturnValue() {
     }, "Echo");
 
     const string msg = "calling cpp function with return value from cpp.";
-    l.Set("msg", msg.data(), msg.size());
+    l.CreateObject(msg.data(), msg.size(), "msg");
 
     lfunc.Exec([](int, const LuaObject& lobj) -> bool {
         auto res = lobj.ToInteger<int32_t>();
