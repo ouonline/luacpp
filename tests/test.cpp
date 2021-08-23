@@ -13,7 +13,7 @@ static void TestSetGet() {
 
     l.Set("var", value);
     auto lobj = l.Get("var");
-    assert(lobj.GetType() == LUA_TNUMBER);
+    assert(lobj.Type() == LUA_TNUMBER);
     assert(lobj.ToNumber() == value);
 }
 
@@ -21,7 +21,7 @@ static void TestNil() {
     LuaState l(luaL_newstate(), true);
 
     auto lobj = l.Get("nilobj");
-    assert(lobj.GetType() == LUA_TNIL);
+    assert(lobj.Type() == LUA_TNIL);
 }
 
 static void TestString() {
@@ -30,9 +30,9 @@ static void TestString() {
     string var("ouonline");
     l.Set("var", var.c_str(), var.size());
     auto lobj = l.Get("var");
-    assert(lobj.GetType() == LUA_TSTRING);
-    auto str_ref = lobj.ToString();
-    assert(string(str_ref.base, str_ref.size) == var);
+    assert(lobj.Type() == LUA_TSTRING);
+    auto buf = lobj.ToBufferRef();
+    assert(string(buf.base, buf.size) == var);
 }
 
 static void TestTable() {
@@ -40,23 +40,23 @@ static void TestTable() {
 
     auto iterfunc = [] (const LuaObject& key, const LuaObject& value) -> bool {
         cout << "    ";
-        if (key.GetType() == LUA_TNUMBER) {
+        if (key.Type() == LUA_TNUMBER) {
             cout << key.ToNumber();
-        } else if (key.GetType() == LUA_TSTRING) {
-            auto str_ref = key.ToString();
-            cout << string(str_ref.base, str_ref.size);
+        } else if (key.Type() == LUA_TSTRING) {
+            auto buf = key.ToBufferRef();
+            cout << buf.base;
         } else {
-            cout << "unsupported key type -> " << key.GetTypeStr() << endl;
+            cout << "unsupported key type -> " << key.TypeName() << endl;
             return false;
         }
 
-        if (value.GetType() == LUA_TNUMBER) {
+        if (value.Type() == LUA_TNUMBER) {
             cout << " -> " << value.ToNumber() << endl;
-        } else if (value.GetType() == LUA_TSTRING) {
-            auto str_ref = value.ToString();
-            cout << " -> " << string(str_ref.base, str_ref.size) << endl;
+        } else if (value.Type() == LUA_TSTRING) {
+            auto buf = value.ToBufferRef();
+            cout << " -> " << buf.base << endl;
         } else {
-            cout << " -> unsupported iter value type: " << value.GetTypeStr() << endl;
+            cout << " -> unsupported iter value type: " << value.TypeName() << endl;
         }
 
         return true;
@@ -65,19 +65,19 @@ static void TestTable() {
     cout << "table1:" << endl;
     l.DoString("var = {'mykey', value = 'myvalue', others = 'myothers'}");
 
-    auto table = l.Get("var").ToTable();
+    LuaTable table(l.Get("var"));
     table.ForEach(iterfunc);
 
     auto lobj = table.Get("others");
-    assert(lobj.GetType() == LUA_TSTRING);
-    auto str_ref = lobj.ToString();
-    assert(string(str_ref.base, str_ref.size) == "myothers");
+    assert(lobj.Type() == LUA_TSTRING);
+    auto buf = lobj.ToBufferRef();
+    assert(string(buf.base, buf.size) == "myothers");
 
     cout << "table2:" << endl;
     auto ltable = l.CreateTable();
     ltable.Set("x", 5);
     ltable.Set("o", "ouonline");
-    ltable.Set("t", ltable);
+    ltable.Set("t", table);
     ltable.ForEach(iterfunc);
 }
 
@@ -106,13 +106,13 @@ static void TestFunctionWithReturnValue() {
 
     const string msg2 = "ouonline.net";
     l.DoString("function return2(a, b) return a, b end");
-    l.Get("return2").ToFunction().Exec([&msg2](int i, const LuaObject& lobj) -> bool {
+    LuaFunction(l.Get("return2")).Exec([&msg2](int i, const LuaObject& lobj) -> bool {
         if (i == 0) {
             assert(lobj.ToInteger<int32_t>() == 5);
             cout << "get [0] -> " << lobj.ToInteger<int32_t>() << endl;
         } else if (i == 1) {
-            auto str_ref = lobj.ToString();
-            const string res2(str_ref.base, str_ref.size);
+            auto buf = lobj.ToBufferRef();
+            const string res2(buf.base, buf.size);
             assert(res2 == msg2);
             cout << "get [1] -> '" << res2 << "'" << endl;
         }
@@ -180,7 +180,7 @@ int ClassDemo::st_value = 12;
 static void TestClass() {
     LuaState l(luaL_newstate(), true);
 
-    auto lclass = l.RegisterClass<ClassDemo>("ClassDemo");
+    auto lclass = l.CreateClass<ClassDemo>("ClassDemo");
     lclass.DefConstructor<const char*, int>()
         .DefMember("set", &ClassDemo::Set)
         .DefMember("print", &ClassDemo::Print);
@@ -196,7 +196,7 @@ static void TestClass() {
 static void TestClassConstructor() {
     LuaState l(luaL_newstate(), true);
 
-    auto lclass = l.RegisterClass<ClassDemo>("ClassDemo");
+    auto lclass = l.CreateClass<ClassDemo>("ClassDemo");
 
     lclass.DefConstructor();
     bool ok = l.DoString("tc = ClassDemo()");
@@ -214,13 +214,12 @@ struct Point final {
 
 static void TestClassProperty() {
     LuaState l(luaL_newstate(), true);
-    auto lclass = l.RegisterClass<Point>("Point");
+    auto lclass = l.CreateClass<Point>("Point");
     lclass.DefConstructor();
 
     lclass.DefMember("x", &Point::x).DefMember("y", &Point::y);
 
-    l.DoString("p = Point();");
-    auto p = l.Get("p").ToUserData().Get<Point>();
+    auto p = l.CreateUserData("Point", "p").Get<Point>();
     assert(p->x == 10);
     assert(p->y == 20);
 
@@ -228,7 +227,7 @@ static void TestClassProperty() {
                "p.x = 12345; p.y = 54321;");
     assert(p->x == 12345);
     assert(p->y == 54321);
-    cout << "in cpp, x = " << p->x << endl;
+    cout << "in cpp, point is [" << p->x << ", " << p->y << "]" << endl;
 }
 
 static inline void GenericPrint(const char* msg) {
@@ -242,7 +241,7 @@ static inline void CMemberPrint(ClassDemo*, const char* msg) {
 static void TestClassMemberFunction() {
     LuaState l(luaL_newstate(), true);
 
-    l.RegisterClass<ClassDemo>("ClassDemo")
+    l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor()
         .DefMember("set", &ClassDemo::Set)
         .DefMember("print", &ClassDemo::Print)
@@ -270,7 +269,7 @@ static void TestClassMemberFunction() {
 static void TestClassStaticProperty() {
     LuaState l(luaL_newstate(), true);
 
-    l.RegisterClass<ClassDemo>("ClassDemo")
+    l.CreateClass<ClassDemo>("ClassDemo")
         .DefStatic("st_value", &ClassDemo::st_value);
 
     bool ok = l.DoString("vvv = ClassDemo.st_value");
@@ -288,19 +287,19 @@ static void TestClassStaticProperty() {
 static void TestClassPropertyReadWrite() {
     LuaState l(luaL_newstate(), true);
 
-    l.RegisterClass<ClassDemo>("ClassDemo")
+    l.CreateClass<ClassDemo>("ClassDemo")
         .DefStatic("st_value", &ClassDemo::st_value, luacpp::WRITE);
 
     bool ok = l.DoString("vvv = ClassDemo.st_value");
     assert(ok);
-    assert(l.Get("vvv").IsNil());
+    assert(l.Get("vvv").Type() == LUA_TNIL);
     cout << "cannot read st_value" << endl;
 }
 
 static void TestClassStaticMemberFunction() {
     LuaState l(luaL_newstate(), true);
 
-    l.RegisterClass<ClassDemo>("ClassDemo")
+    l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefStatic("s_echo", &ClassDemo::StaticEcho)
         .DefStatic("s_print", GenericPrint)
@@ -330,7 +329,7 @@ static int PrintAllStr(lua_State* l) {
 static void TestClassLuaMemberFunction() {
     LuaState l(luaL_newstate(), true);
 
-    l.RegisterClass<ClassDemo>("ClassDemo")
+    l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("print_all_str", &PrintAllStr);
 
@@ -341,7 +340,7 @@ static void TestClassLuaMemberFunction() {
 static void TestClassLuaStaticMemberFunction() {
     LuaState l(luaL_newstate(), true);
 
-    l.RegisterClass<ClassDemo>("ClassDemo")
+    l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefStatic("print_all_str", &PrintAllStr);
 
@@ -357,7 +356,7 @@ static void TestClassLuaStaticMemberFunction() {
 static void TestUserdata1() {
     LuaState l(luaL_newstate(), true);
 
-    l.RegisterClass<ClassDemo>("ClassDemo")
+    l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("get_object_addr", [](ClassDemo* obj) -> ClassDemo* {
             return obj;
@@ -369,7 +368,7 @@ static void TestUserdata1() {
     l.DoString("tc:print()");
 
     l.DoString("obj = tc:get_object_addr();");
-    auto obj_addr = l.Get("obj").ToUserData().Get<ClassDemo>();
+    auto obj_addr = LuaUserData(l.Get("obj")).Get<ClassDemo>();
 
     assert(ud == obj_addr);
 }
@@ -377,11 +376,11 @@ static void TestUserdata1() {
 static void TestUserdata2() {
     LuaState l(luaL_newstate(), true);
 
-    l.RegisterClass<ClassDemo>("ClassDemo")
+    l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("set", &ClassDemo::Set);
     l.DoString("tc = ClassDemo('ouonline', 3); tc:set('in cpp: Print test data from lua')");
-    l.Get("tc").ToUserData().Get<ClassDemo>()->Print();
+    LuaUserData(l.Get("tc")).Get<ClassDemo>()->Print();
 }
 
 static void TestDoString() {
@@ -391,8 +390,8 @@ static void TestDoString() {
                          [] (int n, const LuaObject& lobj) -> bool {
                              cout << "output from resiter: ";
                              if (n == 0) {
-                                 auto str_ref = lobj.ToString();
-                                 cout << string(str_ref.base, str_ref.size) << endl;
+                                 auto buf = lobj.ToBufferRef();
+                                 cout << buf.base << endl;
                              } else if (n == 1) {
                                  cout << lobj.ToNumber() << endl;
                              }

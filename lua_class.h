@@ -1,7 +1,7 @@
 #ifndef __LUA_CPP_LUA_CLASS_H__
 #define __LUA_CPP_LUA_CLASS_H__
 
-#include "lua_ref_object.h"
+#include "lua_object.h"
 #include "func_utils.h"
 #include <stdint.h>
 
@@ -11,14 +11,18 @@ static constexpr uint32_t READ = 0x01;
 static constexpr uint32_t WRITE = 0x10;
 static constexpr uint32_t READWRITE = 0x11;
 
+struct LuaClassData final {
+    int gc_table_ref = LUA_REFNIL;
+};
+
 template <typename T>
-class LuaClass final : public LuaRefObject {
+class LuaClass final : public LuaObject {
 private:
     static constexpr uint32_t CLASS_PROPERTY = 0;
     static constexpr uint32_t CLASS_FUNCTION = 1;
 
     void PushMetatable() {
-        lua_rawgeti(m_l.get(), LUA_REGISTRYINDEX, m_metatable_ref);
+        lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_metatable_ref);
     }
 
     template <typename... FuncArgType>
@@ -125,9 +129,7 @@ private:
     }
 
     template <typename FuncType, typename FuncRetType, typename... FuncArgType>
-    void DoDefStaticFunction(const char* name, const FuncType& f) {
-        auto l = m_l.get();
-
+    void DoDefStaticFunction(lua_State* l, const char* name, const FuncType& f) {
         PushSelf();
         lua_getmetatable(l, -1);
         PushMetatable();
@@ -142,8 +144,7 @@ private:
     }
 
     template <typename FuncType, typename FuncRetType, typename... FuncArgType>
-    void DoDefCStyleMemberFunction(const char* name, const FuncType& f) {
-        auto l = m_l.get();
+    void DoDefCStyleMemberFunction(lua_State* l, const char* name, const FuncType& f) {
         PushMetatable();
         CreateGenericFunction<FuncType, FuncRetType, FuncArgType...>(l, m_gc_table_ref, 0, f);
         lua_setfield(l, -2, name);
@@ -190,8 +191,7 @@ private:
     }
 
     template<typename FuncType, typename FuncRetType, typename... FuncArgType>
-    void DoDefMemberFunction(const char* name, const FuncType& f) {
-        auto l = m_l.get();
+    void DoDefMemberFunction(lua_State* l, const char* name, const FuncType& f) {
         PushMetatable();
         CreateMemberFunction<FuncType, FuncRetType, FuncArgType...>(l, m_gc_table_ref, f);
         lua_setfield(l, -2, name);
@@ -282,50 +282,51 @@ private:
     }
 
     void SetupClass() {
-        auto l = m_l.get();
-
         // retrieve class table
         PushSelf();
 
+        auto ud = (LuaClassData*)lua_touserdata(m_l, -1);
+        m_gc_table_ref = ud->gc_table_ref;
+
         // sets a metatable so that it becomes callable via __call
-        lua_newtable(l);
+        lua_newtable(m_l);
 
-        lua_pushvalue(l, -1);
-        lua_setmetatable(l, -3);
+        lua_pushvalue(m_l, -1);
+        lua_setmetatable(m_l, -3);
 
-        lua_pushcfunction(l, NewIndexFunction);
-        lua_setfield(l, -2, "__newindex");
+        lua_pushcfunction(m_l, NewIndexFunction);
+        lua_setfield(m_l, -2, "__newindex");
 
-        lua_pushcfunction(l, IndexFunction);
-        lua_setfield(l, -2, "__index");
+        lua_pushcfunction(m_l, IndexFunction);
+        lua_setfield(m_l, -2, "__index");
 
-        lua_pop(l, 2);
+        lua_pushcfunction(m_l, GenericDestructor<LuaClassData>);
+        lua_setfield(m_l, -2, "__gc");
+
+        lua_pop(m_l, 2);
     }
 
     void SetupMetatable() {
-        auto l = m_l.get();
-
         // creates metatable for class instances
-        lua_newtable(l);
+        lua_newtable(m_l);
 
         // sets the __newindex field so that userdata can modify members
-        lua_pushcfunction(l, NewIndexFunction);
-        lua_setfield(l, -2, "__newindex");
+        lua_pushcfunction(m_l, NewIndexFunction);
+        lua_setfield(m_l, -2, "__newindex");
 
         // destructor for class instances
-        lua_pushcfunction(l, GenericDestructor<T>);
-        lua_setfield(l, -2, "__gc");
+        lua_pushcfunction(m_l, GenericDestructor<T>);
+        lua_setfield(m_l, -2, "__gc");
 
         // sets the __index field to be itself so that userdata can find member functions
-        lua_pushcfunction(l, IndexFunction);
-        lua_setfield(l, -2, "__index");
+        lua_pushcfunction(m_l, IndexFunction);
+        lua_setfield(m_l, -2, "__index");
 
-        m_metatable_ref = luaL_ref(l, LUA_REGISTRYINDEX);
+        m_metatable_ref = luaL_ref(m_l, LUA_REGISTRYINDEX);
     }
 
 public:
-    LuaClass(const std::shared_ptr<lua_State>& lp, int index, int gc_table_ref)
-        : LuaRefObject(lp, index), m_gc_table_ref(gc_table_ref) {
+    LuaClass(lua_State* l, int index) : LuaObject(l, index) {
         SetupClass();
         SetupMetatable();
     }
@@ -336,46 +337,44 @@ public:
     LuaClass& operator=(const LuaClass&) = delete;
 
     ~LuaClass() {
-        if (m_l.get()) { // not moved
-            luaL_unref(m_l.get(), LUA_REGISTRYINDEX, m_metatable_ref);
+        if (m_l) { // not moved
+            luaL_unref(m_l, LUA_REGISTRYINDEX, m_metatable_ref);
         }
     }
 
     /** constructor */
     template <typename... FuncArgType>
     LuaClass& DefConstructor() {
-        auto l = m_l.get();
         PushSelf();
-        lua_getmetatable(l, -1);
+        lua_getmetatable(m_l, -1);
         PushMetatable();
-        lua_pushcclosure(l, Constructor<FuncArgType...>, 1);
-        lua_setfield(l, -2, "__call");
-        lua_pop(l, 2);
+        lua_pushcclosure(m_l, Constructor<FuncArgType...>, 1);
+        lua_setfield(m_l, -2, "__call");
+        lua_pop(m_l, 2);
         return *this;
     }
 
     /** property */
     template <typename PropertyType>
     LuaClass& DefMember(const char* name, PropertyType T::* mptr, uint32_t permission = READWRITE) {
-        auto l = m_l.get();
         PushMetatable();
-        DoDefMemberProperty<PropertyType>(l, m_gc_table_ref, mptr, permission);
-        lua_setfield(l, -2, name);
-        lua_pop(l, 1);
+        DoDefMemberProperty<PropertyType>(m_l, m_gc_table_ref, mptr, permission);
+        lua_setfield(m_l, -2, name);
+        lua_pop(m_l, 1);
         return *this;
     }
 
     /** member function */
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefMember(const char* name, FuncRetType (T::*f)(FuncArgType...)) {
-        DoDefMemberFunction<decltype(f), FuncRetType, FuncArgType...>(name, f);
+        DoDefMemberFunction<decltype(f), FuncRetType, FuncArgType...>(m_l, name, f);
         return *this;
     }
 
     /** member function with const qualifier */
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefMember(const char* name, FuncRetType (T::*f)(FuncArgType...) const) {
-        DoDefMemberFunction<decltype(f), FuncRetType, FuncArgType...>(name, f);
+        DoDefMemberFunction<decltype(f), FuncRetType, FuncArgType...>(m_l, name, f);
         return *this;
     }
 
@@ -383,7 +382,7 @@ public:
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefMember(const char* name, const std::function<FuncRetType (FuncArgType...)>& f) {
         using FuncType = std::function<FuncRetType (FuncArgType...)>;
-        DoDefCStyleMemberFunction<FuncType, FuncRetType, FuncArgType...>(name, f);
+        DoDefCStyleMemberFunction<FuncType, FuncRetType, FuncArgType...>(m_l, name, f);
         return *this;
     }
 
@@ -397,29 +396,27 @@ public:
     /** c-style member function */
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefMember(const char* name, FuncRetType (*f)(FuncArgType...)) {
-        DoDefCStyleMemberFunction<decltype(f), FuncRetType, FuncArgType...>(name, f);
+        DoDefCStyleMemberFunction<decltype(f), FuncRetType, FuncArgType...>(m_l, name, f);
         return *this;
     }
 
     /** lua-style member function */
     LuaClass& DefMember(const char* name, int (*f)(lua_State*)) {
-        auto l = m_l.get();
         PushMetatable();
-        DoDefLuaFunction(l, f);
-        lua_setfield(l, -2, name);
-        lua_pop(l, 1);
+        DoDefLuaFunction(m_l, f);
+        lua_setfield(m_l, -2, name);
+        lua_pop(m_l, 1);
         return *this;
     }
 
     /** static property */
     template <typename PropertyType>
     LuaClass& DefStatic(const char* name, PropertyType* ptr, uint32_t permission = READWRITE) {
-        auto l = m_l.get();
         PushSelf();
-        lua_getmetatable(l, -1);
-        DoDefStaticProperty(l, ptr, permission);
-        lua_setfield(l, -2, name);
-        lua_pop(l, 2);
+        lua_getmetatable(m_l, -1);
+        DoDefStaticProperty(m_l, ptr, permission);
+        lua_setfield(m_l, -2, name);
+        lua_pop(m_l, 2);
         return *this;
     }
 
@@ -427,14 +424,14 @@ public:
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefStatic(const char* name, const std::function<FuncRetType (FuncArgType...)>& f) {
         using FuncType = std::function<FuncRetType (FuncArgType...)>;
-        DoDefStaticFunction<FuncType, FuncRetType, FuncArgType...>(name, f);
+        DoDefStaticFunction<FuncType, FuncRetType, FuncArgType...>(m_l, name, f);
         return *this;
     }
 
     /** C-style static member function */
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefStatic(const char* name, FuncRetType (*f)(FuncArgType...)) {
-        DoDefStaticFunction<decltype(f), FuncRetType, FuncArgType...>(name, f);
+        DoDefStaticFunction<decltype(f), FuncRetType, FuncArgType...>(m_l, name, f);
         return *this;
     }
 
@@ -447,20 +444,18 @@ public:
 
     /** lua-style static member function */
     LuaClass& DefStatic(const char* name, int (*f)(lua_State*)) {
-        auto l = m_l.get();
-
         PushSelf();
-        lua_getmetatable(l, -1);
+        lua_getmetatable(m_l, -1);
         PushMetatable();
 
-        DoDefLuaFunction(l, f);
+        DoDefLuaFunction(m_l, f);
 
-        lua_pushvalue(l, -1);
-        lua_setfield(l, -3, name);
+        lua_pushvalue(m_l, -1);
+        lua_setfield(m_l, -3, name);
 
-        lua_setfield(l, -3, name);
+        lua_setfield(m_l, -3, name);
 
-        lua_pop(l, 3);
+        lua_pop(m_l, 3);
         return *this;
     }
 
@@ -469,7 +464,7 @@ private:
     int m_metatable_ref;
 
     /** metatable(only containing __gc) for DestructorObject */
-    const int m_gc_table_ref;
+    int m_gc_table_ref;
 };
 
 }

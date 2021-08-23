@@ -6,27 +6,31 @@
 
 namespace luacpp {
 
-class LuaTable final : public LuaRefObject {
+class LuaTable final : public LuaObject {
 public:
-    LuaTable(const std::shared_ptr<lua_State>& l, int index) : LuaRefObject(l, index) {}
-
+    LuaTable(lua_State* l, int index) : LuaObject(l, index) {}
+    LuaTable(LuaObject&& lobj) : LuaObject(std::move(lobj)) {}
     LuaTable(LuaTable&&) = default;
-    LuaTable& operator=(LuaTable&&) = default;
     LuaTable(const LuaTable&) = delete;
+
+    LuaTable& operator=(LuaTable&&) = default;
     LuaTable& operator=(const LuaTable&) = delete;
+
+    // NOTE: this function needs to push and pop the table
+    uint64_t Size() const;
 
     LuaObject Get(int index) const;
     LuaObject Get(const char* name) const;
 
     void Set(int index, const char* str);
-    void Set(int index, const char* str, size_t len);
+    void Set(int index, const char* str, uint64_t len);
     void Set(int index, lua_Number);
-    void Set(int index, const LuaRefObject& lobj);
+    void Set(int index, const LuaObject& lobj);
 
     void Set(const char* name, const char* str);
-    void Set(const char* name, const char* str, size_t len);
+    void Set(const char* name, const char* str, uint64_t len);
     void Set(const char* name, lua_Number value);
-    void Set(const char* name, const LuaRefObject& lobj);
+    void Set(const char* name, const LuaObject& lobj);
 
     bool ForEach(const std::function<bool (const LuaObject& key,
                                            const LuaObject& value)>& func) const;

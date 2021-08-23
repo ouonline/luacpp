@@ -17,10 +17,11 @@ class LuaState final {
 public:
     LuaState(lua_State* l, bool is_owner);
     LuaState(LuaState&&) = default;
-    LuaState& operator=(LuaState&&) = default;
     LuaState(const LuaState&) = delete;
-    LuaState& operator=(const LuaState&) = delete;
     ~LuaState();
+
+    LuaState& operator=(LuaState&&) = default;
+    LuaState& operator=(const LuaState&) = delete;
 
     lua_State* GetRawPtr() const {
         return m_l.get();
@@ -29,9 +30,9 @@ public:
     LuaObject Get(const char* name) const;
 
     void Set(const char* name, const char* str);
-    void Set(const char* name, const char* str, size_t len);
+    void Set(const char* name, const char* str, uint64_t len);
     void Set(const char* name, lua_Number value);
-    void Set(const char* name, const LuaRefObject& lobj);
+    void Set(const char* name, const LuaObject& lobj);
 
     LuaTable CreateTable(const char* name = nullptr);
 
@@ -60,11 +61,10 @@ public:
         auto l = m_l.get();
         auto top_idx = lua_gettop(l);
 
-        // class table not found
+        // class not found
         lua_getglobal(l, classname);
-        if (!lua_istable(l, -1)) {
-            lua_pushnil(l);
-            LuaUserData ret(m_l, -1);
+        if (lua_isnil(l, -1)) {
+            LuaUserData ret(l, -1);
             lua_pop(l, lua_gettop(l) - top_idx);
             return ret;
         }
@@ -85,7 +85,7 @@ public:
         PushValues(l, std::forward<Argv>(argv)...);
         if (lua_pcall(l, sizeof...(Argv) + 1, 1, 0) != LUA_OK) {
             lua_pushnil(l);
-            LuaUserData ret(m_l, -1);
+            LuaUserData ret(l, -1);
             lua_pop(l, lua_gettop(l) - top_idx);
             return ret;
         }
@@ -102,7 +102,7 @@ public:
           +-------------+
         */
 
-        LuaUserData ret(m_l, -1);
+        LuaUserData ret(l, -1);
 
         if (name) {
             lua_setglobal(l, name);
@@ -115,10 +115,11 @@ public:
     }
 
     template <typename T>
-    LuaClass<T> RegisterClass(const char* name = nullptr) {
+    LuaClass<T> CreateClass(const char* name = nullptr) {
         lua_State* l = m_l.get();
-        lua_newtable(l);
-        LuaClass<T> ret(m_l, -1, m_gc_table_ref);
+        auto ud = (LuaClassData*)lua_newuserdata(l, sizeof(LuaClassData));
+        ud->gc_table_ref = m_gc_table_ref;
+        LuaClass<T> ret(l, -1);
         if (name) {
             lua_setglobal(l, name);
         } else {
@@ -156,7 +157,7 @@ private:
 
         lua_pushcclosure(l, GenericFunction<FuncType, FuncRetType, FuncArgType...>, 2);
 
-        LuaFunction ret(m_l, -1);
+        LuaFunction ret(l, -1);
         if (name) {
             lua_setglobal(l, name);
         } else {

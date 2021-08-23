@@ -1,13 +1,20 @@
 #ifndef __LUA_CPP_FUNC_UTILS_H__
 #define __LUA_CPP_FUNC_UTILS_H__
 
+extern "C" {
+#include "lua.h"
+}
+
+#include "lua_buffer_ref.h"
 #include <memory>
 #include <functional>
 
 namespace luacpp {
 
-template <typename T>
-static void DummyDeleter(T*) {}
+class LuaObject;
+class LuaTable;
+class LuaFunction;
+class LuaUserData;
 
 /* -------------------------------------------------------------------------- */
 
@@ -52,20 +59,26 @@ public:
         return lua_tonumber(m_l, m_index);
     }
 
-    // LUA_TSTRING
-    operator const char* () const {
-        return lua_tostring(m_l, m_index);
-    }
-
     // LUA_TUSERDATA and LUA_TLIGHTUSERDATA
     template <typename T>
     operator T* () const {
         return (T*)lua_touserdata(m_l, m_index);
     }
 
-    operator LuaRefObject () const {
-        return LuaRefObject(std::shared_ptr<lua_State>(m_l, DummyDeleter<lua_State>), m_index);
+    // LUA_TSTRING
+    operator const char* () const {
+        return lua_tostring(m_l, m_index);
     }
+    operator LuaBufferRef () const {
+        size_t len = 0;
+        auto addr = lua_tolstring(m_l, m_index, &len);
+        return LuaBufferRef(addr, len);
+    }
+
+    operator LuaObject () const;
+    operator LuaTable () const;
+    operator LuaFunction () const;
+    operator LuaUserData () const;
 
 private:
     lua_State* m_l;
@@ -115,6 +128,9 @@ static inline void PushValue(lua_State* l, double arg) {
 static inline void PushValue(lua_State* l, const char* arg) {
     lua_pushstring(l, arg);
 }
+static inline void PushValue(lua_State* l, const LuaBufferRef& arg) {
+    lua_pushlstring(l, (const char*)arg.base, arg.size);
+}
 
 // LUA_TLIGHTUSERDATA
 template <typename T>
@@ -122,9 +138,7 @@ static inline void PushValue(lua_State* l, T* arg) {
     lua_pushlightuserdata(l, (void*)arg);
 }
 
-static inline void PushValue(lua_State* l, const LuaRefObject& obj) {
-    obj.PushSelf();
-}
+void PushValue(lua_State* l, const LuaObject& obj);
 
 static inline void PushValues(lua_State*) {}
 
