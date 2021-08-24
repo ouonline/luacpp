@@ -84,7 +84,7 @@ static void TestTable() {
     ltable.ForEach(iterfunc);
 }
 
-static void TestFunctionWithReturnValue() {
+static void TestFuncWithReturnValue() {
     LuaState l(luaL_newstate(), true);
 
     auto lfunc = l.CreateFunction([] (const char* msg) -> int {
@@ -127,7 +127,7 @@ static void GlobalEcho(const char* msg) {
     cout << msg << endl;
 }
 
-static void TestFunctionWithoutReturnValue() {
+static void TestFuncWithoutReturnValue() {
     LuaState l(luaL_newstate(), true);
 
     auto lfunc = l.CreateFunction(GlobalEcho, "Echo");
@@ -135,6 +135,20 @@ static void TestFunctionWithoutReturnValue() {
 
     string errmsg;
     bool ok = l.DoString("Echo('calling cpp function without return value from lua')", &errmsg);
+    assert(ok);
+    assert(errmsg.empty());
+}
+
+static void TestFuncWithBuiltinReferenceTypes() {
+    LuaState l(luaL_newstate(), true);
+    auto lobj = l.CreateObject(53142, "var");
+    auto lfunc = l.CreateFunction([](const LuaObject& lobj) -> void {
+        cout << "empty function for testing reference arguments." << endl;
+        cout << "value = " << lobj.ToInteger<int>() << endl;
+    });
+
+    string errmsg;
+    bool ok = lfunc.Exec(nullptr, &errmsg, lobj);
     assert(ok);
     assert(errmsg.empty());
 }
@@ -183,8 +197,8 @@ int ClassDemo::st_value = 12;
 static void TestClass() {
     LuaState l(luaL_newstate(), true);
 
-    auto lclass = l.CreateClass<ClassDemo>("ClassDemo");
-    lclass.DefConstructor<const char*, int>()
+    auto lclass = l.CreateClass<ClassDemo>("ClassDemo")
+        .DefConstructor<const char*, int>()
         .DefMember("set", &ClassDemo::Set)
         .DefMember("print", &ClassDemo::Print);
 
@@ -217,15 +231,17 @@ struct Point final {
 
 static void TestClassProperty() {
     LuaState l(luaL_newstate(), true);
-    auto lclass = l.CreateClass<Point>("Point");
-    lclass.DefConstructor();
+    auto lclass = l.CreateClass<Point>("Point")
+        .DefConstructor()
+        .DefMember("x", &Point::x)
+        .DefMember("y", &Point::y);
 
-    lclass.DefMember("x", &Point::x).DefMember("y", &Point::y);
-
-    auto p = l.CreateUserData("Point", "p").Get<Point>();
+    auto lud = lclass.CreateUserData();
+    auto p = lud.Get<Point>();
     assert(p->x == 10);
     assert(p->y == 20);
 
+    l.Set("p", lud);
     l.DoString("print('x = ', p.x);"
                "p.x = 12345; p.y = 54321;");
     assert(p->x == 12345);
@@ -359,15 +375,17 @@ static void TestClassLuaStaticMemberFunction() {
 static void TestUserdata1() {
     LuaState l(luaL_newstate(), true);
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    auto lclass = l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("get_object_addr", [](ClassDemo* obj) -> ClassDemo* {
             return obj;
         })
         .DefMember("print", &ClassDemo::Print);
 
-    auto ud = l.CreateUserData("ClassDemo", "tc", "ouonline", 5).Get<ClassDemo>();
+    auto lud = lclass.CreateUserData("ouonline", 5);
+    auto ud = lud.Get<ClassDemo>();
     ud->Set("in lua: Print test data from cpp");
+    l.Set("tc", lud);
     l.DoString("tc:print()");
 
     l.DoString("obj = tc:get_object_addr();");
@@ -418,8 +436,9 @@ static const map<string, void (*)()> g_test_suite = {
     {"TestNil", TestNil},
     {"TestString", TestString},
     {"TestTable", TestTable},
-    {"TestFunctionWithReturnValue", TestFunctionWithReturnValue},
-    {"TestFunctionWithoutReturnValue", TestFunctionWithoutReturnValue},
+    {"TestFuncWithReturnValue", TestFuncWithReturnValue},
+    {"TestFuncWithoutReturnValue", TestFuncWithoutReturnValue},
+    {"TestFuncWithBuiltinReferenceTypes", TestFuncWithBuiltinReferenceTypes},
     {"TestClass", TestClass},
     {"TestClassConstructor", TestClassConstructor},
     {"TestClassProperty", TestClassProperty},

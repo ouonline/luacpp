@@ -10,11 +10,12 @@ class LuaTable final : public LuaObject {
 public:
     LuaTable(lua_State* l, int index) : LuaObject(l, index) {}
     LuaTable(LuaObject&& lobj) : LuaObject(std::move(lobj)) {}
+    LuaTable(const LuaObject& lobj) : LuaObject(lobj) {}
     LuaTable(LuaTable&&) = default;
-    LuaTable(const LuaTable&) = delete;
+    LuaTable(const LuaTable&) = default;
 
     LuaTable& operator=(LuaTable&&) = default;
-    LuaTable& operator=(const LuaTable&) = delete;
+    LuaTable& operator=(const LuaTable&) = default;
 
     // NOTE: this function needs to push and pop the table
     uint64_t Size() const;

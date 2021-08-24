@@ -1,20 +1,25 @@
 cmake_minimum_required(VERSION 3.10)
 project(luacpp)
 
-option(LUACPP_BUILD_TESTS "build tests" ON)
+option(LUACPP_BUILD_TESTS "build tests" OFF)
 
 set (CMAKE_CXX_STANDARD 14)
 
 file(GLOB LUACPP_SRC *.cpp)
 add_library(luacpp_static STATIC ${LUACPP_SRC})
 
-if(NOT LUACPP_LUA_INCLUDE_DIRS OR NOT LUACPP_LUA_LIBRARIES)
-    message(FATAL_ERROR "please set `LUACPP_LUA_INCLUDE_DIRS` and `LUACPP_LUA_LIBRARIES`.")
+if(NOT LUA_INCLUDE_DIR)
+    find_package(Lua QUIET)
+    if (NOT Lua_FOUND)
+        message(FATAL_ERROR "lua dev lib is required. please install lua development files or specify `LUA_INCLUDE_DIR` manually.")
+    endif()
 endif()
 
-target_link_libraries(luacpp_static PUBLIC ${LUACPP_LUA_LIBRARIES})
-target_include_directories(luacpp_static PUBLIC ${LUACPP_LUA_INCLUDE_DIRS})
+target_include_directories(luacpp_static PUBLIC ${LUA_INCLUDE_DIR})
 
 if(LUACPP_BUILD_TESTS)
+    if(NOT LUA_LIBRARIES)
+        message(FATAL_ERROR "lua dev lib is required. please install lua development libs, or specify `LUA_INCLUDE_DIR` and `LUA_LIBRARIES` manually.")
+    endif()
     add_subdirectory(tests)
 endif()

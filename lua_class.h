@@ -1,7 +1,7 @@
 #ifndef __LUA_CPP_LUA_CLASS_H__
 #define __LUA_CPP_LUA_CLASS_H__
 
-#include "lua_object.h"
+#include "lua_user_data.h"
 #include "func_utils.h"
 #include <stdint.h>
 
@@ -11,17 +11,18 @@ static constexpr uint32_t READ = 0x01;
 static constexpr uint32_t WRITE = 0x10;
 static constexpr uint32_t READWRITE = 0x11;
 
+static constexpr uint32_t CLASS_PROPERTY = 0;
+static constexpr uint32_t CLASS_FUNCTION = 1;
+
 struct LuaClassData final {
     int gc_table_ref = LUA_REFNIL;
+    int metatable_ref = LUA_REFNIL;
 };
 
 template <typename T>
 class LuaClass final : public LuaObject {
 private:
-    static constexpr uint32_t CLASS_PROPERTY = 0;
-    static constexpr uint32_t CLASS_FUNCTION = 1;
-
-    void PushMetatable() {
+    void PushMetatable() const {
         lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_metatable_ref);
     }
 
@@ -48,63 +49,6 @@ private:
         lua_setmetatable(l, -2);
 
         return 1;
-    }
-
-    static int IndexFunction(lua_State* l) {
-        auto key = lua_tostring(l, 2);
-        auto ret_type = luaL_getmetafield(l, 1, key);
-        if (ret_type != LUA_TTABLE) {
-            lua_pushnil(l);
-            return 1;
-        }
-
-        lua_getfield(l, -1, "type");
-        int value_type = lua_tointeger(l, -1);
-
-        if (value_type == CLASS_FUNCTION) {
-            lua_getfield(l, -2, "func");
-            return 1;
-        } else if (value_type == CLASS_PROPERTY) {
-            lua_getfield(l, -2, "getter");
-            if (lua_isnil(l, -1)) {
-                return 1;
-            }
-            lua_pushvalue(l, 1); // userdata
-            if (lua_pcall(l, 1, 1, 0) == LUA_OK) {
-                return 1;
-            }
-        }
-
-        lua_pushnil(l);
-        return 1;
-    }
-
-    static int NewIndexFunction(lua_State* l) {
-        auto key = lua_tostring(l, 2);
-        auto key_type = luaL_getmetafield(l, 1, key);
-        if (key_type != LUA_TTABLE) { // is not a field defined in c++
-            return 0;
-        }
-
-        lua_getfield(l, -1, "type");
-        int value_type = lua_tointeger(l, -1);
-
-        // only values can be modified
-        if (value_type == CLASS_PROPERTY) {
-            // move userdata to position 2
-            lua_pushvalue(l, 1);
-            lua_replace(l, 2);
-            // move setter to position 1
-            lua_getfield(l, -2, "setter");
-            if (lua_isnil(l, -1)) {
-                return 0;
-            }
-            lua_replace(l, 1);
-            lua_pop(l, 2);
-            lua_pcall(l, 2, 0, 0);
-        }
-
-        return 0;
     }
 
     template <typename FuncType, typename FuncRetType, typename... FuncArgType>
@@ -281,66 +225,30 @@ private:
         }
     }
 
-    void SetupClass() {
-        // retrieve class table
+    void Init() {
         PushSelf();
-
         auto ud = (LuaClassData*)lua_touserdata(m_l, -1);
         m_gc_table_ref = ud->gc_table_ref;
-
-        // sets a metatable so that it becomes callable via __call
-        lua_newtable(m_l);
-
-        lua_pushvalue(m_l, -1);
-        lua_setmetatable(m_l, -3);
-
-        lua_pushcfunction(m_l, NewIndexFunction);
-        lua_setfield(m_l, -2, "__newindex");
-
-        lua_pushcfunction(m_l, IndexFunction);
-        lua_setfield(m_l, -2, "__index");
-
-        lua_pushcfunction(m_l, GenericDestructor<LuaClassData>);
-        lua_setfield(m_l, -2, "__gc");
-
-        lua_pop(m_l, 2);
-    }
-
-    void SetupMetatable() {
-        // creates metatable for class instances
-        lua_newtable(m_l);
-
-        // sets the __newindex field so that userdata can modify members
-        lua_pushcfunction(m_l, NewIndexFunction);
-        lua_setfield(m_l, -2, "__newindex");
-
-        // destructor for class instances
-        lua_pushcfunction(m_l, GenericDestructor<T>);
-        lua_setfield(m_l, -2, "__gc");
-
-        // sets the __index field to be itself so that userdata can find member functions
-        lua_pushcfunction(m_l, IndexFunction);
-        lua_setfield(m_l, -2, "__index");
-
-        m_metatable_ref = luaL_ref(m_l, LUA_REGISTRYINDEX);
+        m_metatable_ref = ud->metatable_ref;
+        lua_pop(m_l, 1);
     }
 
 public:
     LuaClass(lua_State* l, int index) : LuaObject(l, index) {
-        SetupClass();
-        SetupMetatable();
+        Init();
+    }
+    LuaClass(LuaObject&& rhs) : LuaObject(std::move(rhs)) {
+        Init();
+    }
+    LuaClass(const LuaObject& rhs) : LuaObject(rhs) {
+        Init();
     }
 
     LuaClass(LuaClass&&) = default;
-    LuaClass& operator=(LuaClass&&) = default;
-    LuaClass(const LuaClass&) = delete;
-    LuaClass& operator=(const LuaClass&) = delete;
+    LuaClass(const LuaClass&) = default;
 
-    ~LuaClass() {
-        if (m_l) { // not moved
-            luaL_unref(m_l, LUA_REGISTRYINDEX, m_metatable_ref);
-        }
-    }
+    LuaClass& operator=(LuaClass&&) = default;
+    LuaClass& operator=(const LuaClass&) = default;
 
     /** constructor */
     template <typename... FuncArgType>
@@ -457,6 +365,19 @@ public:
 
         lua_pop(m_l, 3);
         return *this;
+    }
+
+    template <typename... Argv>
+    LuaUserData CreateUserData(Argv&&... argv) const {
+        auto ud = (T*)lua_newuserdata(m_l, sizeof(T));
+        new (ud) T(std::forward<Argv>(argv)...);
+
+        PushMetatable();
+        lua_setmetatable(m_l, -2);
+
+        LuaUserData ret(m_l, -1);
+        lua_pop(m_l, 1);
+        return ret;
     }
 
 private:

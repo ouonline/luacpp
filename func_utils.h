@@ -6,7 +6,6 @@ extern "C" {
 }
 
 #include "lua_buffer_ref.h"
-#include <memory>
 #include <functional>
 
 namespace luacpp {

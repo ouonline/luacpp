@@ -8,7 +8,6 @@ extern "C" {
 
 #include "lua_class.h"
 #include "lua_function.h"
-#include <memory>
 #include <functional>
 
 namespace luacpp {
@@ -16,15 +15,15 @@ namespace luacpp {
 class LuaState final {
 public:
     LuaState(lua_State* l, bool is_owner);
-    LuaState(LuaState&&) = default;
+    LuaState(LuaState&&);
     LuaState(const LuaState&) = delete;
     ~LuaState();
 
-    LuaState& operator=(LuaState&&) = default;
+    LuaState& operator=(LuaState&&);
     LuaState& operator=(const LuaState&) = delete;
 
     lua_State* GetRawPtr() const {
-        return m_l.get();
+        return m_l;
     }
 
     LuaObject Get(const char* name) const;
@@ -56,74 +55,19 @@ public:
         return CreateFunction(Lambda2Func(f), name);
     }
 
-    template <typename... Argv>
-    LuaUserData CreateUserData(const char* classname, const char* name = nullptr, Argv&&... argv) {
-        auto l = m_l.get();
-        auto top_idx = lua_gettop(l);
-
-        // class not found
-        lua_getglobal(l, classname);
-        if (lua_isnil(l, -1)) {
-            LuaUserData ret(l, -1);
-            lua_pop(l, lua_gettop(l) - top_idx);
-            return ret;
-        }
-        lua_getmetatable(l, -1);
-
-        /*
-          +-------------+
-          |  metatable  |
-          +-------------+
-          | class table |
-          +-------------+
-          |     ...     |
-          +-------------+
-        */
-
-        lua_getfield(l, -1, "__call"); // get constructor function
-        lua_pushvalue(l, -2); // first argument is the class table itself
-        PushValues(l, std::forward<Argv>(argv)...);
-        if (lua_pcall(l, sizeof...(Argv) + 1, 1, 0) != LUA_OK) {
-            lua_pushnil(l);
-            LuaUserData ret(l, -1);
-            lua_pop(l, lua_gettop(l) - top_idx);
-            return ret;
-        }
-
-        /*
-          +-------------+
-          |  userdata   |
-          +-------------+
-          |  metatable  |
-          +-------------+
-          | class table |
-          +-------------+
-          |     ...     |
-          +-------------+
-        */
-
-        LuaUserData ret(l, -1);
-
-        if (name) {
-            lua_setglobal(l, name);
-            lua_pop(l, 2);
-        } else {
-            lua_pop(l, 3);
-        }
-
-        return ret;
-    }
-
     template <typename T>
     LuaClass<T> CreateClass(const char* name = nullptr) {
-        lua_State* l = m_l.get();
-        auto ud = (LuaClassData*)lua_newuserdata(l, sizeof(LuaClassData));
+        auto ud = (LuaClassData*)lua_newuserdata(m_l, sizeof(LuaClassData));
         ud->gc_table_ref = m_gc_table_ref;
-        LuaClass<T> ret(l, -1);
+        ud->metatable_ref = SetupClassInstanceMetatable<T>(m_l);
+
+        SetupClassData(m_l);
+
+        LuaClass<T> ret(m_l, -1);
         if (name) {
-            lua_setglobal(l, name);
+            lua_setglobal(m_l, name);
         } else {
-            lua_pop(l, 1);
+            lua_pop(m_l, 1);
         }
         return ret;
     }
@@ -135,39 +79,139 @@ public:
                 const std::function<bool (int, const LuaObject&)>& callback = nullptr);
 
 private:
-    void SetupGcTable() {
-        auto l = m_l.get();
-        lua_newtable(l);
-        lua_pushcfunction(l, GenericDestructor<DestructorObject>);
-        lua_setfield(l, -2, "__gc");
-        m_gc_table_ref = luaL_ref(l, LUA_REGISTRYINDEX);
-    }
-
     template <typename FuncType, typename FuncRetType, typename... FuncArgType>
     LuaFunction DoCreateFunction(const FuncType& f, const char* name) {
-        auto l = m_l.get();
         using WrapperType = ValueWrapper<FuncType>;
 
-        lua_pushinteger(l, 0); // argoffset
-        auto wrapper = lua_newuserdata(l, sizeof(WrapperType));
+        lua_pushinteger(m_l, 0); // argoffset
+        auto wrapper = lua_newuserdata(m_l, sizeof(WrapperType));
         new (wrapper) WrapperType(f);
 
-        lua_rawgeti(l, LUA_REGISTRYINDEX, m_gc_table_ref);
-        lua_setmetatable(l, -2);
+        lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_gc_table_ref);
+        lua_setmetatable(m_l, -2);
 
-        lua_pushcclosure(l, GenericFunction<FuncType, FuncRetType, FuncArgType...>, 2);
+        lua_pushcclosure(m_l, GenericFunction<FuncType, FuncRetType, FuncArgType...>, 2);
 
-        LuaFunction ret(l, -1);
+        LuaFunction ret(m_l, -1);
         if (name) {
-            lua_setglobal(l, name);
+            lua_setglobal(m_l, name);
         } else {
-            lua_pop(l, 1);
+            lua_pop(m_l, 1);
         }
         return ret;
     }
 
+    /* ----------------------- utils for class ------------------------ */
+
+    static int IndexFunctionForClass(lua_State* l) {
+        auto key = lua_tostring(l, 2);
+        auto ret_type = luaL_getmetafield(l, 1, key);
+        if (ret_type != LUA_TTABLE) {
+            lua_pushnil(l);
+            return 1;
+        }
+
+        lua_getfield(l, -1, "type");
+        int value_type = lua_tointeger(l, -1);
+
+        if (value_type == CLASS_FUNCTION) {
+            lua_getfield(l, -2, "func");
+            return 1;
+        } else if (value_type == CLASS_PROPERTY) {
+            lua_getfield(l, -2, "getter");
+            if (lua_isnil(l, -1)) {
+                return 1;
+            }
+            lua_pushvalue(l, 1); // userdata
+            if (lua_pcall(l, 1, 1, 0) == LUA_OK) {
+                return 1;
+            }
+        }
+
+        lua_pushnil(l);
+        return 1;
+    }
+
+    static int NewIndexFunctionForClass(lua_State* l) {
+        auto key = lua_tostring(l, 2);
+        auto key_type = luaL_getmetafield(l, 1, key);
+        if (key_type != LUA_TTABLE) { // is not a field defined in c++
+            return 0;
+        }
+
+        lua_getfield(l, -1, "type");
+        int value_type = lua_tointeger(l, -1);
+
+        // only values can be modified
+        if (value_type == CLASS_PROPERTY) {
+            // move userdata to position 2
+            lua_pushvalue(l, 1);
+            lua_replace(l, 2);
+            // move setter to position 1
+            lua_getfield(l, -2, "setter");
+            if (lua_isnil(l, -1)) {
+                return 0;
+            }
+            lua_replace(l, 1);
+            lua_pop(l, 2);
+            lua_pcall(l, 2, 0, 0);
+        }
+
+        return 0;
+    }
+
+    static int DestructorForClass(lua_State* l) {
+        // destroying metatable of instances only when this class is destroyed.
+        auto ud = (LuaClassData*)lua_touserdata(l, 1);
+        luaL_unref(l, LUA_REGISTRYINDEX, ud->metatable_ref);
+        return 0;
+    }
+
+    void SetupClassData(lua_State* l) {
+        // sets a metatable so that it becomes callable via __call
+        lua_newtable(l);
+
+        lua_pushvalue(l, -1);
+        lua_setmetatable(l, -3);
+
+        lua_pushcfunction(l, NewIndexFunctionForClass);
+        lua_setfield(l, -2, "__newindex");
+
+        lua_pushcfunction(l, IndexFunctionForClass);
+        lua_setfield(l, -2, "__index");
+
+        lua_pushcfunction(l, DestructorForClass);
+        lua_setfield(l, -2, "__gc");
+
+        lua_pop(l, 1);
+    }
+
+    // returns ref index of the metatable
+    template <typename T>
+    int SetupClassInstanceMetatable(lua_State* l) {
+        // creates metatable for class instances
+        lua_newtable(l);
+
+        // sets the __newindex field so that userdata can modify members
+        lua_pushcfunction(l, NewIndexFunctionForClass);
+        lua_setfield(l, -2, "__newindex");
+
+        // sets the __index field to be itself so that userdata can find member functions
+        lua_pushcfunction(l, IndexFunctionForClass);
+        lua_setfield(l, -2, "__index");
+
+        // destructor for class instances
+        lua_pushcfunction(l, GenericDestructor<T>);
+        lua_setfield(l, -2, "__gc");
+
+        return luaL_ref(l, LUA_REGISTRYINDEX);
+    }
+
+    /* ---------------------------------------------------------------- */
+
 private:
-    std::shared_ptr<lua_State> m_l;
+    lua_State* m_l;
+    void (*m_deleter)(lua_State*);
 
     /** metatable(only contains __gc) for DestructorObject */
     int m_gc_table_ref;

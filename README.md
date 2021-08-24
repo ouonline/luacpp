@@ -20,7 +20,7 @@
 
 # Overview
 
-`lua-cpp` is a C++ library aiming at simplifying the use of Lua API. It is compatible with Lua 5.2.3(or above) and needs C++14 support.
+`lua-cpp` is a C++ library aiming at simplifying the use of Lua APIs. It is compatible with Lua 5.2.3(or above) and needs C++14 support.
 
 [[back to top](#table-of-contents)]
 
@@ -30,13 +30,34 @@
 
 Prerequisites
 
-* Lua >= 5.2
+* Lua >= 5.2.3
 * GCC >= 4.9 with c++14 support
 * CMake >= 3.10 (optional)
 
+Building with pre-installed lua package:
+
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Release -DLUA_INCLUDE_DIRS=/path/to/lua/include/dir -DLUA_LIBRARIES=/path/to/lua/libs ..
+mkdir build
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j
+```
+
+or specify lua headers manually:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -DLUA_INCLUDE_DIR=/path/to/lua/include/dir ..
+```
+
+and build tests:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug -DLUACPP_BUILD_TESTS=ON ..
+```
+
+or
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug -DLUACPP_BUILD_TESTS=ON -DLUA_INCLUDE_DIR=/path/to/lua/include/dir -DLUA_LIBRARIES=/path/to/lua/libs ..
 ```
 
 [[back to top](#table-of-contents)]
@@ -55,11 +76,11 @@ Let's start with a simple example, the famous `Hello, world!`:
 #include <iostream>
 using namespace std;
 
-#include "luacpp.hpp"
+#include "luacpp.h"
 using namespace luacpp;
 
 int main(void) {
-    LuaState l;
+    LuaState l(luaL_newstate(), true);
 
     l.CreateObject("Hello, luacpp from ouonline!", "msg");
     auto lobj = l.Get("msg");
@@ -88,11 +109,11 @@ In this example, we set the variable `msg`'s value to be a string "Hello, luacpp
 #include <iostream>
 using namespace std;
 
-#include "luacpp.hpp"
+#include "luacpp.h"
 using namespace luacpp;
 
 int main(void) {
-    LuaState l;
+    LuaState l(luaL_newstate(), true);
 
     auto iterfunc = [] (const LuaObject& key, const LuaObject& value) -> bool {
         cout << "    ";
@@ -120,20 +141,19 @@ int main(void) {
 
     cout << "table1:" << endl;
     l.DoString("var = {'mykey', value = 'myvalue', others = 'myothers'}");
-    l.Get("var").ToTable().ForEach(iterfunc);
+    LuaTable(l.Get("var")).ForEach(iterfunc);
 
     cout << "table2:" << endl;
     auto ltable = l.CreateTable();
     ltable.Set("x", 5);
     ltable.Set("o", "ouonline");
-    ltable.Set("t", ltable);
     ltable.ForEach(iterfunc);
 
     return 0;
 }
 ```
 
-At first we use `LuaState::DoString()` to execute a chunk that creates a table named `var` with 3 fields.
+We use `LuaState::DoString()` to execute a chunk that creates a table named `var` with 3 fields.
 
 `LuaTable::ForEach()` takes a callback function that is used to iterate each key-value pair in the table. If the callback function returns `false`, `LuaTable::ForEach()` exits and returns `false`.
 
@@ -147,11 +167,11 @@ We can use `LuaState::CreateTable()` to create a new empty table and use `LuaTab
 #include <iostream>
 using namespace std;
 
-#include "luacpp.hpp"
+#include "luacpp.h"
 using namespace luacpp;
 
 int main(void) {
-    LuaState l;
+    LuaState l(luaL_newstate(), true);
 
     auto resiter1 = [] (int, const LuaObject& lobj) -> bool {
         auto buf = lobj.ToBufferRef();
@@ -182,7 +202,7 @@ int main(void) {
                "io.write('return value -> ', res, '\\n')");
 
     l.DoString("function return2(a, b) return a, b end");
-    l.Get("return2").ToFunction().Exec(resiter2, nullptr, 5, "ouonline");
+    LuaFunction(l.Get("return2")).Exec(resiter2, nullptr, 5, "ouonline");
 
     return 0;
 }
@@ -194,7 +214,7 @@ First we define a C++ function `echo` and set its name to be `echo` in the Lua e
 
 ## Exporting and Using User-defined Types
 
-First we define a class `ClassDemo` for test:
+We define a class `ClassDemo` for test:
 
 ```c++
 class ClassDemo final {
@@ -247,11 +267,11 @@ Then we see how to export this class to the Lua environment:
 #include <iostream>
 using namespace std;
 
-#include "luacpp.hpp"
+#include "luacpp.h"
 using namespace luacpp;
 
 int main(void) {
-    LuaState l;
+    LuaState l(luaL_newstate(), true);
 
     auto lclass = l.CreateClass<ClassDemo>("ClassDemo");
 
@@ -268,7 +288,7 @@ int main(void) {
         .DefMember<void, const char*>("echo_str", &ClassDemo::Echo) // overloaded function
         .DefMember<void, int>("echo_int", &ClassDemo::Echo)
         .DefMember("m_value", &ClassDemo::m_value) // default is READWRITE
-        .DefStatic("st_value", &ClassDemo::st_value, luacpp::READ);
+        .DefStatic("st_value", &ClassDemo::st_value, luacpp::READ); // read only
     l.DoString("tc = ClassDemo('ouonline', 5); tc:print();"
                "tc:echo_str('calling class member function from lua')");
 
@@ -295,17 +315,28 @@ The following snippet displays how to use `LuaUserData` to exchange data between
 #include <iostream>
 using namespace std;
 
-#include "luacpp.hpp"
+#include "luacpp.h"
 using namespace luacpp;
 
 int main(void) {
-    LuaState l;
+    LuaState l(luaL_newstate(), true);
 
-    l.CreateClass<ClassDemo>("ClassDemo")
+    auto lclass = l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
+        .DefMember("get_object_addr", [](ClassDemo* obj) -> ClassDemo* {
+            return obj;
+        })
         .DefMember("print", &ClassDemo::Print);
-    l.CreateUserData("ClassDemo", "tc", "ouonline", 5).Get<ClassDemo>()->Set("in lua: Print test data from cpp");
+
+    auto lud = lclass.CreateUserData("ouonline", 5);
+    auto ud = lud.Get<ClassDemo>();
+    ud->Set("in lua: Print test data from cpp");
+    l.Set("tc", lud);
     l.DoString("tc:print()");
+
+    l.DoString("obj = tc:get_object_addr();");
+    auto obj_addr = LuaUserData(l.Get("obj")).Get<ClassDemo>();
+    assert(ud == obj_addr);
 
     return 0;
 }
@@ -319,17 +350,17 @@ The following example is similar to the previous one, except that we modify the 
 #include <iostream>
 using namespace std;
 
-#include "luacpp.hpp"
+#include "luacpp.h"
 using namespace luacpp;
 
 int main(void) {
-    LuaState l;
+    LuaState l(luaL_newstate(), true);
 
     l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("set", &ClassDemo::Set);
     l.DoString("tc = ClassDemo('ouonline', 3); tc:set('in cpp: Print test data from lua')");
-    l.Get("tc").ToUserData().Get<ClassDemo>()->Print();
+    LuaUserData(l.Get("tc")).Get<ClassDemo>()->Print();
 
     return 0;
 }
@@ -389,24 +420,6 @@ lua_Number ToNumber() const;
 ```
 
 Converts this object to a (floating point) number.
-
-```c++
-LuaTable ToTable() const;
-```
-
-Converts this object to a `LuaTable` object.
-
-```c++
-LuaFunction ToFunction() const;
-```
-
-Converts this object to a `LuaFunction` object.
-
-```c++
-LuaUserData ToUserData() const;
-```
-
-Converts this object to a `LuaUserData` object.
 
 [[back to top](#table-of-contents)]
 
@@ -475,7 +488,7 @@ Itarates the table with the callback function `func`.
 `LuaFunction`(inherits from `LuaObject`) represents the function type of Lua.
 
 ```c++
-LuaFunction(lua_State* l, uint64_t index);
+LuaFunction(lua_State* l, int index);
 ```
 
 Creates a `LuaFunction` with the table located in `index` of the lua_State `l`.
@@ -486,7 +499,7 @@ bool Exec(const std::function<bool (int i, const LuaObject&)>& callback = nullpt
           std::string* errstr = nullptr, Argv&&... argv);
 ```
 
-Invokes the function with arguments `argv`. `callback` is a callback function used to handle result(s). Note that the first argument `i` of `callback` counts from 0. `errstr` is a string to receive a message if an error occurs. The rest of arguments `argv`, if any, are passed to the real function being called.
+Invokes the function with arguments `argv`. `callback` is a callback function used to handle result(s). Note that the first argument `i` of `callback` starts from 0. `errstr` is a string to receive a message if an error occurs. The rest of arguments `argv`, if any, are passed to the real function being called.
 
 [[back to top](#table-of-contents)]
 
@@ -665,10 +678,10 @@ Exports a new type `T` with the name `name`. If `name` is already exported, that
 
 ```c++
 template<typename... Argv>
-LuaUserData CreateUserData(const char* classname, const char* name = nullptr, Argv&&... argv);
+LuaUserData CreateUserData(Argv&&... argv) const;
 ```
 
-Creates a `LuaUserData` of type `classname` with the name `name`. The arguments `argv` are passed to the constructor of `T` to create an instance. If `classname` is not exported, a `nil` object is returned.
+Creates a `LuaUserData` instance. The arguments `argv` are passed to the constructor of `T` to create an instance.
 
 ```c++
 bool DoString(const char* chunk, std::string* errstr = nullptr,
@@ -691,7 +704,7 @@ Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and
 # Notes
 
 * Class member functions should be called with colon operator, in the form of `object:func(...)`, to ensure the object itself is the first argument passed to func. Otherwise you need to do it manually, like `object.func(object, ...)`.
-* Currently `luacpp` doesn't support passing and returning values by reference. Only bool/int/float/pointer/LuaObject are supported. You should export functions with supported types.
+* Currently `luacpp` doesn't support passing and returning values by reference. Only bool/int(8,16,32,64)/float/double/pointer/LuaObject/LuaTable/LuaFunction/LuaUserData are supported. You should export functions with supported types.
 
 -----
 

@@ -32,16 +32,4 @@ lua_Number LuaObject::ToNumber() const {
     return ret;
 }
 
-LuaTable LuaObject::ToTable() const {
-    return ToTypedObject<LuaTable>();
-}
-
-LuaFunction LuaObject::ToFunction() const {
-    return ToTypedObject<LuaFunction>();
-}
-
-LuaUserData LuaObject::ToUserData() const {
-    return ToTypedObject<LuaUserData>();
-}
-
 }

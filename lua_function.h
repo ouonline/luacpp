@@ -12,12 +12,14 @@ class LuaFunction final : public LuaObject {
 public:
     LuaFunction(lua_State* l, int index) : LuaObject(l, index) {}
     LuaFunction(LuaObject&& lobj) : LuaObject(std::move(lobj)) {}
+    LuaFunction(const LuaObject& lobj) : LuaObject(lobj) {}
     LuaFunction(LuaFunction&&) = default;
-    LuaFunction(const LuaFunction&) = delete;
+    LuaFunction(const LuaFunction&) = default;
 
     LuaFunction& operator=(LuaFunction&&) = default;
-    LuaFunction& operator=(const LuaFunction&) = delete;
+    LuaFunction& operator=(const LuaFunction&) = default;
 
+    /** i starts from 0 */
     template <typename... Argv>
     bool Exec(const std::function<bool (int i, const LuaObject&)>& callback = nullptr,
               std::string* errstr = nullptr, Argv&&... argv) {

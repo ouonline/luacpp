@@ -30,7 +30,18 @@ public:
         MoveFunc(std::move(rhs));
     }
 
+    LuaObject(const LuaObject& rhs) {
+        m_l = rhs.m_l;
+        m_type = rhs.m_type;
+        rhs.PushSelf();
+        m_ref_index = luaL_ref(m_l, LUA_REGISTRYINDEX);
+    }
+
     LuaObject& operator=(LuaObject&& rhs) {
+        if (&rhs == this) {
+            return *this;
+        }
+
         if (m_l) {
             luaL_unref(m_l, LUA_REGISTRYINDEX, m_ref_index);
         }
@@ -38,8 +49,21 @@ public:
         return *this;
     }
 
-    LuaObject(const LuaObject&) = delete;
-    LuaObject& operator=(const LuaObject&) = delete;
+    LuaObject& operator=(const LuaObject& rhs) {
+        if (&rhs == this) {
+            return *this;
+        }
+
+        if (m_l) {
+            luaL_unref(m_l, LUA_REGISTRYINDEX, m_ref_index);
+        }
+
+        m_l = rhs.m_l;
+        m_type = rhs.m_type;
+        rhs.PushSelf();
+        m_ref_index = luaL_ref(m_l, LUA_REGISTRYINDEX);
+        return *this;
+    }
 
     virtual ~LuaObject() {
         // m_l is nullptr if object was moved to another object
@@ -66,23 +90,12 @@ public:
     bool ToBool() const;
     lua_Number ToNumber() const;
     LuaBufferRef ToBufferRef() const;
-    LuaTable ToTable() const;
-    LuaFunction ToFunction() const;
-    LuaUserData ToUserData() const;
 
     void PushSelf() const {
         lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_ref_index);
     }
 
 private:
-    template <typename T>
-    T ToTypedObject() const {
-        PushSelf();
-        T ret(m_l, -1);
-        lua_pop(m_l, 1);
-        return ret;
-    }
-
     void MoveFunc(LuaObject&& rhs) {
         m_l = rhs.m_l;
         m_type = rhs.m_type;
@@ -90,7 +103,7 @@ private:
 
         rhs.m_l = nullptr;
         rhs.m_type = LUA_TNIL;
-        rhs.m_ref_index = -1;
+        rhs.m_ref_index = LUA_REFNIL;
     }
 
 protected:

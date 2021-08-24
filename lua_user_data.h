@@ -9,11 +9,12 @@ class LuaUserData final : public LuaObject {
 public:
     LuaUserData(lua_State* l, int index) : LuaObject(l, index) {}
     LuaUserData(LuaObject&& lobj) : LuaObject(std::move(lobj)) {}
+    LuaUserData(const LuaObject& lobj) : LuaObject(lobj) {}
     LuaUserData(LuaUserData&&) = default;
-    LuaUserData(const LuaUserData&) = delete;
+    LuaUserData(const LuaUserData&) = default;
 
     LuaUserData& operator=(LuaUserData&&) = default;
-    LuaUserData& operator=(const LuaUserData&) = delete;
+    LuaUserData& operator=(const LuaUserData&) = default;
 
     template <typename T>
     T* Get() const {
