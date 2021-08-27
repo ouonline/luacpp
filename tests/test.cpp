@@ -233,20 +233,67 @@ static void TestClassProperty() {
     LuaState l(luaL_newstate(), true);
     auto lclass = l.CreateClass<Point>("Point")
         .DefConstructor()
-        .DefMember("x", &Point::x)
-        .DefMember("y", &Point::y);
+        .DefMember("x",
+                   [](const Point* p) ->int {
+                       return p->x;
+                   },
+                   [](Point* p, int v) -> void {
+                       p->x = v;
+                   })
+        .DefMember("y",
+                   [](const Point* p) -> int {
+                       return p->y;
+                   },
+                   [](Point* p, int v) -> void {
+                       p->y = v;
+                   });
 
-    auto lud = lclass.CreateUserData();
-    auto p = lud.Get<Point>();
-    assert(p->x == 10);
-    assert(p->y == 20);
+    auto lp1 = lclass.CreateUserData();
+    auto p1 = lp1.Get<Point>();
+    assert(p1->x == 10);
+    assert(p1->y == 20);
 
-    l.Set("p", lud);
-    l.DoString("print('x = ', p.x);"
-               "p.x = 12345; p.y = 54321;");
-    assert(p->x == 12345);
-    assert(p->y == 54321);
-    cout << "in cpp, point is [" << p->x << ", " << p->y << "]" << endl;
+    l.Set("p1", lp1);
+    l.DoString("p2 = Point();"
+               "print('x = ', p1.x);"
+               "p1.x = 12345; p1.y = 54321;");
+    assert(p1->x == 12345);
+    assert(p1->y == 54321);
+
+    auto lp2 = LuaUserData(l.Get("p2"));
+    auto p2 = lp2.Get<Point>();
+    assert(p2->x == 10);
+    assert(p2->y == 20);
+
+    cout << "in cpp, p1 is [" << p1->x << ", " << p1->y << "], p2 is ["
+         << p2->x << ", " << p2->y << "]" << endl;
+}
+
+static void TestClassPropertyReadWrite() {
+    LuaState l(luaL_newstate(), true);
+    auto lclass = l.CreateClass<Point>("Point")
+        .DefConstructor()
+        .DefMemberReadOnly("x",
+                           [](const Point* p) ->int {
+                               return p->x;
+                           })
+        .DefMemberWriteOnly("y",
+                            [](Point* p, int v) -> void {
+                                p->y = v;
+                            });
+
+    auto lp1 = lclass.CreateUserData();
+    auto p1 = lp1.Get<Point>();
+    assert(p1->x == 10);
+    assert(p1->y == 20);
+
+    l.Set("p1", lp1);
+    l.DoString("print('x = ', p1.x);"
+               "p1.x = 12345; p1.y = 54321;");
+    assert(p1->x == 10);
+    assert(p1->y == 54321);
+
+    cout << "in cpp, p1 is [" << p1->x << ", " << p1->y << "]" << endl;
 }
 
 static inline void GenericPrint(const char* msg) {
@@ -289,7 +336,13 @@ static void TestClassStaticProperty() {
     LuaState l(luaL_newstate(), true);
 
     l.CreateClass<ClassDemo>("ClassDemo")
-        .DefStatic("st_value", &ClassDemo::st_value);
+        .DefStatic("st_value",
+                   []() -> int {
+                       return ClassDemo::st_value;
+                   },
+                   [](int v) -> void {
+                       ClassDemo::st_value = v;
+                   });
 
     bool ok = l.DoString("vvv = ClassDemo.st_value");
     assert(ok);
@@ -303,11 +356,15 @@ static void TestClassStaticProperty() {
     cout << "after modification, get st_value = " << ClassDemo::st_value << endl;
 }
 
-static void TestClassPropertyReadWrite() {
+static void TestClassStaticPropertyReadWrite() {
     LuaState l(luaL_newstate(), true);
+    auto lptr = l.GetPtr();
 
     l.CreateClass<ClassDemo>("ClassDemo")
-        .DefStatic("st_value", &ClassDemo::st_value, luacpp::WRITE);
+        .DefStaticWriteOnly("st_value",
+                            [](int v) -> void {
+                                ClassDemo::st_value = v;
+                            });
 
     bool ok = l.DoString("vvv = ClassDemo.st_value");
     assert(ok);
@@ -442,12 +499,13 @@ static const map<string, void (*)()> g_test_suite = {
     {"TestClass", TestClass},
     {"TestClassConstructor", TestClassConstructor},
     {"TestClassProperty", TestClassProperty},
+    {"TestClassPropertyReadWrite", TestClassPropertyReadWrite},
     {"TestClassMemberFunction", TestClassMemberFunction},
     {"TestClassLuaMemberFunction", TestClassLuaMemberFunction},
     {"TestClassStaticProperty", TestClassStaticProperty},
+    {"TestClassStaticPropertyReadWrite", TestClassStaticPropertyReadWrite},
     {"TestClassStaticMemberFunction", TestClassStaticMemberFunction},
     {"TestClassLuaStaticMemberFunction", TestClassLuaStaticMemberFunction},
-    {"TestClassPropertyReadWrite", TestClassPropertyReadWrite},
     {"TestUserdata1", TestUserdata1},
     {"TestUserdata2", TestUserdata2},
     {"TestDoString", TestDoString},

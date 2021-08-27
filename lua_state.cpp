@@ -39,7 +39,7 @@ LuaState& LuaState::operator=(LuaState&& rhs) {
 
 static inline int SetupGcTable(lua_State* l) {
     lua_newtable(l);
-    lua_pushcfunction(l, GenericDestructor<DestructorObject>);
+    lua_pushcfunction(l, luacpp_generic_destructor<DestructorObject>);
     lua_setfield(l, -2, "__gc");
     return luaL_ref(l, LUA_REGISTRYINDEX);
 }

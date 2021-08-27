@@ -287,8 +287,10 @@ int main(void) {
     lclass.DefMember("print", &ClassDemo::Print)
         .DefMember<void, const char*>("echo_str", &ClassDemo::Echo) // overloaded function
         .DefMember<void, int>("echo_int", &ClassDemo::Echo)
-        .DefMember("m_value", &ClassDemo::m_value) // default is READWRITE
-        .DefStatic("st_value", &ClassDemo::st_value, luacpp::READ); // read only
+        .DefMember("m_value", // default is READWRITE
+                   [](const ClassDemo* c) -> int { return c->m_value; },
+                   [](ClassDemo* c, int v) -> void { c->m_value = v; })
+        .DefStaticReadOnly("st_value", [](const ClassDemo* c) -> int { return c->st_value; });
     l.DoString("tc = ClassDemo('ouonline', 5); tc:print();"
                "tc:echo_str('calling class member function from lua')");
 
@@ -549,11 +551,17 @@ Exports function `f` to be a member function of this class and `name` as the exp
 
 ```c++
 /** property */
-template <typename PropertyType>
-LuaClass& DefMember(const char* name, PropertyType T::* mptr, uint32_t permission = READWRITE);
+template <typename GetterType, typename SetterType>
+LuaClass& DefMember(const char* name, const GetterType& getter, const SetterType& setter);
+
+template <typename GetterType>
+LuaClass& DefMemberReadOnly(const char* name, const GetterType& getter);
+
+template <typename SetterType>
+LuaClass& DefMemberWriteOnly(const char* name, const SetterType& setter);
 ```
 
-Exports a member pointed by `mptr` as a member `name` of this class in Lua.
+Exports a member `name` of this class in Lua. Note that `getter` and `setter` **MUST** be lambda functions.
 
 ```c++
 /** std::function static member function */
@@ -575,12 +583,17 @@ LuaClass<T>& DefStatic(const char* name, int (*f)(lua_State* l));
 Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua.
 
 ```c++
-/** static property */
-template <typename PropertyType>
-LuaClass& DefStatic(const char* name, PropertyType* ptr, uint32_t permission = READWRITE);
+template <typename GetterType, typename SetterType>
+LuaClass& DefStatic(const char* name, const GetterType& getter, const SetterType& setter);
+
+template <typename GetterType>
+LuaClass& DefStaticReadOnly(const char* name, const GetterType& getter);
+
+template <typename SetterType>
+LuaClass& DefStaticWriteOnly(const char* name, const SetterType& setter);
 ```
 
-Exports a static member pointed by `ptr` as a member `name` of this class in Lua.
+Exports a static member `name` of this class in Lua. Note that `getter` and `setter` **MUST** be lambda functions.
 
 [[back to top](#table-of-contents)]
 
@@ -612,7 +625,7 @@ LuaState(lua_State* l, bool is_owner);
 The constructor.
 
 ```c++
-lua_State* GetRawPtr() const;
+lua_State* GetPtr() const;
 ```
 
 Returns the `lua_State` pointer.

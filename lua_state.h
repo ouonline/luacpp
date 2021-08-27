@@ -22,7 +22,7 @@ public:
     LuaState& operator=(LuaState&&);
     LuaState& operator=(const LuaState&) = delete;
 
-    lua_State* GetRawPtr() const {
+    lua_State* GetPtr() const {
         return m_l;
     }
 
@@ -90,7 +90,7 @@ private:
         lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_gc_table_ref);
         lua_setmetatable(m_l, -2);
 
-        lua_pushcclosure(m_l, GenericFunction<FuncType, FuncRetType, FuncArgType...>, 2);
+        lua_pushcclosure(m_l, luacpp_generic_function<FuncType, FuncRetType, FuncArgType...>, 2);
 
         LuaFunction ret(m_l, -1);
         if (name) {
@@ -201,7 +201,7 @@ private:
         lua_setfield(l, -2, "__index");
 
         // destructor for class instances
-        lua_pushcfunction(l, GenericDestructor<T>);
+        lua_pushcfunction(l, luacpp_generic_destructor<T>);
         lua_setfield(l, -2, "__gc");
 
         return luaL_ref(l, LUA_REGISTRYINDEX);

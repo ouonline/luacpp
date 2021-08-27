@@ -151,8 +151,8 @@ static void PushValues(lua_State* l, First&& first, Rest&&... rest) {
 
 // function traits for extracting typeinfo from lambda functions
 
-template <typename FuncType>
-struct FunctionTraits final : public FunctionTraits<decltype(&FuncType::operator())> {};
+template <typename ClassType>
+struct FunctionTraits final : public FunctionTraits<decltype(&ClassType::operator())> {};
 
 template <typename ClassType, typename FuncRetType, typename... FuncArgType>
 struct FunctionTraits<FuncRetType(ClassType::*)(FuncArgType...) const> {
@@ -259,7 +259,7 @@ struct ValueWrapper final : public DestructorObject {
 };
 
 template <typename T>
-static int GenericDestructor(lua_State* l) {
+static int luacpp_generic_destructor(lua_State* l) {
     auto ud = (T*)lua_touserdata(l, 1);
     ud->~T();
     return 0;
@@ -267,7 +267,7 @@ static int GenericDestructor(lua_State* l) {
 
 /** FuncType may be a C-style function or a std::function or a callable object */
 template <typename FuncType, typename FuncRetType, typename... FuncArgType>
-static int GenericFunction(lua_State* l) {
+static int luacpp_generic_function(lua_State* l) {
     auto argoffset = lua_tointeger(l, lua_upvalueindex(1));
     auto wrapper = (ValueWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
     return FunctionCaller<sizeof...(FuncArgType)>::Exec(wrapper->value, l, argoffset);
