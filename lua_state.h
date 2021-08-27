@@ -33,6 +33,7 @@ public:
     LuaObject CreateObject(const char* str, uint64_t len, const char* name = nullptr);
     LuaObject CreateObject(lua_Number value, const char* name = nullptr);
 
+    LuaObject CreateNil();
     LuaTable CreateTable(const char* name = nullptr);
 
     /** c-style function */

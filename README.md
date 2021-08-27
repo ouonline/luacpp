@@ -643,6 +643,12 @@ LuaObject Get(const char* name) const;
 Gets an object by its name.
 
 ```c++
+LuaObject CreateNil();
+```
+
+Returns a `nil` object.
+
+```c++
 LuaObject CreateObject(const char* str, const char* name = nullptr);
 ```
 

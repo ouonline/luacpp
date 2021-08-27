@@ -108,6 +108,10 @@ LuaObject LuaState::CreateObject(lua_Number value, const char* name) {
     return ret;
 }
 
+LuaObject LuaState::CreateNil() {
+    return LuaObject(m_l);
+}
+
 LuaTable LuaState::CreateTable(const char* name) {
     lua_newtable(m_l);
     LuaTable ret(m_l, -1);

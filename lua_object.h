@@ -17,6 +17,8 @@ class LuaUserData;
 
 class LuaObject {
 public:
+    LuaObject(lua_State* l) : m_l(l), m_type(LUA_TNIL), m_ref_index(LUA_REFNIL) {}
+
     LuaObject(lua_State* l, int index) {
         m_l = l;
         m_type = lua_type(l, index);
