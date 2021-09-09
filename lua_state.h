@@ -33,8 +33,11 @@ public:
     LuaObject CreateObject(const char* str, uint64_t len, const char* name = nullptr);
     LuaObject CreateObject(lua_Number value, const char* name = nullptr);
 
-    LuaObject CreateNil();
     LuaTable CreateTable(const char* name = nullptr);
+
+    LuaObject CreateNil() {
+        return LuaObject(m_l);
+    }
 
     /** c-style function */
     template <typename FuncRetType, typename... FuncArgType>
@@ -58,11 +61,21 @@ public:
 
     template <typename T>
     LuaClass<T> CreateClass(const char* name = nullptr) {
-        auto ud = (LuaClassData*)lua_newuserdata(m_l, sizeof(LuaClassData));
+        auto ud = (LuaClassData*)lua_newuserdatauv(m_l, sizeof(LuaClassData), 2);
+        new (ud) LuaClassData();
         ud->gc_table_ref = m_gc_table_ref;
-        ud->metatable_ref = SetupClassInstanceMetatable<T>(m_l);
 
-        SetupClassData(m_l);
+        // metatable for class itself
+        CreateClassMetatable(m_l);
+        lua_setmetatable(m_l, -2);
+
+        // uservalue 1 is a table of parent classes
+        lua_newtable(m_l);
+        lua_setiuservalue(m_l, -2, CLASS_PARENT_TABLE_IDX);
+
+        // uservalue 2 is the metatable for class instances
+        CreateClassInstanceMetatable(m_l, luacpp_generic_destructor<T>);
+        lua_setiuservalue(m_l, -2, CLASS_INSTANCE_METATABLE_IDX);
 
         LuaClass<T> ret(m_l, -1);
         if (name) {
@@ -104,108 +117,37 @@ private:
 
     /* ----------------------- utils for class ------------------------ */
 
-    static int IndexFunctionForClass(lua_State* l) {
-        auto key = lua_tostring(l, 2);
-        auto ret_type = luaL_getmetafield(l, 1, key);
-        if (ret_type != LUA_TTABLE) {
-            lua_pushnil(l);
-            return 1;
-        }
+    static int luacpp_index_for_class(lua_State* l);
+    static int luacpp_newindex_for_class(lua_State* l);
+    static int luacpp_index_for_class_instance(lua_State* l);
+    static int luacpp_newindex_for_class_instance(lua_State* l);
 
-        lua_getfield(l, -1, "type");
-        int value_type = lua_tointeger(l, -1);
-
-        if (value_type == CLASS_FUNCTION) {
-            lua_getfield(l, -2, "func");
-            return 1;
-        } else if (value_type == CLASS_PROPERTY) {
-            lua_getfield(l, -2, "getter");
-            if (lua_isnil(l, -1)) {
-                return 1;
-            }
-            lua_pushvalue(l, 1); // userdata
-            if (lua_pcall(l, 1, 1, 0) == LUA_OK) {
-                return 1;
-            }
-        }
-
-        lua_pushnil(l);
-        return 1;
-    }
-
-    static int NewIndexFunctionForClass(lua_State* l) {
-        auto key = lua_tostring(l, 2);
-        auto key_type = luaL_getmetafield(l, 1, key);
-        if (key_type != LUA_TTABLE) { // is not a field defined in c++
-            return 0;
-        }
-
-        lua_getfield(l, -1, "type");
-        int value_type = lua_tointeger(l, -1);
-
-        // only values can be modified
-        if (value_type == CLASS_PROPERTY) {
-            // move userdata to position 2
-            lua_pushvalue(l, 1);
-            lua_replace(l, 2);
-            // move setter to position 1
-            lua_getfield(l, -2, "setter");
-            if (lua_isnil(l, -1)) {
-                return 0;
-            }
-            lua_replace(l, 1);
-            lua_pop(l, 2);
-            lua_pcall(l, 2, 0, 0);
-        }
-
-        return 0;
-    }
-
-    static int DestructorForClass(lua_State* l) {
-        // destroying metatable of instances only when this class is destroyed.
-        auto ud = (LuaClassData*)lua_touserdata(l, 1);
-        luaL_unref(l, LUA_REGISTRYINDEX, ud->metatable_ref);
-        return 0;
-    }
-
-    void SetupClassData(lua_State* l) {
+    void CreateClassMetatable(lua_State* l) {
         // sets a metatable so that it becomes callable via __call
         lua_newtable(l);
 
-        lua_pushvalue(l, -1);
-        lua_setmetatable(l, -3);
-
-        lua_pushcfunction(l, NewIndexFunctionForClass);
+        lua_pushcfunction(l, luacpp_newindex_for_class);
         lua_setfield(l, -2, "__newindex");
 
-        lua_pushcfunction(l, IndexFunctionForClass);
+        lua_pushcfunction(l, luacpp_index_for_class);
         lua_setfield(l, -2, "__index");
-
-        lua_pushcfunction(l, DestructorForClass);
-        lua_setfield(l, -2, "__gc");
-
-        lua_pop(l, 1);
     }
 
-    // returns ref index of the metatable
-    template <typename T>
-    int SetupClassInstanceMetatable(lua_State* l) {
+    void CreateClassInstanceMetatable(lua_State* l, int (*gc)(lua_State*)) {
         // creates metatable for class instances
         lua_newtable(l);
 
         // sets the __newindex field so that userdata can modify members
-        lua_pushcfunction(l, NewIndexFunctionForClass);
+        lua_pushcfunction(l, luacpp_newindex_for_class_instance);
         lua_setfield(l, -2, "__newindex");
 
         // sets the __index field to be itself so that userdata can find member functions
-        lua_pushcfunction(l, IndexFunctionForClass);
+        lua_pushcfunction(l, luacpp_index_for_class_instance);
         lua_setfield(l, -2, "__index");
 
         // destructor for class instances
-        lua_pushcfunction(l, luacpp_generic_destructor<T>);
+        lua_pushcfunction(l, gc);
         lua_setfield(l, -2, "__gc");
-
-        return luaL_ref(l, LUA_REGISTRYINDEX);
     }
 
     /* ---------------------------------------------------------------- */

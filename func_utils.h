@@ -21,12 +21,10 @@ class ValueConverter final {
 public:
     ValueConverter(lua_State* l, int index) : m_l(l), m_index(index) {}
 
-    // LUA_TBOOLEAN
     operator bool () const {
         return lua_toboolean(m_l, m_index);
     }
 
-    // LUA_TNUMBER
     operator int8_t () const {
         return lua_tointeger(m_l, m_index);
     }
@@ -58,13 +56,11 @@ public:
         return lua_tonumber(m_l, m_index);
     }
 
-    // LUA_TUSERDATA and LUA_TLIGHTUSERDATA
     template <typename T>
     operator T* () const {
         return (T*)lua_touserdata(m_l, m_index);
     }
 
-    // LUA_TSTRING
     operator const char* () const {
         return lua_tostring(m_l, m_index);
     }
@@ -86,12 +82,10 @@ private:
 
 /* -------------------------------------------------------------------------- */
 
-// LUA_TBOOLEAN
 static inline void PushValue(lua_State* l, bool arg) {
     lua_pushboolean(l, arg);
 }
 
-// LUA_TNUMBER
 static inline void PushValue(lua_State* l, int8_t arg) {
     lua_pushinteger(l, arg);
 }
@@ -123,7 +117,6 @@ static inline void PushValue(lua_State* l, double arg) {
     lua_pushnumber(l, arg);
 }
 
-// LUA_TSTRING
 static inline void PushValue(lua_State* l, const char* arg) {
     lua_pushstring(l, arg);
 }
@@ -131,7 +124,6 @@ static inline void PushValue(lua_State* l, const LuaBufferRef& arg) {
     lua_pushlstring(l, (const char*)arg.base, arg.size);
 }
 
-// LUA_TLIGHTUSERDATA
 template <typename T>
 static inline void PushValue(lua_State* l, T* arg) {
     lua_pushlightuserdata(l, (void*)arg);

@@ -37,11 +37,597 @@ LuaState& LuaState::operator=(LuaState&& rhs) {
     return *this;
 }
 
-static inline int SetupGcTable(lua_State* l) {
-    lua_newtable(l);
+static inline int CreateGcTable(lua_State* l) {
+    lua_createtable(l, 0, 1);
     lua_pushcfunction(l, luacpp_generic_destructor<DestructorObject>);
     lua_setfield(l, -2, "__gc");
     return luaL_ref(l, LUA_REGISTRYINDEX);
+}
+
+int LuaState::luacpp_index_for_class(lua_State* l) {
+    auto key = lua_tostring(l, 2);
+
+    lua_getmetatable(l, 1);
+    if (lua_isnil(l, -1)) {
+        return 1;
+    }
+
+    lua_getfield(l, -1, key);
+
+    // ----- case 1: is a member function or static member function ----- //
+
+    if (lua_isfunction(l, -1)) {
+        return 1;
+    }
+
+    // ----- case 2: is a property ----- //
+
+    if (lua_istable(l, -1)) {
+        lua_getfield(l, -1, "getter");
+        if (lua_isnil(l, -1)) {
+            luaL_error(l, "cannot read `%s`.", key);
+            return 1;
+        }
+
+        lua_pushvalue(l, 1); // userdata
+        lua_pushvalue(l, 2); // the key
+        lua_pcall(l, 2, 1, 0);
+
+        return 1;
+    }
+
+    // is not a field exported by c++
+    if (!lua_isnil(l, -1)) {
+        lua_pushnil(l);
+        return 1;
+    }
+
+    // ----- case 3: not found in current class ----- //
+
+    // get parent table
+    lua_getiuservalue(l, 1, CLASS_PARENT_TABLE_IDX);
+
+    /*
+      +--------------+
+      | parent table |
+      +--------------+
+      |      ...     |
+      +--------------+
+    */
+
+    // iterate all parents until the key is found
+    lua_pushnil(l);
+    while (lua_next(l, -2) != 0) {
+        /*
+          +--------------+
+          |    parent    |
+          +--------------+
+          |  key(unused) |
+          +--------------+
+          | parent table |
+          +--------------+
+          |      ...     |
+          +--------------+
+        */
+        lua_getfield(l, -1, key);
+        if (!lua_isnil(l, -1)) {
+            return 1;
+        }
+
+        lua_pop(l, 2);
+    }
+
+    // not found
+    lua_pushnil(l);
+    return 1;
+}
+
+int LuaState::luacpp_newindex_for_class(lua_State* l) {
+    auto key = lua_tostring(l, 2);
+
+    lua_getmetatable(l, 1);
+    if (lua_isnil(l, -1)) {
+        luaL_error(l, "cannot find metatable of class.");
+        return 0;
+    }
+
+    /*
+      +-----------+
+      | metatable |
+      +-----------+
+      | new value |
+      +-----------+
+      |    key    |
+      +-----------+
+      | classdata |
+      +-----------+
+    */
+
+    lua_getfield(l, -1, key);
+
+    /*
+      +-----------+
+      |   value   |
+      +-----------+
+      | metatable |
+      +-----------+
+      | new value |
+      +-----------+
+      |    key    |
+      +-----------+
+      | classdata |
+      +-----------+
+    */
+
+    // ----- case 1: is a property ----- //
+
+    if (lua_istable(l, -1)) {
+        lua_getfield(l, -1, "setter");
+        if (lua_isnil(l, -1)) {
+            luaL_error(l, "cannot write `%s`.", key);
+            return 0;
+        }
+        if (!lua_isfunction(l, -1)) {
+            luaL_error(l, "`setter` is not a function.");
+            return 0;
+        }
+        lua_pushvalue(l, 1); // classdata
+        lua_pushvalue(l, 3); // new value
+        lua_pcall(l, 2, 0, 0);
+        return 0;
+    }
+
+    // ----- case 2: is not a field exported by c++ ----- //
+
+    // get parent table
+    lua_getiuservalue(l, 1, CLASS_PARENT_TABLE_IDX);
+
+    /*
+      +--------------+
+      | parent table |
+      +--------------+
+      |      ...     |
+      +--------------+
+    */
+
+    // iterate all parents until the key is found
+    lua_pushnil(l);
+    while (lua_next(l, -2) != 0) {
+        /*
+          +--------------+
+          |    parent    |
+          +--------------+
+          |  key(unused) |
+          +--------------+
+          | parent table |
+          +--------------+
+          |      ...     |
+          +--------------+
+        */
+
+        // check whether the required filed exists
+        lua_getfield(l, -1, key);
+        if (!lua_isnil(l, -1)) {
+            lua_pushvalue(l, 3);
+            lua_setfield(l, -3, key);
+            return 0;
+        }
+
+        lua_pop(l, 2);
+    }
+
+    return 0;
+}
+
+/**
+  parameters:
+
+  +---------------+
+  | current class | <- (optional) pushed by derived instance
+  +---------------+
+  |      key      |
+  +---------------+
+  |   userdata    |
+  +---------------+
+*/
+int LuaState::luacpp_index_for_class_instance(lua_State* l) {
+    auto key = lua_tostring(l, 2);
+
+    // cannot use `lua_getiuservalue` because this userdata may be used as a parent class instance
+    if (lua_gettop(l) == 2) { // called by lua from `__index`
+        lua_getiuservalue(l, 1, 1); // the class
+    }
+    lua_getiuservalue(l, -1, CLASS_INSTANCE_METATABLE_IDX);
+
+    /*
+      +--------------------------+
+      | class instance metatable |
+      +--------------------------+
+      |      current class       |
+      +--------------------------+
+      |           key            |
+      +--------------------------+
+      |        userdata          |
+      +--------------------------+
+    */
+
+    if (lua_isnil(l, -1)) {
+        return 1;
+    }
+
+    lua_getfield(l, -1, key);
+
+    // ----- case 1: is a member function ----- //
+
+    if (lua_isfunction(l, -1)) {
+        return 1;
+    }
+
+    // ----- case 2: is a property ----- //
+
+    if (lua_istable(l, -1)) {
+        lua_getfield(l, -1, "getter");
+        if (lua_isnil(l, -1)) {
+            luaL_error(l, "cannot read `%s`.", key);
+            return 1;
+        }
+
+        lua_pushvalue(l, 1); // userdata
+        lua_pushvalue(l, 2); // the key
+        lua_pcall(l, 2, 1, 0);
+        return 1;
+    }
+
+    // ----- case 3: is not a field exported by c++ ----- //
+
+    if (!lua_isnil(l, -1)) {
+        lua_pushnil(l);
+        return 1;
+    }
+
+    // ----- case 4: not found in current instance ----- //
+
+    lua_pop(l, 2);
+
+    /*
+      +-------+
+      | class |
+      +-------+
+      |  ...  |
+      +-------+
+    */
+
+    // ----- case 4.1: find from the class because this key may be a static member ----- //
+
+    lua_getmetatable(l, -1);
+
+    /*
+      +-----------+
+      | metatable |
+      +-----------+
+      |   class   |
+      +-----------+
+      |    ...    |
+      +-----------+
+    */
+
+    lua_getfield(l, -1, key);
+    if (!lua_isnil(l, -1)) {
+        return 1;
+    }
+
+    // ----- case 4.2: find from parents ----- //
+
+    lua_pop(l, 2);
+
+    // get parent table
+    lua_getiuservalue(l, -1, CLASS_PARENT_TABLE_IDX);
+
+    /*
+      +--------------+
+      | parent table |
+      +--------------+
+      |      ...     |
+      +--------------+
+    */
+
+    // iterate all parent classes until the key is found
+    lua_pushnil(l);
+    while (lua_next(l, -2) != 0) {
+        /*
+          +--------------+
+          |    parent    |
+          +--------------+
+          |  key(unused) |
+          +--------------+
+          | parent table |
+          +--------------+
+          |      ...     |
+          +--------------+
+        */
+
+        // get instance's metatable
+        lua_getiuservalue(l, -1, CLASS_INSTANCE_METATABLE_IDX);
+
+        /*
+          +--------------+
+          |  metatable   |
+          +--------------+
+          |    parent    |
+          +--------------+
+          |  key(unused) |
+          +--------------+
+          | parent table |
+          +--------------+
+          |      ...     |
+          +--------------+
+        */
+
+        // get __index value from parent's instance metatable
+        lua_getfield(l, -1, "__index");
+
+        /*
+          +--------------+
+          |   __index    |
+          +--------------+
+          |  metatable   |
+          +--------------+
+          |    parent    |
+          +--------------+
+          |  key(unused) |
+          +--------------+
+          | parent table |
+          +--------------+
+          |      ...     |
+          +--------------+
+        */
+
+        if (lua_isfunction(l, -1)) {
+            lua_pushvalue(l, 1); // userdata
+            lua_pushvalue(l, 2); // the key
+            lua_pushvalue(l, -5); // parent class
+            lua_pcall(l, 3, 1, 0);
+            if (!lua_isnil(l, -1)) {
+                return 1;
+            }
+        } else {
+            lua_getfield(l, -1, key);
+            if (!lua_isnil(l, -1)) {
+                return 1;
+            }
+        }
+
+        /*
+          +--------------+
+          |     res      |
+          +--------------+
+          |  metatable   |
+          +--------------+
+          |    parent    |
+          +--------------+
+          |  key(unused) |
+          +--------------+
+          | parent table |
+          +--------------+
+          |      ...     |
+          +--------------+
+        */
+
+        lua_pop(l, 3);
+    }
+
+    // not found
+    lua_pushnil(l);
+    return 1;
+}
+
+/**
+  parameters:
+
+  +---------------+
+  | current class | <- (optional) pushed by derived instance
+  +---------------+
+  |   new value   |
+  +---------------+
+  |      key      |
+  +---------------+
+  |   userdata    |
+  +---------------+
+*/
+int LuaState::luacpp_newindex_for_class_instance(lua_State* l) {
+    auto key = lua_tostring(l, 2);
+
+    // cannot use `lua_getiuservalue` because this userdata may be used as a parent class instance
+    if (lua_gettop(l) == 3) {
+        lua_getiuservalue(l, 1, 1);
+    }
+
+    lua_getiuservalue(l, -1, CLASS_INSTANCE_METATABLE_IDX);
+
+    /*
+      +--------------------------+
+      | class instance metatable |
+      +--------------------------+
+      |      current class       |
+      +--------------------------+
+      |        new value         |
+      +--------------------------+
+      |           key            |
+      +--------------------------+
+      |        userdata          |
+      +--------------------------+
+    */
+
+    if (lua_isnil(l, -1)) {
+        luaL_error(l, "cannot find metatable of class instances.");
+        return 0;
+    }
+
+    lua_getfield(l, -1, key);
+
+    /*
+      +--------------------------+
+      |       value of key       |
+      +--------------------------+
+      | class instance metatable |
+      +--------------------------+
+      |      current class       |
+      +--------------------------+
+      |        new value         |
+      +--------------------------+
+      |           key            |
+      +--------------------------+
+      |        userdata          |
+      +--------------------------+
+    */
+
+    // ----- case 1: is a property ----- //
+
+    if (lua_istable(l, -1)) {
+        lua_getfield(l, -1, "setter");
+        if (lua_isnil(l, -1)) {
+            luaL_error(l, "cannot write `%s`.", key);
+            return 0;
+        }
+        if (!lua_isfunction(l, -1)) {
+            luaL_error(l, "`setter` is not a function.");
+            return 0;
+        }
+        lua_pushvalue(l, 1); // userdata
+        lua_pushvalue(l, 3); // new value
+        lua_pcall(l, 2, 0, 0);
+        return 0;
+    }
+
+    // is not a writable field exported by c++
+    if (!lua_isnil(l, -1)) {
+        luaL_error(l, "`%s` is not a writable field exported by c++.", key);
+        return 0;
+    }
+
+    // ----- case 2: is a static member ----- //
+
+    lua_pop(l, 2);
+
+    /*
+      +-------+
+      | class |
+      +-------+
+      |  ...  |
+      +-------+
+    */
+
+    lua_getmetatable(l, -1);
+
+    /*
+      +-----------+
+      | metatable |
+      +-----------+
+      |   class   |
+      +-----------+
+      |    ...    |
+      +-----------+
+    */
+
+    lua_getfield(l, -1, key);
+    if (lua_istable(l, -1)) {
+        lua_getfield(l, -1, "setter");
+        if (lua_isnil(l, -1)) {
+            luaL_error(l, "cannot write `%s`.", key);
+            return 0;
+        }
+        if (!lua_isfunction(l, -1)) {
+            luaL_error(l, "`setter` is not a function.");
+            return 0;
+        }
+        lua_pushvalue(l, 1); // userdata
+        lua_pushvalue(l, 3); // new value
+        lua_pcall(l, 2, 0, 0);
+        return 0;
+    }
+
+    // is not a writable field exported by c++
+    if (!lua_isnil(l, -1)) {
+        luaL_error(l, "`%s` is not a writable field exported by c++.", key);
+        return 0;
+    }
+
+    lua_pop(l, 2);
+
+    // ----- case 3: not found in current class ----- //
+
+    // get parent table
+    lua_getiuservalue(l, -1, CLASS_PARENT_TABLE_IDX);
+
+    /*
+      +--------------+
+      | parent table |
+      +--------------+
+      |      ...     |
+      +--------------+
+    */
+
+    // iterate all parent classes until the key is found
+    lua_pushnil(l);
+    while (lua_next(l, -2) != 0) {
+        /*
+          +--------------+
+          |    parent    |
+          +--------------+
+          |  key(unused) |
+          +--------------+
+          | parent table |
+          +--------------+
+          |      ...     |
+          +--------------+
+        */
+
+        lua_getiuservalue(l, -1, CLASS_INSTANCE_METATABLE_IDX);
+
+        /*
+          +--------------------+
+          | instance metatable |
+          +--------------------+
+          |       parent       |
+          +--------------------+
+          |     key(unused)    |
+          +--------------------+
+          |    parent table    |
+          +--------------------+
+          |         ...        |
+          +--------------------+
+        */
+
+        // get __newindex value from parent's instance metatable
+        lua_getfield(l, -1, "__newindex");
+
+        /*
+          +--------------------+
+          |     __newindex     |
+          +--------------------+
+          | instance metatable |
+          +--------------------+
+          |       parent       |
+          +--------------------+
+          |     key(unused)    |
+          +--------------------+
+          |    parent table    |
+          +--------------------+
+          |         ...        |
+          +--------------------+
+        */
+
+        if (lua_isfunction(l, -1)) {
+            lua_pushvalue(l, 1); // userdata
+            lua_pushvalue(l, 2); // the key
+            lua_pushvalue(l, 3); // new value
+            lua_pushvalue(l, -6); // parent class
+            lua_pcall(l, 4, 0, 0);
+            return 0;
+        }
+    }
+
+    return 0;
 }
 
 LuaState::LuaState(lua_State* l, bool is_owner) {
@@ -53,7 +639,7 @@ LuaState::LuaState(lua_State* l, bool is_owner) {
         m_deleter = DummyDeleter;
     }
 
-    m_gc_table_ref = SetupGcTable(l);
+    m_gc_table_ref = CreateGcTable(l);
 }
 
 LuaState::~LuaState() {
@@ -106,10 +692,6 @@ LuaObject LuaState::CreateObject(lua_Number value, const char* name) {
         lua_pop(m_l, 1);
     }
     return ret;
-}
-
-LuaObject LuaState::CreateNil() {
-    return LuaObject(m_l);
 }
 
 LuaTable LuaState::CreateTable(const char* name) {

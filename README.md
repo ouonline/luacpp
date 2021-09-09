@@ -6,6 +6,7 @@
     - [Processing Tables](#processing-tables)
     - [Calling Functions](#calling-functions)
     - [Exporting and Using User-defined Types](#exporting-and-using-user-defined-types)
+    - [Class Inheritance](#class-inheritance)
 * [Classes and APIs](#classes-and-apis)
     - [LuaObject](#luaobject)
     - [LuaTable](#luatable)
@@ -20,7 +21,7 @@
 
 # Overview
 
-`lua-cpp` is a C++ library aiming at simplifying the use of Lua APIs. It is compatible with Lua 5.2.3(or above) and needs C++14 support.
+`lua-cpp` is a C++ library aiming at simplifying the use of Lua APIs. It is compatible with Lua 5.4.0(or above) and needs C++14 support.
 
 [[back to top](#table-of-contents)]
 
@@ -30,7 +31,7 @@
 
 Prerequisites
 
-* Lua >= 5.2.3
+* Lua >= 5.4.0
 * GCC >= 4.9 with c++14 support
 * CMake >= 3.10 (optional)
 
@@ -217,7 +218,7 @@ First we define a C++ function `echo` and set its name to be `echo` in the Lua e
 We define a class `ClassDemo` for test:
 
 ```c++
-class ClassDemo final {
+class ClassDemo {
 public:
     ClassDemo() {
         cout << "ClassDemo::ClassDemo() is called without value." << endl;
@@ -230,7 +231,7 @@ public:
             m_msg = msg;
         }
     }
-    ~ClassDemo() {
+    virtual ~ClassDemo() {
         cout << "ClassDemo::~ClassDemo() is called." << endl;
     }
 
@@ -307,7 +308,9 @@ int main(void) {
 
 `LuaState::CreateClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. You can register different names with the same c++ class.
 
-`LuaClass::DefMember()` is a template function used to export member functions for this class. `LuaClass::DefStatic()` is used to export static member functions. Both member functions and staic member functions can be C-style functions or `std::function`s.
+`LuaClass::DefMember()` is a template function used to export member functions and properties and `LuaClass::DefStatic()` to export static member functions and properties. Both member functions and staic member functions can be C-style functions or `std::function`s.
+
+Refer to the [Classes and APIs](classes-and-apis) section for `LuaClass::DefMemberReadOnly()`, `LuaClass::DefMemberWriteOnly()`, `LuaClass::DefStaticReadOnly()` and `LuaClass::DefStaticWriteOnly()` to see how to export read-only and write-only properties.
 
 Class member functions should be called with colon operator in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
 
@@ -367,6 +370,52 @@ int main(void) {
     return 0;
 }
 ```
+
+[[back to top](#table-of-contents)]
+
+## Class Inheritance
+
+We define `DerivedDemo1` and `DerivedDemo2`:
+
+```c++
+class DerivedDemo1 : public ClassDemo {}; // do nothing
+
+class DerivedDemo2 : public DerivedDemo1 {}; // do nothing
+```
+
+and use
+
+```c++
+template <typename BaseType>
+LuaClass& AddBaseClass(const LuaClass<BaseType>& lclass);
+```
+
+to connect derived classes with base classes:
+
+```c++
+LuaState l(luaL_newstate(), true);
+
+auto base = l.CreateClass<ClassDemo>("ClassDemo")
+    .DefConstructor()
+    .DefStatic("StaticEcho", &ClassDemo::StaticEcho)
+    .DefMember<const char*, const char*>("echo", &ClassDemo::Echo)
+    .DefMember("m_value",
+                [](const ClassDemo* c) -> int {
+                    return c->m_value;
+                },
+                [](ClassDemo* c, int v) -> void {
+                    c->m_value = v;
+                });
+
+auto derived1 = l.CreateClass<DerivedDemo1>("DerivedDemo1")
+    .AddBaseClass(base)
+    .DefConstructor();
+
+auto derived2 = l.CreateClass<DerivedDemo2>("DerivedDemo2")
+    .AddBaseClass(derived1)
+    .DefConstructor();
+```
+
 
 [[back to top](#table-of-contents)]
 
@@ -521,6 +570,13 @@ LuaClass<T>& DefConstructor();
 ```
 
 Sets the class's constructor with argument type `FuncArgType` and return a reference of the class itself.
+
+```c++
+template <typename BaseType>
+LuaClass& AddBaseClass(const LuaClass<BaseType>& lclass);
+```
+
+Connects the derived classes with their base classes.
 
 ```c++
 /** member function */

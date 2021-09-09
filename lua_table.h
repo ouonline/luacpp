@@ -33,8 +33,9 @@ public:
     void Set(const char* name, lua_Number value);
     void Set(const char* name, const LuaObject& lobj);
 
-    bool ForEach(const std::function<bool (const LuaObject& key,
+    bool ForEach(const std::function<bool (int i /* starting from 0 */,
                                            const LuaObject& value)>& func) const;
+    bool ForEach(const std::function<bool (const LuaObject& key, const LuaObject& value)>& func) const;
 };
 
 }
