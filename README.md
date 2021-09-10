@@ -526,11 +526,11 @@ void Set(const char* name, const LuaObject& lobj)
 Sets the value at `index` or `name` to be the object `lobj`. Note that `lobj` and this table **MUST** be created by the same LuaState.
 
 ```c++
-bool ForEach(const std::function<bool (const LuaObject& key,
-                                       const LuaObject& value)>& func) const;
+bool ForEach(const std::function<bool (int i, const LuaObject& value)>& func) const;
+bool ForEach(const std::function<bool (const LuaObject& key, const LuaObject& value)>& func) const;
 ```
 
-Itarates the table with the callback function `func`.
+Itarates the table with the callback function `func`. Note that the parameter `i` starts from 0.
 
 [[back to top](#table-of-contents)]
 

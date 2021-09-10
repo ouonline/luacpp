@@ -82,8 +82,24 @@ void LuaTable::Set(const char* name, const LuaObject& lobj) {
     lua_pop(m_l, 1);
 }
 
-bool LuaTable::ForEach(const function<bool (const LuaObject& key,
-                                            const LuaObject& value)>& func) const {
+bool LuaTable::ForEach(const function<bool (int i, const LuaObject& value)>& func) const {
+    PushSelf();
+    auto len = lua_rawlen(m_l, -1);
+
+    for (uint32_t i = 0; i < len; ++i) {
+        lua_rawgeti(m_l, -1, i + 1);
+        if (!func(i, LuaObject(m_l, -1))) {
+            lua_pop(m_l, 2);
+            return false;
+        }
+        lua_pop(m_l, 1);
+    }
+
+    lua_pop(m_l, 1);
+    return true;
+}
+
+bool LuaTable::ForEach(const function<bool (const LuaObject& key, const LuaObject& value)>& func) const {
     PushSelf();
     lua_pushnil(m_l);
     while (lua_next(m_l, -2) != 0) {

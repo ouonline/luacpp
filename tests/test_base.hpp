@@ -82,6 +82,21 @@ static void TestTable() {
     ltable.Set("o", "ouonline");
     ltable.Set("t", table);
     ltable.ForEach(iterfunc);
+
+    l.DoString("arr = {'a', 'c', 'e'}");
+    LuaTable(l.Get("arr")).ForEach([](int i, const LuaObject& value) -> bool {
+        auto buf_ref = value.ToBufferRef();
+        const string s(buf_ref.base, buf_ref.size);
+        cout << "[" << i << "] -> " << s << endl;
+        if (i == 0) {
+            assert(s == "a");
+        } else if (i == 1) {
+            assert(s == "c");
+        } else if (i == 2) {
+            assert(s == "e");
+        }
+        return true;
+    });
 }
 
 static void TestFuncWithReturnValue() {
