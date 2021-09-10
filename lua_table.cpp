@@ -82,7 +82,7 @@ void LuaTable::Set(const char* name, const LuaObject& lobj) {
     lua_pop(m_l, 1);
 }
 
-bool LuaTable::ForEach(const function<bool (int i, const LuaObject& value)>& func) const {
+bool LuaTable::ForEach(const function<bool (uint32_t i, const LuaObject& value)>& func) const {
     PushSelf();
     auto len = lua_rawlen(m_l, -1);
 

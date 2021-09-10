@@ -6,7 +6,7 @@ extern "C" {
 #include "lauxlib.h"
 }
 
-#include "lua_buffer_ref.h"
+#include "lua_string_ref.h"
 #include <utility> // std::move
 
 namespace luacpp {
@@ -89,7 +89,7 @@ public:
 
     bool ToBool() const;
     lua_Number ToNumber() const;
-    LuaBufferRef ToBufferRef() const;
+    LuaStringRef ToStringRef() const;
 
     void PushSelf() const {
         lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_ref_index);

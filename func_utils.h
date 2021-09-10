@@ -5,7 +5,7 @@ extern "C" {
 #include "lua.h"
 }
 
-#include "lua_buffer_ref.h"
+#include "lua_string_ref.h"
 #include <functional>
 
 namespace luacpp {
@@ -64,10 +64,10 @@ public:
     operator const char* () const {
         return lua_tostring(m_l, m_index);
     }
-    operator LuaBufferRef () const {
+    operator LuaStringRef () const {
         size_t len = 0;
         auto addr = lua_tolstring(m_l, m_index, &len);
-        return LuaBufferRef(addr, len);
+        return LuaStringRef(addr, len);
     }
 
     operator LuaObject () const;
@@ -120,7 +120,7 @@ static inline void PushValue(lua_State* l, double arg) {
 static inline void PushValue(lua_State* l, const char* arg) {
     lua_pushstring(l, arg);
 }
-static inline void PushValue(lua_State* l, const LuaBufferRef& arg) {
+static inline void PushValue(lua_State* l, const LuaStringRef& arg) {
     lua_pushlstring(l, (const char*)arg.base, arg.size);
 }
 

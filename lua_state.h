@@ -87,10 +87,10 @@ public:
     }
 
     bool DoString(const char* chunk, std::string* errstr = nullptr,
-                  const std::function<bool (int, const LuaObject&)>& callback = nullptr);
+                  const std::function<bool (uint32_t, const LuaObject&)>& callback = nullptr);
 
     bool DoFile(const char* script, std::string* errstr = nullptr,
-                const std::function<bool (int, const LuaObject&)>& callback = nullptr);
+                const std::function<bool (uint32_t, const LuaObject&)>& callback = nullptr);
 
 private:
     template <typename FuncType, typename FuncRetType, typename... FuncArgType>

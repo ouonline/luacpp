@@ -86,7 +86,7 @@ int main(void) {
     l.CreateObject("Hello, luacpp from ouonline!", "msg");
     auto lobj = l.Get("msg");
     if (lobj.Type() == LUA_TSTRING) {
-        auto buf = lobj.ToBufferRef();
+        auto buf = lobj.ToStringRef();
         cout << "get msg -> " << buf.base << endl;
     } else {
         cerr << "unknown object type -> " << lobj.TypeName() << endl;
@@ -121,7 +121,7 @@ int main(void) {
         if (key.Type() == LUA_TNUMBER) {
             cout << key.ToNumber();
         } else if (key.Type() == LUA_TSTRING) {
-            auto buf = key.ToBufferRef();
+            auto buf = key.ToStringRef();
             cout << buf.base;
         } else {
             cout << "unsupported key type -> " << key.TypeName() << endl;
@@ -131,7 +131,7 @@ int main(void) {
         if (value.Type() == LUA_TNUMBER) {
             cout << " -> " << value.ToNumber() << endl;
         } else if (value.Type() == LUA_TSTRING) {
-            auto buf = value.ToBufferRef();
+            auto buf = value.ToStringRef();
             cout << " -> " << buf.base << endl;
         } else {
             cout << " -> unsupported iter value type: " << value.TypeName() << endl;
@@ -174,17 +174,17 @@ using namespace luacpp;
 int main(void) {
     LuaState l(luaL_newstate(), true);
 
-    auto resiter1 = [] (int, const LuaObject& lobj) -> bool {
-        auto buf = lobj.ToBufferRef();
+    auto resiter1 = [] (uint32_t, const LuaObject& lobj) -> bool {
+        auto buf = lobj.ToStringRef();
         cout << "output from resiter1: " << buf.base << endl;
         return true;
     };
-    auto resiter2 = [] (int n, const LuaObject& lobj) -> bool {
+    auto resiter2 = [] (uint32_t n, const LuaObject& lobj) -> bool {
         cout << "output from resiter2: ";
         if (n == 0) {
             cout << lobj.ToNumber() << endl;
         } else if (n == 1) {
-            auto buf = lobj.ToBufferRef();
+            auto buf = lobj.ToStringRef();
             cout << buf.base << endl;
         }
 
@@ -454,10 +454,10 @@ bool ToBool() const;
 Converts this object to a `bool` value.
 
 ```c++
-LuaBufferRef ToBufferRef() const;
+LuaStringRef ToStringRef() const;
 ```
 
-Converts this object to a `LuaBufferRef` object, which only contains address and size of the buffer.
+Converts this object to a `LuaStringRef` object, which only contains address and size of the buffer.
 
 ```c++
 template <typename T>
@@ -526,7 +526,7 @@ void Set(const char* name, const LuaObject& lobj)
 Sets the value at `index` or `name` to be the object `lobj`. Note that `lobj` and this table **MUST** be created by the same LuaState.
 
 ```c++
-bool ForEach(const std::function<bool (int i, const LuaObject& value)>& func) const;
+bool ForEach(const std::function<bool (uint32_t i, const LuaObject& value)>& func) const;
 bool ForEach(const std::function<bool (const LuaObject& key, const LuaObject& value)>& func) const;
 ```
 
@@ -546,7 +546,7 @@ Creates a `LuaFunction` with the table located in `index` of the lua_State `l`.
 
 ```c++
 template <typename... Argv>
-bool Exec(const std::function<bool (int i, const LuaObject&)>& callback = nullptr,
+bool Exec(const std::function<bool (uint32_t i, const LuaObject&)>& callback = nullptr,
           std::string* errstr = nullptr, Argv&&... argv);
 ```
 
@@ -598,9 +598,6 @@ LuaClass& DefMember(const char* name, const FuncType& f);
 /** c-style member function */
 template <typename FuncRetType, typename... FuncArgType>
 LuaClass<T>& DefMember(const char* name, FuncRetType (*f)(FuncArgType...));
-
-/** lua-style member function */
-LuaClass<T>& DefMember(const char* name, int (*f)(lua_State* l));
 ```
 
 Exports function `f` to be a member function of this class and `name` as the exported function name in Lua.
@@ -617,7 +614,7 @@ template <typename SetterType>
 LuaClass& DefMemberWriteOnly(const char* name, const SetterType& setter);
 ```
 
-Exports a member `name` of this class in Lua. Note that `getter` and `setter` **MUST** be lambda functions.
+Exports a member `name` of this class in Lua. Note that `getter` and `setter` **MUST** be lambda functions. `getter` takes a const pointer of `T` as the first argument and `setter` takes a pointer of `T` as the first argument. See `tests/test_class.hpp` for usage examples.
 
 ```c++
 /** std::function static member function */
@@ -631,9 +628,6 @@ LuaClass<T>& DefStatic(const char* name, FuncRetType (*f)(FuncArgType...));
 /** lambda static member function */
 template <typename FuncType>
 LuaClass<T>& DefStatic(const char* name, const FuncType& f);
-
-/** lua-style static member function */
-LuaClass<T>& DefStatic(const char* name, int (*f)(lua_State* l));
 ```
 
 Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua.
@@ -649,7 +643,7 @@ template <typename SetterType>
 LuaClass& DefStaticWriteOnly(const char* name, const SetterType& setter);
 ```
 
-Exports a static member `name` of this class in Lua. Note that `getter` and `setter` **MUST** be lambda functions.
+Exports a static member `name` of this class in Lua. Note that `getter` and `setter` **MUST** be lambda functions. `getter` takes a const pointer of `T` as the first argument and `setter` takes a pointer of `T` as the first argument. See `tests/test_class.hpp` for usage examples.
 
 [[back to top](#table-of-contents)]
 
@@ -760,14 +754,14 @@ Creates a `LuaUserData` instance. The arguments `argv` are passed to the constru
 
 ```c++
 bool DoString(const char* chunk, std::string* errstr = nullptr,
-              const std::function<bool (int, const LuaObject&)>& callback = nullptr);
+              const std::function<bool (uint32_t, const LuaObject&)>& callback = nullptr);
 ```
 
 Evaluates the chunk `chunk`. The rest of arguments, `errstr` and `callback`, have the same meaning as in `LuaFunction::Exec()`.
 
 ```c++
 bool DoFile(const char* script, std::string* errstr = nullptr,
-            const std::function<bool (int, const LuaObject&)>& callback = nullptr);
+            const std::function<bool (uint32_t, const LuaObject&)>& callback = nullptr);
 ```
 
 Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and `callback`, have the same meaning as in `LuaFunction::Exec()`.

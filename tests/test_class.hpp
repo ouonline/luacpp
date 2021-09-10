@@ -135,7 +135,7 @@ static void TestClassMemberFunction() {
     bool ok = l.DoString(chunk.c_str());
     assert(ok);
 
-    auto buf = l.Get("var1").ToBufferRef();
+    auto buf = l.Get("var1").ToStringRef();
     assert(string(buf.base, buf.size) ==  expected_str);
 
     string errmsg;

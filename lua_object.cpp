@@ -14,12 +14,12 @@ bool LuaObject::ToBool() const {
     return ret;
 }
 
-LuaBufferRef LuaObject::ToBufferRef() const {
+LuaStringRef LuaObject::ToStringRef() const {
     size_t len = 0;
 
     PushSelf();
     const char* str = lua_tolstring(m_l, -1, &len);
-    LuaBufferRef ret(str, len);
+    LuaStringRef ret(str, len);
     lua_pop(m_l, 1);
 
     return ret;

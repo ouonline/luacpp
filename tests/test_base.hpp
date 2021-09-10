@@ -30,11 +30,11 @@ static void TestString() {
     auto lobj = l.CreateObject(var.c_str(), var.size(), "var");
     assert(lobj.Type() == LUA_TSTRING);
 
-    auto buf = lobj.ToBufferRef();
+    auto buf = lobj.ToStringRef();
     assert(string(buf.base, buf.size) == var);
 
     auto lobj2 = l.Get("var");
-    auto buf2 = lobj2.ToBufferRef();
+    auto buf2 = lobj2.ToStringRef();
     assert(string(buf2.base, buf2.size) == var);
 }
 
@@ -46,7 +46,7 @@ static void TestTable() {
         if (key.Type() == LUA_TNUMBER) {
             cout << key.ToNumber();
         } else if (key.Type() == LUA_TSTRING) {
-            auto buf = key.ToBufferRef();
+            auto buf = key.ToStringRef();
             cout << buf.base;
         } else {
             cout << "unsupported key type -> " << key.TypeName() << endl;
@@ -56,7 +56,7 @@ static void TestTable() {
         if (value.Type() == LUA_TNUMBER) {
             cout << " -> " << value.ToNumber() << endl;
         } else if (value.Type() == LUA_TSTRING) {
-            auto buf = value.ToBufferRef();
+            auto buf = value.ToStringRef();
             cout << " -> " << buf.base << endl;
         } else {
             cout << " -> unsupported iter value type: " << value.TypeName() << endl;
@@ -73,7 +73,7 @@ static void TestTable() {
 
     auto lobj = table.Get("others");
     assert(lobj.Type() == LUA_TSTRING);
-    auto buf = lobj.ToBufferRef();
+    auto buf = lobj.ToStringRef();
     assert(string(buf.base, buf.size) == "myothers");
 
     cout << "table2:" << endl;
@@ -84,8 +84,8 @@ static void TestTable() {
     ltable.ForEach(iterfunc);
 
     l.DoString("arr = {'a', 'c', 'e'}");
-    LuaTable(l.Get("arr")).ForEach([](int i, const LuaObject& value) -> bool {
-        auto buf_ref = value.ToBufferRef();
+    LuaTable(l.Get("arr")).ForEach([](uint32_t i, const LuaObject& value) -> bool {
+        auto buf_ref = value.ToStringRef();
         const string s(buf_ref.base, buf_ref.size);
         cout << "[" << i << "] -> " << s << endl;
         if (i == 0) {
@@ -110,7 +110,7 @@ static void TestFuncWithReturnValue() {
     const string msg = "calling cpp function with return value from cpp.";
     l.CreateObject(msg.data(), msg.size(), "msg");
 
-    lfunc.Exec([](int, const LuaObject& lobj) -> bool {
+    lfunc.Exec([](uint32_t, const LuaObject& lobj) -> bool {
         auto res = lobj.ToInteger<int32_t>();
         assert(res == 5);
         return true;
@@ -124,12 +124,12 @@ static void TestFuncWithReturnValue() {
 
     const string msg2 = "ouonline.net";
     l.DoString("function return2(a, b) return a, b end");
-    LuaFunction(l.Get("return2")).Exec([&msg2](int i, const LuaObject& lobj) -> bool {
+    LuaFunction(l.Get("return2")).Exec([&msg2](uint32_t i, const LuaObject& lobj) -> bool {
         if (i == 0) {
             assert(lobj.ToInteger<int32_t>() == 5);
             cout << "get [0] -> " << lobj.ToInteger<int32_t>() << endl;
         } else if (i == 1) {
-            auto buf = lobj.ToBufferRef();
+            auto buf = lobj.ToStringRef();
             const string res2(buf.base, buf.size);
             assert(res2 == msg2);
             cout << "get [1] -> '" << res2 << "'" << endl;
@@ -204,10 +204,10 @@ static void TestDoString() {
     LuaState l(luaL_newstate(), true);
     string errstr;
     bool ok = l.DoString("return 'ouonline', 5", &errstr,
-                         [] (int n, const LuaObject& lobj) -> bool {
+                         [] (uint32_t n, const LuaObject& lobj) -> bool {
                              cout << "output from resiter: ";
                              if (n == 0) {
-                                 auto buf = lobj.ToBufferRef();
+                                 auto buf = lobj.ToStringRef();
                                  cout << buf.base << endl;
                              } else if (n == 1) {
                                  cout << lobj.ToNumber() << endl;

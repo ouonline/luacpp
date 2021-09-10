@@ -21,7 +21,7 @@ public:
 
     /** i starts from 0 */
     template <typename... Argv>
-    bool Exec(const std::function<bool (int i, const LuaObject&)>& callback = nullptr,
+    bool Exec(const std::function<bool (uint32_t i, const LuaObject&)>& callback = nullptr,
               std::string* errstr = nullptr, Argv&&... argv) {
         PushSelf();
         PushValues(m_l, std::forward<Argv>(argv)...);
