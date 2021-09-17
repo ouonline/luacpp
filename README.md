@@ -83,7 +83,7 @@ using namespace luacpp;
 int main(void) {
     LuaState l(luaL_newstate(), true);
 
-    l.CreateObject("Hello, luacpp from ouonline!", "msg");
+    l.CreateString("Hello, luacpp from ouonline!", "msg");
     auto lobj = l.Get("msg");
     if (lobj.Type() == LUA_TSTRING) {
         auto buf = lobj.ToStringRef();
@@ -98,7 +98,7 @@ int main(void) {
 
 In this example, we set the variable `msg`'s value to be a string "Hello, luacpp from ouonline!", then use the getter function to fetch its value and print it.
 
-`LuaState::CreateObject()`s are a series of overloaded functions, which can be used to set up various kinds of variables. Once the variable is set, its value is kept in the `LuaState` instance until it is modified again or the `LuaState` instance is destroyed.
+`LuaState::CreateString()`, `LuaState::CreateNumber()` and `LuaState::CreateInteger()` are a series of functions used to set up various kinds of variables. Once a variable is set, its value is kept in the `LuaState` instance until it is modified again or the `LuaState` instance is destroyed.
 
 `LuaState::Get()` is used to get a variable by its name. The value returned by `LuaState::Get()` is a `LuaObject` instance, which can be converted to the proper type later. You'd better check the return value of `LuaObject::Type()` before any conversions.
 
@@ -146,8 +146,8 @@ int main(void) {
 
     cout << "table2:" << endl;
     auto ltable = l.CreateTable();
-    ltable.Set("x", 5);
-    ltable.Set("o", "ouonline");
+    ltable.SetInteger("x", 5);
+    ltable.SetString("o", "ouonline");
     ltable.ForEach(iterfunc);
 
     return 0;
@@ -158,7 +158,7 @@ We use `LuaState::DoString()` to execute a chunk that creates a table named `var
 
 `LuaTable::ForEach()` takes a callback function that is used to iterate each key-value pair in the table. If the callback function returns `false`, `LuaTable::ForEach()` exits and returns `false`.
 
-We can use `LuaState::CreateTable()` to create a new empty table and use `LuaTable::Set()` to set fields of this table. `LuaTable::Set()`s are a series of overloaded functions used to handle various kinds of data types.
+We can use `LuaState::CreateTable()` to create a new empty table and use `LuaTable::SetNumber()`, `LuaTable::SetInteger()`, `LuaTable::SetString()` and `LuaTable::Set()` to set fields of this table.
 
 [[back to top](#table-of-contents)]
 
@@ -196,7 +196,7 @@ int main(void) {
         return 5;
     }, "Echo");
 
-    l.CreateObject("calling cpp function with return value from cpp: ", "msg");
+    l.CreateString("calling cpp function with return value from cpp: ", "msg");
     lfunc.Exec(resiter1, nullptr, l.Get("msg"));
 
     l.DoString("res = Echo('calling cpp function with return value from lua: ');"
@@ -460,8 +460,7 @@ LuaStringRef ToStringRef() const;
 Converts this object to a `LuaStringRef` object, which only contains address and size of the buffer.
 
 ```c++
-template <typename T>
-T ToInteger() const;
+lua_Integer ToInteger() const;
 ```
 
 Converts this object to an integer.
@@ -485,12 +484,6 @@ LuaTable(lua_State* l, int index);
 Creates a `LuaTable` with the table located in `index` of the lua_State `l`.
 
 ```c++
-uint64_t Size() const;
-```
-
-Returns the number of elements in the table. Note that in current implementation this function needs to push and pop the table.
-
-```c++
 LuaObject Get(int index) const;
 LuaObject Get(const char* name) const;
 ```
@@ -498,32 +491,39 @@ LuaObject Get(const char* name) const;
 Gets an object by its `index` or `name` in this table.
 
 ```c++
-void Set(int index, const char* str);
-void Set(const char* name, const char* str);
-```
-
-Sets the value at `index` or `name` to be the string `str`.
-
-```c++
-void Set(int index, const char* str, uint64_t len);
-void Set(const char* name, const char* str, uint64_t len)
-```
-
-Sets the value at `index` or `name` to be the string `str` with length `len`.
-
-```c++
-void Set(int index, lua_Number n);
-void Set(const char* name, lua_Number n);
-```
-
-Sets the value at `index` or `name` to be the number `n`.
-
-```c++
 void Set(int index, const LuaObject& lobj);
 void Set(const char* name, const LuaObject& lobj)
 ```
 
 Sets the value at `index` or `name` to be the object `lobj`. Note that `lobj` and this table **MUST** be created by the same LuaState.
+
+```c++
+void SetString(int index, const char* str);
+void SetString(const char* name, const char* str);
+```
+
+Sets the value at `index` or `name` to be the string `str`.
+
+```c++
+void SetString(int index, const char* str, uint64_t len);
+void SetString(const char* name, const char* str, uint64_t len)
+```
+
+Sets the value at `index` or `name` to be the string `str` with length `len`.
+
+```c++
+void SetNumber(int index, lua_Number n);
+void SetNumber(const char* name, lua_Number n);
+```
+
+Sets the value at `index` or `name` to be a (floating) number `n`.
+
+```c++
+void SetInteger(int index, lua_Integer n);
+void SetInteger(const char* name, lua_Integer n);
+```
+
+Sets the value at `index` or `name` to be an integer `n`.
 
 ```c++
 bool ForEach(const std::function<bool (uint32_t i, const LuaObject& value)>& func) const;
@@ -675,12 +675,6 @@ LuaState(lua_State* l, bool is_owner);
 The constructor.
 
 ```c++
-lua_State* GetPtr() const;
-```
-
-Returns the `lua_State` pointer.
-
-```c++
 void Set(const char* name, const LuaObject& lobj);
 ```
 
@@ -699,22 +693,28 @@ LuaObject CreateNil();
 Returns a `nil` object.
 
 ```c++
-LuaObject CreateObject(const char* str, const char* name = nullptr);
+LuaObject CreateString(const char* str, const char* name = nullptr);
 ```
 
 Sets the variable `name`(if present) to be the string `str` and returns that object.
 
 ```c++
-LuaObject CreateObject(const char* str, uint64_t len, const char* name = nullptr);
+LuaObject CreateString(const char* str, uint64_t len, const char* name = nullptr);
 ```
 
 Sets the variable `name`(if present) to be a string pointed by `str` with length `len` and returns that object.
 
 ```c++
-LuaObject CreateObject(lua_Number value, const char* name = nullptr);
+LuaObject CreateNumber(lua_Number value, const char* name = nullptr);
 ```
 
-Sets the variable `name`(if present) to be the number `n` and returns that object.
+Sets the variable `name`(if present) to be a (floating) number `n` and returns that object.
+
+```c++
+LuaObject CreateInteger(lua_Integer value, const char* name = nullptr);
+```
+
+Sets the variable `name`(if present) to be an integer `n` and returns that object.
 
 ```c++
 LuaTable CreateTable(const char* name = nullptr);

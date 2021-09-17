@@ -17,21 +17,22 @@ public:
     LuaTable& operator=(LuaTable&&) = default;
     LuaTable& operator=(const LuaTable&) = default;
 
-    // NOTE: this function needs to push and pop the table
-    uint64_t Size() const;
-
     LuaObject Get(int index) const;
     LuaObject Get(const char* name) const;
 
-    void Set(int index, const char* str);
-    void Set(int index, const char* str, uint64_t len);
-    void Set(int index, lua_Number);
     void Set(int index, const LuaObject& lobj);
-
-    void Set(const char* name, const char* str);
-    void Set(const char* name, const char* str, uint64_t len);
-    void Set(const char* name, lua_Number value);
     void Set(const char* name, const LuaObject& lobj);
+
+    void SetString(int index, const char* str);
+    void SetString(int index, const char* str, uint64_t len);
+    void SetString(const char* name, const char* str);
+    void SetString(const char* name, const char* str, uint64_t len);
+
+    void SetNumber(int index, lua_Number);
+    void SetNumber(const char* name, lua_Number);
+
+    void SetInteger(int index, lua_Integer);
+    void SetInteger(const char* name, lua_Integer);
 
     bool ForEach(const std::function<bool (uint32_t i /* starting from 0 */,
                                            const LuaObject& value)>& func) const;

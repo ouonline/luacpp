@@ -13,6 +13,7 @@ static const map<string, void (*)()> g_test_suite = {
     {"TestFuncWithReturnValue", TestFuncWithReturnValue},
     {"TestFuncWithoutReturnValue", TestFuncWithoutReturnValue},
     {"TestFuncWithBuiltinReferenceTypes", TestFuncWithBuiltinReferenceTypes},
+    {"TestVariadicArguments", TestVariadicArguments},
     {"TestUserdata1", TestUserdata1},
     {"TestUserdata2", TestUserdata2},
     {"TestDoString", TestDoString},

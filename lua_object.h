@@ -79,16 +79,9 @@ public:
         return lua_typename(m_l, m_type);
     }
 
-    template <typename T>
-    T ToInteger() const {
-        PushSelf();
-        auto ret = (T)lua_tointeger(m_l, -1);
-        lua_pop(m_l, 1);
-        return ret;
-    }
-
     bool ToBool() const;
     lua_Number ToNumber() const;
+    lua_Integer ToInteger() const;
     LuaStringRef ToStringRef() const;
 
     void PushSelf() const {

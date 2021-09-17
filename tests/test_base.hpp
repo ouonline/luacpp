@@ -11,7 +11,7 @@ static void TestSetGet() {
     LuaState l(luaL_newstate(), true);
     const int value = 5;
 
-    auto lobj = l.CreateObject(value);
+    auto lobj = l.CreateInteger(value);
     assert(lobj.Type() == LUA_TNUMBER);
     assert(lobj.ToNumber() == value);
 }
@@ -27,7 +27,7 @@ static void TestString() {
     LuaState l(luaL_newstate(), true);
 
     const string var("ouonline");
-    auto lobj = l.CreateObject(var.c_str(), var.size(), "var");
+    auto lobj = l.CreateString(var.c_str(), var.size(), "var");
     assert(lobj.Type() == LUA_TSTRING);
 
     auto buf = lobj.ToStringRef();
@@ -78,8 +78,8 @@ static void TestTable() {
 
     cout << "table2:" << endl;
     auto ltable = l.CreateTable();
-    ltable.Set("x", 5);
-    ltable.Set("o", "ouonline");
+    ltable.SetInteger("x", 5);
+    ltable.SetString("o", "ouonline");
     ltable.Set("t", table);
     ltable.ForEach(iterfunc);
 
@@ -108,10 +108,10 @@ static void TestFuncWithReturnValue() {
     }, "Echo");
 
     const string msg = "calling cpp function with return value from cpp.";
-    l.CreateObject(msg.data(), msg.size(), "msg");
+    l.CreateString(msg.data(), msg.size(), "msg");
 
     lfunc.Exec([](uint32_t, const LuaObject& lobj) -> bool {
-        auto res = lobj.ToInteger<int32_t>();
+        auto res = lobj.ToInteger();
         assert(res == 5);
         return true;
     }, nullptr, l.Get("msg"));
@@ -126,8 +126,8 @@ static void TestFuncWithReturnValue() {
     l.DoString("function return2(a, b) return a, b end");
     LuaFunction(l.Get("return2")).Exec([&msg2](uint32_t i, const LuaObject& lobj) -> bool {
         if (i == 0) {
-            assert(lobj.ToInteger<int32_t>() == 5);
-            cout << "get [0] -> " << lobj.ToInteger<int32_t>() << endl;
+            assert(lobj.ToInteger() == 5);
+            cout << "get [0] -> " << lobj.ToInteger() << endl;
         } else if (i == 1) {
             auto buf = lobj.ToStringRef();
             const string res2(buf.base, buf.size);
@@ -156,14 +156,37 @@ static void TestFuncWithoutReturnValue() {
 
 static void TestFuncWithBuiltinReferenceTypes() {
     LuaState l(luaL_newstate(), true);
-    auto lobj = l.CreateObject(53142, "var");
+    auto lobj = l.CreateInteger(53142, "var");
     auto lfunc = l.CreateFunction([](const LuaObject& lobj) -> void {
         cout << "empty function for testing reference arguments." << endl;
-        cout << "value = " << lobj.ToInteger<int>() << endl;
+        cout << "value = " << lobj.ToInteger() << endl;
     });
 
     string errmsg;
     bool ok = lfunc.Exec(nullptr, &errmsg, lobj);
+    assert(ok);
+    assert(errmsg.empty());
+}
+
+static void TestVariadicArguments() {
+    LuaState l(luaL_newstate(), true);
+    auto lfunc = l.CreateFunction([](int opt, const LuaObject& args) -> void {
+        uint32_t nr_args = 0;
+        if (args.Type() == LUA_TTABLE) {
+            LuaTable(args).ForEach([&nr_args](const LuaObject&, const LuaObject&) -> bool {
+                ++nr_args;
+                return true;
+            });
+        }
+        cout << "opt = " << opt << ", args size = " << nr_args << endl;
+    }, "VariadicFunc");
+
+    string errmsg;
+    bool ok = l.DoString("VariadicFunc(5)", &errmsg);
+    assert(ok);
+    assert(errmsg.empty());
+
+    ok = l.DoString("VariadicFunc(123, {'a', ['b'] = 2, ['c'] = 'd'})", &errmsg);
     assert(ok);
     assert(errmsg.empty());
 }

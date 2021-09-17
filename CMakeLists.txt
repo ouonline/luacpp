@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(luacpp)
 
 option(LUACPP_BUILD_TESTS "build tests" OFF)
+option(LUACPP_INSTALL "install headers and libs" ON)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -19,6 +20,12 @@ if(NOT LUA_INCLUDE_DIR)
 endif()
 
 target_include_directories(luacpp_static PUBLIC ${LUA_INCLUDE_DIR})
+
+if(LUACPP_INSTALL)
+    file(GLOB LUACPP_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+    install(FILES ${LUACPP_HEADERS} DESTINATION include/luacpp)
+    install(TARGETS luacpp_static LIBRARY DESTINATION lib)
+endif()
 
 if(LUACPP_BUILD_TESTS)
     if(NOT LUA_LIBRARIES)

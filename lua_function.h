@@ -29,7 +29,8 @@ public:
     }
 
 private:
-    bool Invoke(const std::function<bool (int i, const LuaObject)>& callback, int argc,
+    // i starts from 0
+    bool Invoke(const std::function<bool (uint32_t i, const LuaObject)>& callback, int argc,
                 std::string* errstr) {
         const int top = lua_gettop(m_l) - argc - 1 /* the function itself */;
 

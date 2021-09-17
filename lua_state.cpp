@@ -630,6 +630,34 @@ int LuaState::luacpp_newindex_for_class_instance(lua_State* l) {
     return 0;
 }
 
+void LuaState::CreateClassMetatable(lua_State* l) {
+    // sets a metatable so that it becomes callable via __call
+    lua_newtable(l);
+
+    lua_pushcfunction(l, luacpp_newindex_for_class);
+    lua_setfield(l, -2, "__newindex");
+
+    lua_pushcfunction(l, luacpp_index_for_class);
+    lua_setfield(l, -2, "__index");
+}
+
+void LuaState::CreateClassInstanceMetatable(lua_State* l, int (*gc)(lua_State*)) {
+    // creates metatable for class instances
+    lua_newtable(l);
+
+    // sets the __newindex field so that userdata can modify members
+    lua_pushcfunction(l, luacpp_newindex_for_class_instance);
+    lua_setfield(l, -2, "__newindex");
+
+    // sets the __index field to be itself so that userdata can find member functions
+    lua_pushcfunction(l, luacpp_index_for_class_instance);
+    lua_setfield(l, -2, "__index");
+
+    // destructor for class instances
+    lua_pushcfunction(l, gc);
+    lua_setfield(l, -2, "__gc");
+}
+
 LuaState::LuaState(lua_State* l, bool is_owner) {
     m_l = l;
     if (is_owner) {
@@ -661,7 +689,7 @@ void LuaState::Set(const char* name, const LuaObject& lobj) {
     lua_setglobal(m_l, name);
 }
 
-LuaObject LuaState::CreateObject(const char* str, const char* name) {
+LuaObject LuaState::CreateString(const char* str, const char* name) {
     lua_pushstring(m_l, str);
     LuaObject ret(m_l, -1);
     if (name) {
@@ -672,7 +700,7 @@ LuaObject LuaState::CreateObject(const char* str, const char* name) {
     return ret;
 }
 
-LuaObject LuaState::CreateObject(const char* str, uint64_t len, const char* name) {
+LuaObject LuaState::CreateString(const char* str, uint64_t len, const char* name) {
     lua_pushlstring(m_l, str, len);
     LuaObject ret(m_l, -1);
     if (name) {
@@ -683,8 +711,19 @@ LuaObject LuaState::CreateObject(const char* str, uint64_t len, const char* name
     return ret;
 }
 
-LuaObject LuaState::CreateObject(lua_Number value, const char* name) {
+LuaObject LuaState::CreateNumber(lua_Number value, const char* name) {
     lua_pushnumber(m_l, value);
+    LuaObject ret(m_l, -1);
+    if (name) {
+        lua_setglobal(m_l, name);
+    } else {
+        lua_pop(m_l, 1);
+    }
+    return ret;
+}
+
+LuaObject LuaState::CreateInteger(lua_Integer value, const char* name) {
+    lua_pushinteger(m_l, value);
     LuaObject ret(m_l, -1);
     if (name) {
         lua_setglobal(m_l, name);

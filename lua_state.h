@@ -22,16 +22,13 @@ public:
     LuaState& operator=(LuaState&&);
     LuaState& operator=(const LuaState&) = delete;
 
-    lua_State* GetPtr() const {
-        return m_l;
-    }
-
     LuaObject Get(const char* name) const;
     void Set(const char* name, const LuaObject& lobj);
 
-    LuaObject CreateObject(const char* str, const char* name = nullptr);
-    LuaObject CreateObject(const char* str, uint64_t len, const char* name = nullptr);
-    LuaObject CreateObject(lua_Number value, const char* name = nullptr);
+    LuaObject CreateString(const char* str, const char* name = nullptr);
+    LuaObject CreateString(const char* str, uint64_t len, const char* name = nullptr);
+    LuaObject CreateNumber(lua_Number value, const char* name = nullptr);
+    LuaObject CreateInteger(lua_Integer value, const char* name = nullptr);
 
     LuaTable CreateTable(const char* name = nullptr);
 
@@ -122,33 +119,8 @@ private:
     static int luacpp_index_for_class_instance(lua_State* l);
     static int luacpp_newindex_for_class_instance(lua_State* l);
 
-    void CreateClassMetatable(lua_State* l) {
-        // sets a metatable so that it becomes callable via __call
-        lua_newtable(l);
-
-        lua_pushcfunction(l, luacpp_newindex_for_class);
-        lua_setfield(l, -2, "__newindex");
-
-        lua_pushcfunction(l, luacpp_index_for_class);
-        lua_setfield(l, -2, "__index");
-    }
-
-    void CreateClassInstanceMetatable(lua_State* l, int (*gc)(lua_State*)) {
-        // creates metatable for class instances
-        lua_newtable(l);
-
-        // sets the __newindex field so that userdata can modify members
-        lua_pushcfunction(l, luacpp_newindex_for_class_instance);
-        lua_setfield(l, -2, "__newindex");
-
-        // sets the __index field to be itself so that userdata can find member functions
-        lua_pushcfunction(l, luacpp_index_for_class_instance);
-        lua_setfield(l, -2, "__index");
-
-        // destructor for class instances
-        lua_pushcfunction(l, gc);
-        lua_setfield(l, -2, "__gc");
-    }
+    void CreateClassMetatable(lua_State* l);
+    void CreateClassInstanceMetatable(lua_State* l, int (*gc)(lua_State*));
 
     /* ---------------------------------------------------------------- */
 

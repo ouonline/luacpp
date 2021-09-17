@@ -159,7 +159,7 @@ static void TestClassStaticProperty() {
 
     bool ok = l.DoString("vvv = ClassDemo.st_value");
     assert(ok);
-    auto vvv = l.Get("vvv").ToInteger<int32_t>();
+    auto vvv = l.Get("vvv").ToInteger();
     assert(vvv == ClassDemo::st_value);
     cout << "get st_value = " << vvv << endl;
 
@@ -171,7 +171,6 @@ static void TestClassStaticProperty() {
 
 static void TestClassStaticPropertyReadWrite() {
     LuaState l(luaL_newstate(), true);
-    auto lptr = l.GetPtr();
 
     l.CreateClass<ClassDemo>("ClassDemo")
         .DefStaticWriteOnly("st_value",
