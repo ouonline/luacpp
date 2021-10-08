@@ -21,8 +21,8 @@ public:
 
     /** i starts from 0 */
     template <typename... Argv>
-    bool Exec(const std::function<bool (uint32_t i, const LuaObject&)>& callback = nullptr,
-              std::string* errstr = nullptr, Argv&&... argv) {
+    bool Execute(const std::function<bool (uint32_t i, const LuaObject&)>& callback = nullptr,
+                 std::string* errstr = nullptr, Argv&&... argv) {
         PushSelf();
         PushValues(m_l, std::forward<Argv>(argv)...);
         return Invoke(callback, sizeof...(Argv), errstr);

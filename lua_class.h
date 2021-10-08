@@ -45,7 +45,7 @@ private:
         // move the new instance to the first position as the first argument of InitInstance()
         lua_replace(l, 1);
 
-        FunctionCaller<sizeof...(FuncArgType) + 1>::Exec(InitInstance<FuncArgType...>, l, 0);
+        FunctionCaller<sizeof...(FuncArgType) + 1>::Execute(InitInstance<FuncArgType...>, l, 0);
 
         // pops arguments so that the new instance is on the top of lua_State
         auto argc = sizeof...(FuncArgType);
@@ -100,7 +100,7 @@ private:
         auto argoffset = lua_tointeger(l, lua_upvalueindex(1));
         auto wrapper = (ValueWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
         auto ud = (T*)lua_touserdata(l, 1);
-        return FunctionCaller<sizeof...(FuncArgType)>::Exec(ud, wrapper->value, l, argoffset);
+        return FunctionCaller<sizeof...(FuncArgType)>::Execute(ud, wrapper->value, l, argoffset);
     }
 
     template <typename FuncType, typename FuncRetType, typename... FuncArgType>

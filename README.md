@@ -197,19 +197,19 @@ int main(void) {
     }, "Echo");
 
     l.CreateString("calling cpp function with return value from cpp: ", "msg");
-    lfunc.Exec(resiter1, nullptr, l.Get("msg"));
+    lfunc.Execute(resiter1, nullptr, l.Get("msg"));
 
     l.DoString("res = Echo('calling cpp function with return value from lua: ');"
                "io.write('return value -> ', res, '\\n')");
 
     l.DoString("function return2(a, b) return a, b end");
-    LuaFunction(l.Get("return2")).Exec(resiter2, nullptr, 5, "ouonline");
+    LuaFunction(l.Get("return2")).Execute(resiter2, nullptr, 5, "ouonline");
 
     return 0;
 }
 ```
 
-First we define a C++ function `echo` and set its name to be `echo` in the Lua environment using `LuaState::CreateFunction()`. `LuaFunction::Exec()` invokes the real function. See [LuaFunction](#luafunction) for more details.
+First we define a C++ function `echo` and set its name to be `echo` in the Lua environment using `LuaState::CreateFunction()`. `LuaFunction::Execute()` invokes the real function. See [LuaFunction](#luafunction) for more details.
 
 [[back to top](#table-of-contents)]
 
@@ -546,8 +546,8 @@ Creates a `LuaFunction` with the table located in `index` of the lua_State `l`.
 
 ```c++
 template <typename... Argv>
-bool Exec(const std::function<bool (uint32_t i, const LuaObject&)>& callback = nullptr,
-          std::string* errstr = nullptr, Argv&&... argv);
+bool Execute(const std::function<bool (uint32_t i, const LuaObject&)>& callback = nullptr,
+             std::string* errstr = nullptr, Argv&&... argv);
 ```
 
 Invokes the function with arguments `argv`. `callback` is a callback function used to handle result(s). Note that the first argument `i` of `callback` starts from 0. `errstr` is a string to receive a message if an error occurs. The rest of arguments `argv`, if any, are passed to the real function being called.
@@ -757,14 +757,14 @@ bool DoString(const char* chunk, std::string* errstr = nullptr,
               const std::function<bool (uint32_t, const LuaObject&)>& callback = nullptr);
 ```
 
-Evaluates the chunk `chunk`. The rest of arguments, `errstr` and `callback`, have the same meaning as in `LuaFunction::Exec()`.
+Evaluates the chunk `chunk`. The rest of arguments, `errstr` and `callback`, have the same meaning as in `LuaFunction::Execute()`.
 
 ```c++
 bool DoFile(const char* script, std::string* errstr = nullptr,
             const std::function<bool (uint32_t, const LuaObject&)>& callback = nullptr);
 ```
 
-Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and `callback`, have the same meaning as in `LuaFunction::Exec()`.
+Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and `callback`, have the same meaning as in `LuaFunction::Execute()`.
 
 [[back to top](#table-of-contents)]
 

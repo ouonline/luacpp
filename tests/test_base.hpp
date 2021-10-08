@@ -110,7 +110,7 @@ static void TestFuncWithReturnValue() {
     const string msg = "calling cpp function with return value from cpp.";
     l.CreateString(msg.data(), msg.size(), "msg");
 
-    lfunc.Exec([](uint32_t, const LuaObject& lobj) -> bool {
+    lfunc.Execute([](uint32_t, const LuaObject& lobj) -> bool {
         auto res = lobj.ToInteger();
         assert(res == 5);
         return true;
@@ -124,7 +124,7 @@ static void TestFuncWithReturnValue() {
 
     const string msg2 = "ouonline.net";
     l.DoString("function return2(a, b) return a, b end");
-    LuaFunction(l.Get("return2")).Exec([&msg2](uint32_t i, const LuaObject& lobj) -> bool {
+    LuaFunction(l.Get("return2")).Execute([&msg2](uint32_t i, const LuaObject& lobj) -> bool {
         if (i == 0) {
             assert(lobj.ToInteger() == 5);
             cout << "get [0] -> " << lobj.ToInteger() << endl;
@@ -146,7 +146,7 @@ static void TestFuncWithoutReturnValue() {
     LuaState l(luaL_newstate(), true);
 
     auto lfunc = l.CreateFunction(GlobalEcho, "Echo");
-    lfunc.Exec(nullptr, nullptr, "calling cpp function without return value from cpp");
+    lfunc.Execute(nullptr, nullptr, "calling cpp function without return value from cpp");
 
     string errmsg;
     bool ok = l.DoString("Echo('calling cpp function without return value from lua')", &errmsg);
@@ -163,7 +163,7 @@ static void TestFuncWithBuiltinReferenceTypes() {
     });
 
     string errmsg;
-    bool ok = lfunc.Exec(nullptr, &errmsg, lobj);
+    bool ok = lfunc.Execute(nullptr, &errmsg, lobj);
     assert(ok);
     assert(errmsg.empty());
 }
