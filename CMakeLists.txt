@@ -4,10 +4,10 @@ project(luacpp)
 option(LUACPP_BUILD_TESTS "build tests" OFF)
 option(LUACPP_INSTALL "install headers and libs" ON)
 
-set(CMAKE_CXX_STANDARD 14)
-
 file(GLOB LUACPP_SRC *.cpp)
 add_library(luacpp_static STATIC ${LUACPP_SRC})
+
+target_compile_features(luacpp_static PUBLIC cxx_std_14)
 
 if(NOT LUA_INCLUDE_DIR)
     find_package(Lua QUIET)
