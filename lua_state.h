@@ -95,7 +95,7 @@ private:
         using WrapperType = ValueWrapper<FuncType>;
 
         lua_pushinteger(m_l, 0); // argoffset
-        auto wrapper = lua_newuserdata(m_l, sizeof(WrapperType));
+        auto wrapper = lua_newuserdatauv(m_l, sizeof(WrapperType), 0);
         new (wrapper) WrapperType(f);
 
         lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_gc_table_ref);

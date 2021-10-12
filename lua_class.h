@@ -68,7 +68,7 @@ private:
         lua_pushinteger(l, argoffset);
 
         // upvalue 2: wrapper
-        auto wrapper = lua_newuserdata(l, sizeof(WrapperType));
+        auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
         new (wrapper) WrapperType(f);
 
         // wrapper's destructor
@@ -111,7 +111,7 @@ private:
         lua_pushinteger(l, 1);
 
         // upvalue 2: wrapper
-        auto wrapper = lua_newuserdata(l, sizeof(WrapperType));
+        auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
         new (wrapper) WrapperType(f);
 
         // wrapper's destructor
@@ -155,7 +155,7 @@ private:
         lua_newtable(l);
 
         using GetterWrapperType = ValueWrapper<GetterType>;
-        auto wrapper = lua_newuserdata(l, sizeof(GetterWrapperType));
+        auto wrapper = lua_newuserdatauv(l, sizeof(GetterWrapperType), 0);
         new (wrapper) GetterWrapperType(getter);
         PushGcTable(); // wrapper's destructor
         lua_setmetatable(l, -2);
@@ -163,7 +163,7 @@ private:
         lua_setfield(l, -2, "getter");
 
         using SetterWrapperType = ValueWrapper<SetterType>;
-        wrapper = lua_newuserdata(l, sizeof(SetterWrapperType));
+        wrapper = lua_newuserdatauv(l, sizeof(SetterWrapperType), 0);
         new (wrapper) SetterWrapperType(setter);
         PushGcTable(); // wrapper's destructor
         lua_setmetatable(l, -2);
@@ -176,7 +176,7 @@ private:
         lua_newtable(l);
 
         using WrapperType = ValueWrapper<Getter>;
-        auto wrapper = (WrapperType*)lua_newuserdata(l, sizeof(WrapperType));
+        auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
         new (wrapper) WrapperType(getter);
         PushGcTable(); // wrapper's destructor
         lua_setmetatable(l, -2);
@@ -189,7 +189,7 @@ private:
         lua_newtable(l);
 
         using WrapperType = ValueWrapper<SetterType>;
-        auto wrapper = (WrapperType*)lua_newuserdata(l, sizeof(WrapperType));
+        auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
         new (wrapper) WrapperType(setter);
         PushGcTable(); // wrapper's destructor
         lua_setmetatable(l, -2);
@@ -243,7 +243,7 @@ private:
         lua_newtable(l);
 
         using GetterWrapperType = ValueWrapper<GetterType>;
-        auto wrapper = lua_newuserdata(l, sizeof(GetterWrapperType));
+        auto wrapper = lua_newuserdatauv(l, sizeof(GetterWrapperType), 0);
         new (wrapper) GetterWrapperType(getter);
         PushGcTable(); // wrapper's destructor
         lua_setmetatable(l, -2);
@@ -251,7 +251,7 @@ private:
         lua_setfield(l, -2, "getter");
 
         using SetterWrapperType = ValueWrapper<SetterType>;
-        wrapper = lua_newuserdata(l, sizeof(SetterWrapperType));
+        wrapper = lua_newuserdatauv(l, sizeof(SetterWrapperType), 0);
         new (wrapper) SetterWrapperType(setter);
         PushGcTable(); // wrapper's destructor
         lua_setmetatable(l, -2);
@@ -264,7 +264,7 @@ private:
         lua_newtable(l);
 
         using WrapperType = ValueWrapper<GetterType>;
-        auto wrapper = (WrapperType*)lua_newuserdata(l, sizeof(WrapperType));
+        auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
         new (wrapper) WrapperType(getter);
         PushGcTable(); // wrapper's destructor
         lua_setmetatable(l, -2);
@@ -277,7 +277,7 @@ private:
         lua_newtable(l);
 
         using WrapperType = ValueWrapper<SetterType>;
-        auto wrapper = (WrapperType*)lua_newuserdata(l, sizeof(WrapperType));
+        auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
         new (wrapper) WrapperType(setter);
         PushGcTable(); // wrapper's destructor
         lua_setmetatable(l, -2);
@@ -498,7 +498,7 @@ public:
 
     template <typename... Argv>
     LuaUserData CreateUserData(Argv&&... argv) const {
-        auto ud = (T*)lua_newuserdatauv(m_l, sizeof(T), 1);
+        auto ud = lua_newuserdatauv(m_l, sizeof(T), 1);
         new (ud) T(std::forward<Argv>(argv)...);
 
         PushSelf();
