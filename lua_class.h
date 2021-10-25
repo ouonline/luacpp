@@ -1,6 +1,7 @@
 #ifndef __LUA_CPP_LUA_CLASS_H__
 #define __LUA_CPP_LUA_CLASS_H__
 
+#include "lua_52_53.h"
 #include "lua_user_data.h"
 #include "func_utils.h"
 #include <stdint.h>
