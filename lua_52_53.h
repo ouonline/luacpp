@@ -10,7 +10,7 @@ namespace luacpp {
 static inline void* lua_newuserdatauv(lua_State* l, size_t sz, int nuvalue) {
     auto ret = lua_newuserdata(l, sz);
     if (nuvalue > 0) {
-        lua_newtable(l);
+        lua_createtable(l, nuvalue, 0);
         lua_setuservalue(l, -2);
     }
     return ret;

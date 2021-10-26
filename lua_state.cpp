@@ -632,7 +632,7 @@ int LuaState::luacpp_newindex_for_class_instance(lua_State* l) {
 
 void LuaState::CreateClassMetatable(lua_State* l) {
     // sets a metatable so that it becomes callable via __call
-    lua_newtable(l);
+    lua_createtable(l, 0, 2);
 
     lua_pushcfunction(l, luacpp_newindex_for_class);
     lua_setfield(l, -2, "__newindex");
@@ -643,7 +643,7 @@ void LuaState::CreateClassMetatable(lua_State* l) {
 
 void LuaState::CreateClassInstanceMetatable(lua_State* l, int (*gc)(lua_State*)) {
     // creates metatable for class instances
-    lua_newtable(l);
+    lua_createtable(l, 0, 3);
 
     // sets the __newindex field so that userdata can modify members
     lua_pushcfunction(l, luacpp_newindex_for_class_instance);

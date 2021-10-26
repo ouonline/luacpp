@@ -153,7 +153,7 @@ private:
     template <typename GetterType, typename SetterType>
     void CreateMemberProperty(lua_State* l, const GetterType& getter,
                               const SetterType& setter) {
-        lua_newtable(l);
+        lua_createtable(l, 0, 2);
 
         using GetterWrapperType = ValueWrapper<GetterType>;
         auto wrapper = lua_newuserdatauv(l, sizeof(GetterWrapperType), 0);
@@ -174,7 +174,7 @@ private:
 
     template <typename Getter>
     void CreateMemberPropertyReadOnly(lua_State* l, const Getter& getter) {
-        lua_newtable(l);
+        lua_createtable(l, 0, 1);
 
         using WrapperType = ValueWrapper<Getter>;
         auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
@@ -187,7 +187,7 @@ private:
 
     template <typename SetterType>
     void CreateMemberPropertyWriteOnly(lua_State* l, const SetterType& setter) {
-        lua_newtable(l);
+        lua_createtable(l, 0, 1);
 
         using WrapperType = ValueWrapper<SetterType>;
         auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
@@ -241,7 +241,7 @@ private:
 
     template <typename GetterType, typename SetterType>
     void CreateStaticProperty(lua_State* l, const GetterType& getter, const SetterType& setter) {
-        lua_newtable(l);
+        lua_createtable(l, 0, 2);
 
         using GetterWrapperType = ValueWrapper<GetterType>;
         auto wrapper = lua_newuserdatauv(l, sizeof(GetterWrapperType), 0);
@@ -262,7 +262,7 @@ private:
 
     template <typename GetterType>
     void CreateStaticPropertyReadOnly(lua_State* l, const GetterType& getter) {
-        lua_newtable(l);
+        lua_createtable(l, 0, 1);
 
         using WrapperType = ValueWrapper<GetterType>;
         auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
@@ -275,7 +275,7 @@ private:
 
     template <typename SetterType>
     void CreateStaticPropertyWriteOnly(lua_State* l, const SetterType& setter) {
-        lua_newtable(l);
+        lua_createtable(l, 0, 1);
 
         using WrapperType = ValueWrapper<SetterType>;
         auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
