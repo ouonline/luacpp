@@ -1,4 +1,4 @@
-#include "lua_table.h"
+#include "luacpp/lua_table.h"
 using namespace std;
 
 namespace luacpp {

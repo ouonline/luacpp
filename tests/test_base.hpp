@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../luacpp.h"
+#include "luacpp/luacpp.h"
 #include "test_common.h"
 using namespace luacpp;
 using namespace std;

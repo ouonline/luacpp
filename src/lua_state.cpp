@@ -1,6 +1,6 @@
-#include "lua_state.h"
-#include "lua_table.h"
-#include "lua_function.h"
+#include "luacpp/lua_state.h"
+#include "luacpp/lua_table.h"
+#include "luacpp/lua_function.h"
 using namespace std;
 
 namespace luacpp {

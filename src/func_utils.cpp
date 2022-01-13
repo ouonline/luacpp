@@ -1,7 +1,7 @@
-#include "func_utils.h"
-#include "lua_table.h"
-#include "lua_function.h"
-#include "lua_user_data.h"
+#include "luacpp/func_utils.h"
+#include "luacpp/lua_table.h"
+#include "luacpp/lua_function.h"
+#include "luacpp/lua_user_data.h"
 
 namespace luacpp {
 

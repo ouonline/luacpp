@@ -1,7 +1,7 @@
-#include "lua_object.h"
-#include "lua_table.h"
-#include "lua_function.h"
-#include "lua_user_data.h"
+#include "luacpp/lua_object.h"
+#include "luacpp/lua_table.h"
+#include "luacpp/lua_function.h"
+#include "luacpp/lua_user_data.h"
 #include <string>
 using namespace std;
 
