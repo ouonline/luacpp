@@ -21,14 +21,14 @@ LuaObject LuaTable::Get(const char* name) const {
 
 void LuaTable::Set(int index, const LuaObject& lobj) {
     PushSelf();
-    lobj.PushSelf();
+    PushValue(m_l, lobj);
     lua_rawseti(m_l, -2, index);
     lua_pop(m_l, 1);
 }
 
 void LuaTable::Set(const char* name, const LuaObject& lobj) {
     PushSelf();
-    lobj.PushSelf();
+    PushValue(m_l, lobj);
     lua_setfield(m_l, -2, name);
     lua_pop(m_l, 1);
 }

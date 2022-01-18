@@ -25,6 +25,25 @@ public:
     LuaObject Get(const char* name) const;
     void Set(const char* name, const LuaObject& lobj);
 
+    void Push(const LuaObject& lobj) {
+        PushValue(m_l, lobj);
+    }
+    void PushString(const char* str) {
+        lua_pushstring(m_l, str);
+    }
+    void PushString(const char* str, uint64_t len) {
+        lua_pushlstring(m_l, str, len);
+    }
+    void PushNumber(lua_Number value) {
+        lua_pushnumber(m_l, value);
+    }
+    void PushInteger(lua_Integer value) {
+        lua_pushinteger(m_l, value);
+    }
+    void PushNil() {
+        lua_pushnil(m_l);
+    }
+
     LuaObject CreateString(const char* str, const char* name = nullptr);
     LuaObject CreateString(const char* str, uint64_t len, const char* name = nullptr);
     LuaObject CreateNumber(lua_Number value, const char* name = nullptr);

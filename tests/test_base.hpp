@@ -12,7 +12,7 @@ static void TestSetGet() {
     const int value = 5;
 
     auto lobj = l.CreateInteger(value);
-    assert(lobj.Type() == LUA_TNUMBER);
+    assert(lobj.GetType() == LUA_TNUMBER);
     assert(lobj.ToNumber() == value);
 }
 
@@ -20,7 +20,7 @@ static void TestNil() {
     LuaState l(luaL_newstate(), true);
 
     auto lobj = l.Get("nilobj");
-    assert(lobj.Type() == LUA_TNIL);
+    assert(lobj.GetType() == LUA_TNIL);
 }
 
 static void TestString() {
@@ -28,7 +28,7 @@ static void TestString() {
 
     const string var("ouonline");
     auto lobj = l.CreateString(var.c_str(), var.size(), "var");
-    assert(lobj.Type() == LUA_TSTRING);
+    assert(lobj.GetType() == LUA_TSTRING);
 
     auto buf = lobj.ToStringRef();
     assert(string(buf.base, buf.size) == var);
@@ -43,23 +43,23 @@ static void TestTable() {
 
     auto iterfunc = [] (const LuaObject& key, const LuaObject& value) -> bool {
         cout << "    ";
-        if (key.Type() == LUA_TNUMBER) {
+        if (key.GetType() == LUA_TNUMBER) {
             cout << key.ToNumber();
-        } else if (key.Type() == LUA_TSTRING) {
+        } else if (key.GetType() == LUA_TSTRING) {
             auto buf = key.ToStringRef();
             cout << buf.base;
         } else {
-            cout << "unsupported key type -> " << key.TypeName() << endl;
+            cout << "unsupported key type -> " << key.GetTypeName() << endl;
             return false;
         }
 
-        if (value.Type() == LUA_TNUMBER) {
+        if (value.GetType() == LUA_TNUMBER) {
             cout << " -> " << value.ToNumber() << endl;
-        } else if (value.Type() == LUA_TSTRING) {
+        } else if (value.GetType() == LUA_TSTRING) {
             auto buf = value.ToStringRef();
             cout << " -> " << buf.base << endl;
         } else {
-            cout << " -> unsupported iter value type: " << value.TypeName() << endl;
+            cout << " -> unsupported iter value type: " << value.GetTypeName() << endl;
         }
 
         return true;
@@ -72,7 +72,7 @@ static void TestTable() {
     table.ForEach(iterfunc);
 
     auto lobj = table.Get("others");
-    assert(lobj.Type() == LUA_TSTRING);
+    assert(lobj.GetType() == LUA_TSTRING);
     auto buf = lobj.ToStringRef();
     assert(string(buf.base, buf.size) == "myothers");
 
@@ -172,7 +172,7 @@ static void TestVariadicArguments() {
     LuaState l(luaL_newstate(), true);
     auto lfunc = l.CreateFunction([](int opt, const LuaObject& args) -> void {
         uint32_t nr_args = 0;
-        if (args.Type() == LUA_TTABLE) {
+        if (args.GetType() == LUA_TTABLE) {
             LuaTable(args).ForEach([&nr_args](const LuaObject&, const LuaObject&) -> bool {
                 ++nr_args;
                 return true;

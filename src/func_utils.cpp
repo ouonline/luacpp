@@ -22,7 +22,7 @@ ValueConverter::operator LuaUserData() const {
 }
 
 void PushValue(lua_State* l, const LuaObject& obj) {
-    obj.PushSelf();
+    lua_rawgeti(l, LUA_REGISTRYINDEX, obj.GetRefIndex());
 }
 
 }

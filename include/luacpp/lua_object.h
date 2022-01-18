@@ -7,6 +7,7 @@ extern "C" {
 }
 
 #include "lua_string_ref.h"
+#include "func_utils.h"
 #include <utility> // std::move
 
 namespace luacpp {
@@ -33,7 +34,7 @@ public:
     LuaObject(const LuaObject& rhs) {
         m_l = rhs.m_l;
         m_type = rhs.m_type;
-        rhs.PushSelf();
+        PushValue(m_l, rhs);
         m_ref_index = luaL_ref(m_l, LUA_REGISTRYINDEX);
     }
 
@@ -60,7 +61,7 @@ public:
 
         m_l = rhs.m_l;
         m_type = rhs.m_type;
-        rhs.PushSelf();
+        PushValue(m_l, rhs);
         m_ref_index = luaL_ref(m_l, LUA_REGISTRYINDEX);
         return *this;
     }
@@ -72,11 +73,14 @@ public:
         }
     }
 
-    int Type() const {
+    int GetType() const {
         return m_type;
     }
-    const char* TypeName() const {
+    const char* GetTypeName() const {
         return lua_typename(m_l, m_type);
+    }
+    int GetRefIndex() const {
+        return m_ref_index;
     }
 
     bool ToBool() const;
@@ -84,6 +88,7 @@ public:
     lua_Integer ToInteger() const;
     LuaStringRef ToStringRef() const;
 
+protected:
     void PushSelf() const {
         lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_ref_index);
     }

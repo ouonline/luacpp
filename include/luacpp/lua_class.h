@@ -491,7 +491,7 @@ public:
     LuaClass& AddBaseClass(const LuaClass<BaseType>& lclass) {
         PushParentsTable();
         auto len = lua_rawlen(m_l, -1);
-        lclass.PushSelf();
+        PushValue(m_l, lclass);
         lua_rawseti(m_l, -2, len + 1);
         lua_pop(m_l, 1);
         return *this;

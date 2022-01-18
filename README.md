@@ -85,11 +85,11 @@ int main(void) {
 
     l.CreateString("Hello, luacpp from ouonline!", "msg");
     auto lobj = l.Get("msg");
-    if (lobj.Type() == LUA_TSTRING) {
+    if (lobj.GetType() == LUA_TSTRING) {
         auto buf = lobj.ToStringRef();
         cout << "get msg -> " << buf.base << endl;
     } else {
-        cerr << "unknown object type -> " << lobj.TypeName() << endl;
+        cerr << "unknown object type -> " << lobj.GetTypeName() << endl;
     }
 
     return 0;
@@ -100,7 +100,7 @@ In this example, we set the variable `msg`'s value to be a string "Hello, luacpp
 
 `LuaState::CreateString()`, `LuaState::CreateNumber()` and `LuaState::CreateInteger()` are a series of functions used to set up various kinds of variables. Once a variable is set, its value is kept in the `LuaState` instance until it is modified again or the `LuaState` instance is destroyed.
 
-`LuaState::Get()` is used to get a variable by its name. The value returned by `LuaState::Get()` is a `LuaObject` instance, which can be converted to the proper type later. You'd better check the return value of `LuaObject::Type()` before any conversions.
+`LuaState::Get()` is used to get a variable by its name. The value returned by `LuaState::Get()` is a `LuaObject` instance, which can be converted to the proper type later. You'd better check the return value of `LuaObject::GetType()` before any conversions.
 
 [[back to top](#table-of-contents)]
 
@@ -118,23 +118,23 @@ int main(void) {
 
     auto iterfunc = [] (const LuaObject& key, const LuaObject& value) -> bool {
         cout << "    ";
-        if (key.Type() == LUA_TNUMBER) {
+        if (key.GetType() == LUA_TNUMBER) {
             cout << key.ToNumber();
-        } else if (key.Type() == LUA_TSTRING) {
+        } else if (key.GetType() == LUA_TSTRING) {
             auto buf = key.ToStringRef();
             cout << buf.base;
         } else {
-            cout << "unsupported key type -> " << key.TypeName() << endl;
+            cout << "unsupported key type -> " << key.GetTypeName() << endl;
             return false;
         }
 
-        if (value.Type() == LUA_TNUMBER) {
+        if (value.GetType() == LUA_TNUMBER) {
             cout << " -> " << value.ToNumber() << endl;
-        } else if (value.Type() == LUA_TSTRING) {
+        } else if (value.GetType() == LUA_TSTRING) {
             auto buf = value.ToStringRef();
             cout << " -> " << buf.base << endl;
         } else {
-            cout << " -> unsupported iter value type: " << value.TypeName() << endl;
+            cout << " -> unsupported iter value type: " << value.GetTypeName() << endl;
         }
 
         return true;
@@ -427,7 +427,7 @@ This section describes all classes and functions provided by `lua-cpp`.
 
 ## LuaObject
 
-`LuaObject` represents an arbitrary item of Lua. You are expected to check the return value of `Type()` before any of the following functions is called.
+`LuaObject` represents an arbitrary item of Lua. You are expected to check the return value of `GetType()` before any of the following functions is called.
 
 ```c++
 LuaObject(lua_State* l, int index);
@@ -436,13 +436,13 @@ LuaObject(lua_State* l, int index);
 Creates a `LuaObject` with the object located in `index` of the lua_State `l`.
 
 ```c++
-int Type() const;
+int GetType() const;
 ```
 
 Returns the type of this object. The return value is one of the following: `LUA_TNIL`, `LUA_TNUMBER`, `LUA_TBOOLEAN`, `LUA_TSTRING`, `LUA_TTABLE`, `LUA_TFUNCTION`, `LUA_TUSERDATA`, `LUA_TTHREAD`, and `LUA_TLIGHTUSERDATA`.
 
 ```c++
-const char* TypeName() const;
+const char* GetTypeName() const;
 ```
 
 Returns the name of the object's type.
@@ -685,6 +685,43 @@ LuaObject Get(const char* name) const;
 ```
 
 Gets an object by its name.
+
+```c++
+void Push(const LuaObject& lobj);
+```
+
+Pushes an object `lobj`.
+
+```c++
+void PushString(const char* str);
+```
+
+Pushes a null-terminated string `str`.
+
+```c++
+void PushString(const char* str, uint64_t len);
+```
+
+Pushes a string `str` with length `len`.
+
+```c++
+void PushNumber(lua_Number value);
+```
+
+Pushes a (floating) number `value`.
+
+```c++
+void PushInteger(lua_Integer value);
+```
+
+Pushes an integer `value`.
+
+```c++
+void PushNil();
+```
+
+Pushes a `nil`.
+
 
 ```c++
 LuaObject CreateNil();

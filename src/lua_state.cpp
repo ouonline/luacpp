@@ -685,7 +685,7 @@ LuaObject LuaState::Get(const char* name) const {
 }
 
 void LuaState::Set(const char* name, const LuaObject& lobj) {
-    lobj.PushSelf();
+    PushValue(m_l, lobj);
     lua_setglobal(m_l, name);
 }
 
