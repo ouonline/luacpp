@@ -59,14 +59,14 @@ public:
     template <typename FuncRetType, typename... FuncArgType>
     LuaFunction CreateFunction(FuncRetType (*f)(FuncArgType...), const char* name = nullptr) {
         using FuncType = FuncRetType (*)(FuncArgType...);
-        return DoCreateFunction<FuncType, FuncRetType, FuncArgType...>(f, name);
+        return DoCreateFunction<FuncType, FuncArgType...>(f, name);
     }
 
     /** std::function */
     template <typename FuncRetType, typename... FuncArgType>
     LuaFunction CreateFunction(const std::function<FuncRetType (FuncArgType...)>& f, const char* name = nullptr) {
         using FuncType = std::function<FuncRetType (FuncArgType...)>;
-        return DoCreateFunction<FuncType, FuncRetType, FuncArgType...>(f, name);
+        return DoCreateFunction<FuncType, FuncArgType...>(f, name);
     }
 
     /** lambda function */
@@ -109,7 +109,7 @@ public:
                 const std::function<bool (uint32_t, const LuaObject&)>& callback = nullptr);
 
 private:
-    template <typename FuncType, typename FuncRetType, typename... FuncArgType>
+    template <typename FuncType, typename... FuncArgType>
     LuaFunction DoCreateFunction(const FuncType& f, const char* name) {
         using WrapperType = ValueWrapper<FuncType>;
 
@@ -120,7 +120,7 @@ private:
         lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_gc_table_ref);
         lua_setmetatable(m_l, -2);
 
-        lua_pushcclosure(m_l, luacpp_generic_function<FuncType, FuncRetType, FuncArgType...>, 2);
+        lua_pushcclosure(m_l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
 
         LuaFunction ret(m_l, -1);
         if (name) {

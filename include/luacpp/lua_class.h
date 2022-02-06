@@ -61,7 +61,7 @@ private:
         return 1;
     }
 
-    template <typename FuncType, typename FuncRetType, typename... FuncArgType>
+    template <typename FuncType, typename... FuncArgType>
     void CreateGenericFunction(lua_State* l, int argoffset, const FuncType& f) {
         using WrapperType = ValueWrapper<FuncType>;
 
@@ -76,27 +76,27 @@ private:
         PushGcTable();
         lua_setmetatable(l, -2);
 
-        lua_pushcclosure(l, luacpp_generic_function<FuncType, FuncRetType, FuncArgType...>, 2);
+        lua_pushcclosure(l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
     }
 
-    template <typename FuncType, typename FuncRetType, typename... FuncArgType>
+    template <typename FuncType, typename... FuncArgType>
     void DoDefStaticFunction(lua_State* l, const char* name, const FuncType& f) {
         PushSelf();
         lua_getmetatable(l, -1);
-        CreateGenericFunction<FuncType, FuncRetType, FuncArgType...>(l, 1, f);
+        CreateGenericFunction<FuncType, FuncArgType...>(l, 1, f);
         lua_setfield(l, -2, name);
         lua_pop(l, 2);
     }
 
-    template <typename FuncType, typename FuncRetType, typename... FuncArgType>
+    template <typename FuncType, typename... FuncArgType>
     void DoDefCStyleMemberFunction(lua_State* l, const char* name, const FuncType& f) {
         PushInstanceMetatable();
-        CreateGenericFunction<FuncType, FuncRetType, FuncArgType...>(l, 0, f);
+        CreateGenericFunction<FuncType, FuncArgType...>(l, 0, f);
         lua_setfield(l, -2, name);
         lua_pop(l, 1);
     }
 
-    template <typename FuncType, typename FuncRetType, typename... FuncArgType>
+    template <typename FuncType, typename... FuncArgType>
     static int luacpp_member_function(lua_State* l) {
         auto argoffset = lua_tointeger(l, lua_upvalueindex(1));
         auto wrapper = (ValueWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
@@ -104,7 +104,7 @@ private:
         return FunctionCaller<sizeof...(FuncArgType)>::Execute(ud, wrapper->value, l, argoffset);
     }
 
-    template <typename FuncType, typename FuncRetType, typename... FuncArgType>
+    template <typename FuncType, typename... FuncArgType>
     void CreateMemberFunction(lua_State* l, const FuncType& f) {
         using WrapperType = ValueWrapper<FuncType>;
 
@@ -119,13 +119,13 @@ private:
         PushGcTable();
         lua_setmetatable(l, -2);
 
-        lua_pushcclosure(l, luacpp_member_function<FuncType, FuncRetType, FuncArgType...>, 2);
+        lua_pushcclosure(l, luacpp_member_function<FuncType, FuncArgType...>, 2);
     }
 
-    template<typename FuncType, typename FuncRetType, typename... FuncArgType>
+    template<typename FuncType, typename... FuncArgType>
     void DoDefMemberFunction(lua_State* l, const char* name, const FuncType& f) {
         PushInstanceMetatable();
-        CreateMemberFunction<FuncType, FuncRetType, FuncArgType...>(l, f);
+        CreateMemberFunction<FuncType, FuncArgType...>(l, f);
         lua_setfield(l, -2, name);
         lua_pop(l, 1);
     }
@@ -383,14 +383,14 @@ public:
     /** member function */
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefMember(const char* name, FuncRetType (T::*f)(FuncArgType...)) {
-        DoDefMemberFunction<decltype(f), FuncRetType, FuncArgType...>(m_l, name, f);
+        DoDefMemberFunction<decltype(f), FuncArgType...>(m_l, name, f);
         return *this;
     }
 
     /** member function with const qualifier */
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefMember(const char* name, FuncRetType (T::*f)(FuncArgType...) const) {
-        DoDefMemberFunction<decltype(f), FuncRetType, FuncArgType...>(m_l, name, f);
+        DoDefMemberFunction<decltype(f), FuncArgType...>(m_l, name, f);
         return *this;
     }
 
@@ -398,7 +398,7 @@ public:
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefMember(const char* name, const std::function<FuncRetType (FuncArgType...)>& f) {
         using FuncType = std::function<FuncRetType (FuncArgType...)>;
-        DoDefCStyleMemberFunction<FuncType, FuncRetType, FuncArgType...>(m_l, name, f);
+        DoDefCStyleMemberFunction<FuncType, FuncArgType...>(m_l, name, f);
         return *this;
     }
 
@@ -412,7 +412,7 @@ public:
     /** c-style member function */
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefMember(const char* name, FuncRetType (*f)(FuncArgType...)) {
-        DoDefCStyleMemberFunction<decltype(f), FuncRetType, FuncArgType...>(m_l, name, f);
+        DoDefCStyleMemberFunction<decltype(f), FuncArgType...>(m_l, name, f);
         return *this;
     }
 
@@ -457,14 +457,14 @@ public:
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefStatic(const char* name, const std::function<FuncRetType (FuncArgType...)>& f) {
         using FuncType = std::function<FuncRetType (FuncArgType...)>;
-        DoDefStaticFunction<FuncType, FuncRetType, FuncArgType...>(m_l, name, f);
+        DoDefStaticFunction<FuncType, FuncArgType...>(m_l, name, f);
         return *this;
     }
 
     /** C-style static member function */
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefStatic(const char* name, FuncRetType (*f)(FuncArgType...)) {
-        DoDefStaticFunction<decltype(f), FuncRetType, FuncArgType...>(m_l, name, f);
+        DoDefStaticFunction<decltype(f), FuncArgType...>(m_l, name, f);
         return *this;
     }
 
