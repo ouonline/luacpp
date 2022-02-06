@@ -258,7 +258,7 @@ static int luacpp_generic_destructor(lua_State* l) {
 }
 
 /** FuncType may be a C-style function or a std::function or a callable object */
-template <typename FuncType, typename FuncRetType, typename... FuncArgType>
+template <typename FuncType, typename... FuncArgType>
 static int luacpp_generic_function(lua_State* l) {
     auto argoffset = lua_tointeger(l, lua_upvalueindex(1));
     auto wrapper = (ValueWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
