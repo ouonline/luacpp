@@ -86,8 +86,7 @@ int main(void) {
     l.CreateString("Hello, luacpp from ouonline!", "msg");
     auto lobj = l.Get("msg");
     if (lobj.GetType() == LUA_TSTRING) {
-        auto buf = lobj.ToStringRef();
-        cout << "get msg -> " << buf.base << endl;
+        cout << "get msg -> " << lobj.ToString << endl;
     } else {
         cerr << "unknown object type -> " << lobj.GetTypeName() << endl;
     }
@@ -121,8 +120,7 @@ int main(void) {
         if (key.GetType() == LUA_TNUMBER) {
             cout << key.ToNumber();
         } else if (key.GetType() == LUA_TSTRING) {
-            auto buf = key.ToStringRef();
-            cout << buf.base;
+            cout << key.ToString();
         } else {
             cout << "unsupported key type -> " << key.GetTypeName() << endl;
             return false;
@@ -131,8 +129,7 @@ int main(void) {
         if (value.GetType() == LUA_TNUMBER) {
             cout << " -> " << value.ToNumber() << endl;
         } else if (value.GetType() == LUA_TSTRING) {
-            auto buf = value.ToStringRef();
-            cout << " -> " << buf.base << endl;
+            cout << " -> " << value.ToString() << endl;
         } else {
             cout << " -> unsupported iter value type: " << value.GetTypeName() << endl;
         }
@@ -175,8 +172,7 @@ int main(void) {
     LuaState l(luaL_newstate(), true);
 
     auto resiter1 = [] (uint32_t, const LuaObject& lobj) -> bool {
-        auto buf = lobj.ToStringRef();
-        cout << "output from resiter1: " << buf.base << endl;
+        cout << "output from resiter1: " << lobj.ToString() << endl;
         return true;
     };
     auto resiter2 = [] (uint32_t n, const LuaObject& lobj) -> bool {
@@ -184,8 +180,7 @@ int main(void) {
         if (n == 0) {
             cout << lobj.ToNumber() << endl;
         } else if (n == 1) {
-            auto buf = lobj.ToStringRef();
-            cout << buf.base << endl;
+            cout << lobj.ToString() << endl;
         }
 
         return true;
@@ -458,6 +453,12 @@ LuaStringRef ToStringRef() const;
 ```
 
 Converts this object to a `LuaStringRef` object, which only contains address and size of the buffer.
+
+```c++
+const char* ToString() const;
+```
+
+Converts this object to a c-style string.
 
 ```c++
 lua_Integer ToInteger() const;
