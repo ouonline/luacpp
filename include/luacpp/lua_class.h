@@ -361,7 +361,9 @@ public:
     */
     template <typename GetterType, typename SetterType>
     LuaClass& DefMember(const char* name, const GetterType& getter, const SetterType& setter) {
-        DoDefMemberProperty(m_l, name, Lambda2Func(getter), Lambda2Func(setter));
+        typename LambdaFunctionTraits<GetterType>::std_function_type getter_func(getter);
+        typename LambdaFunctionTraits<SetterType>::std_function_type setter_func(setter);
+        DoDefMemberProperty(m_l, name, getter_func, setter_func);
         return *this;
     }
 
@@ -405,7 +407,8 @@ public:
     /** lambda member function */
     template <typename FuncType>
     LuaClass& DefMember(const char* name, const FuncType& f) {
-        DefMember(name, Lambda2Func(f));
+        typename LambdaFunctionTraits<FuncType>::std_function_type func(f);
+        DefMember(name, func);
         return *this;
     }
 
@@ -471,7 +474,8 @@ public:
     /** lambda static member function */
     template <typename FuncType>
     LuaClass& DefStatic(const char* name, const FuncType& f) {
-        DefStatic(name, Lambda2Func(f));
+        typename LambdaFunctionTraits<FuncType>::std_function_type func(f);
+        DefStatic(name, func);
         return *this;
     }
 

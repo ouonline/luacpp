@@ -72,7 +72,8 @@ public:
     /** lambda function */
     template <typename FuncType>
     LuaFunction CreateFunction(const FuncType& f, const char* name = nullptr) {
-        return CreateFunction(Lambda2Func(f), name);
+        typename LambdaFunctionTraits<FuncType>::std_function_type func(f);
+        return CreateFunction(func, name);
     }
 
     template <typename T>

@@ -21,7 +21,7 @@
 
 # Overview
 
-`lua-cpp` is a C++ library aiming at simplifying the use of Lua APIs. It is compatible with Lua 5.2.0(or above) and needs C++14 support.
+`lua-cpp` is a C++ library aiming at simplifying the use of Lua APIs. It is compatible with Lua 5.2.0(or above) and needs C++11 support.
 
 [[back to top](#table-of-contents)]
 
@@ -32,7 +32,7 @@
 Prerequisites
 
 * Lua >= 5.2.0
-* GCC >= 4.9 with c++14 support
+* GCC >= 4.9 with c++11 support
 * CMake >= 3.10 (optional)
 
 Building with pre-installed lua package:
