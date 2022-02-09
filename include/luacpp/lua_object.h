@@ -113,6 +113,6 @@ private:
     int m_ref_index;
 };
 
-}
+} // namespace luacpp
 
 #endif

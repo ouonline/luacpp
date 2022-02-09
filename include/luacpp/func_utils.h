@@ -21,59 +21,59 @@ class ValueConverter final {
 public:
     ValueConverter(lua_State* l, int index) : m_l(l), m_index(index) {}
 
-    operator bool () const {
+    operator bool() const {
         return lua_toboolean(m_l, m_index);
     }
 
-    operator int8_t () const {
+    operator int8_t() const {
         return lua_tointeger(m_l, m_index);
     }
-    operator uint8_t () const {
+    operator uint8_t() const {
         return lua_tointeger(m_l, m_index);
     }
-    operator int16_t () const {
+    operator int16_t() const {
         return lua_tointeger(m_l, m_index);
     }
-    operator uint16_t () const {
+    operator uint16_t() const {
         return lua_tointeger(m_l, m_index);
     }
-    operator int32_t () const {
+    operator int32_t() const {
         return lua_tointeger(m_l, m_index);
     }
-    operator uint32_t () const {
+    operator uint32_t() const {
         return lua_tointeger(m_l, m_index);
     }
-    operator int64_t () const {
+    operator int64_t() const {
         return lua_tointeger(m_l, m_index);
     }
-    operator uint64_t () const {
+    operator uint64_t() const {
         return lua_tointeger(m_l, m_index);
     }
-    operator float () const {
+    operator float() const {
         return lua_tonumber(m_l, m_index);
     }
-    operator double () const {
+    operator double() const {
         return lua_tonumber(m_l, m_index);
     }
 
     template <typename T>
-    operator T* () const {
+    operator T*() const {
         return (T*)lua_touserdata(m_l, m_index);
     }
 
-    operator const char* () const {
+    operator const char*() const {
         return lua_tostring(m_l, m_index);
     }
-    operator LuaStringRef () const {
+    operator LuaStringRef() const {
         size_t len = 0;
         auto addr = lua_tolstring(m_l, m_index, &len);
         return LuaStringRef(addr, len);
     }
 
-    operator LuaObject () const;
-    operator LuaTable () const;
-    operator LuaFunction () const;
-    operator LuaUserData () const;
+    operator LuaObject() const;
+    operator LuaTable() const;
+    operator LuaFunction() const;
+    operator LuaUserData() const;
 
 private:
     lua_State* m_l;
@@ -145,7 +145,7 @@ template <typename ClassType>
 struct LambdaFunctionTraits final : public LambdaFunctionTraits<decltype(&ClassType::operator())> {};
 
 template <typename ClassType, typename FuncRetType, typename... FuncArgType>
-struct LambdaFunctionTraits<FuncRetType(ClassType::*)(FuncArgType...) const> {
+struct LambdaFunctionTraits<FuncRetType (ClassType::*)(FuncArgType...) const> {
     using std_function_type = std::function<FuncRetType(FuncArgType...)>;
 };
 
@@ -155,15 +155,13 @@ template <uint32_t N>
 struct FunctionCaller final {
     template <typename FuncType, typename... Argv>
     static int Execute(const FuncType& f, lua_State* l, int argoffset, Argv&&... argv) {
-        return FunctionCaller<N - 1>::Execute(f, l, argoffset,
-                                              ValueConverter(l, N + argoffset),
+        return FunctionCaller<N - 1>::Execute(f, l, argoffset, ValueConverter(l, N + argoffset),
                                               std::forward<Argv>(argv)...);
     }
 
     template <typename T, typename FuncType, typename... Argv>
     static int Execute(T* obj, const FuncType& f, lua_State* l, int argoffset, Argv&&... argv) {
-        return FunctionCaller<N - 1>::Execute(obj, f, l, argoffset,
-                                              ValueConverter(l, N + argoffset),
+        return FunctionCaller<N - 1>::Execute(obj, f, l, argoffset, ValueConverter(l, N + argoffset),
                                               std::forward<Argv>(argv)...);
     }
 };
@@ -183,43 +181,37 @@ struct FunctionCaller<0> final {
     }
 
     template <typename FuncRetType, typename... FuncArgType, typename... Argv>
-    static int Execute(const std::function<FuncRetType (FuncArgType...)>& f,
-                       lua_State* l, int, Argv&&... argv) {
+    static int Execute(const std::function<FuncRetType(FuncArgType...)>& f, lua_State* l, int, Argv&&... argv) {
         PushValue(l, f(std::forward<Argv>(argv)...));
         return 1;
     }
 
     template <typename... FuncArgType, typename... Argv>
-    static int Execute(const std::function<void (FuncArgType...)>& f,
-                       lua_State*, int, Argv&&... argv) {
+    static int Execute(const std::function<void(FuncArgType...)>& f, lua_State*, int, Argv&&... argv) {
         f(std::forward<Argv>(argv)...);
         return 0;
     }
 
     template <typename T, typename FuncRetType, typename... FuncArgType, typename... Argv>
-    static int Execute(T* obj, FuncRetType (T::*f)(FuncArgType...), lua_State* l, int,
-                       Argv&&... argv) {
+    static int Execute(T* obj, FuncRetType (T::*f)(FuncArgType...), lua_State* l, int, Argv&&... argv) {
         PushValue(l, (obj->*f)(std::forward<Argv>(argv)...));
         return 1;
     }
 
     template <typename T, typename... FuncArgType, typename... Argv>
-    static int Execute(T* obj, void (T::*f)(FuncArgType...), lua_State*, int,
-                       Argv&&... argv) {
+    static int Execute(T* obj, void (T::*f)(FuncArgType...), lua_State*, int, Argv&&... argv) {
         (obj->*f)(std::forward<Argv>(argv)...);
         return 0;
     }
 
     template <typename T, typename FuncRetType, typename... FuncArgType, typename... Argv>
-    static int Execute(T* obj, FuncRetType (T::*f)(FuncArgType...) const, lua_State* l, int,
-                       Argv&&... argv) {
+    static int Execute(T* obj, FuncRetType (T::*f)(FuncArgType...) const, lua_State* l, int, Argv&&... argv) {
         PushValue(l, (obj->*f)(std::forward<Argv>(argv)...));
         return 1;
     }
 
     template <typename T, typename... FuncArgType, typename... Argv>
-    static int Execute(T* obj, void (T::*f)(FuncArgType...) const, lua_State*, int,
-                       Argv&&... argv) {
+    static int Execute(T* obj, void (T::*f)(FuncArgType...) const, lua_State*, int, Argv&&... argv) {
         (obj->*f)(std::forward<Argv>(argv)...);
         return 0;
     }
@@ -250,6 +242,6 @@ static int luacpp_generic_function(lua_State* l) {
     return FunctionCaller<sizeof...(FuncArgType)>::Execute(wrapper->value, l, argoffset);
 }
 
-}
+} // namespace luacpp
 
 #endif

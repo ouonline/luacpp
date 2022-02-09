@@ -46,4 +46,4 @@ lua_Number LuaObject::ToNumber() const {
     return ret;
 }
 
-}
+} // namespace luacpp

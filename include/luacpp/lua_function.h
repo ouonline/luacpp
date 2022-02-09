@@ -21,7 +21,7 @@ public:
 
     /** i starts from 0 */
     template <typename... Argv>
-    bool Execute(const std::function<bool (uint32_t i, const LuaObject&)>& callback = nullptr,
+    bool Execute(const std::function<bool(uint32_t i, const LuaObject&)>& callback = nullptr,
                  std::string* errstr = nullptr, Argv&&... argv) {
         PushSelf();
         PushValues(m_l, std::forward<Argv>(argv)...);
@@ -30,8 +30,7 @@ public:
 
 private:
     // i starts from 0
-    bool Invoke(const std::function<bool (uint32_t i, const LuaObject)>& callback, int argc,
-                std::string* errstr) {
+    bool Invoke(const std::function<bool(uint32_t i, const LuaObject)>& callback, int argc, std::string* errstr) {
         const int top = lua_gettop(m_l) - argc - 1 /* the function itself */;
 
         bool ok = (lua_pcall(m_l, argc, LUA_MULTRET, 0) == LUA_OK);
@@ -62,6 +61,6 @@ private:
     }
 };
 
-}
+} // namespace luacpp
 
 #endif

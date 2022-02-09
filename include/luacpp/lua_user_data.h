@@ -25,6 +25,6 @@ public:
     }
 };
 
-}
+} // namespace luacpp
 
 #endif

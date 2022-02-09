@@ -64,8 +64,8 @@ public:
 
     /** std::function */
     template <typename FuncRetType, typename... FuncArgType>
-    LuaFunction CreateFunction(const std::function<FuncRetType (FuncArgType...)>& f, const char* name = nullptr) {
-        using FuncType = std::function<FuncRetType (FuncArgType...)>;
+    LuaFunction CreateFunction(const std::function<FuncRetType(FuncArgType...)>& f, const char* name = nullptr) {
+        using FuncType = std::function<FuncRetType(FuncArgType...)>;
         return DoCreateFunction<FuncType, FuncArgType...>(f, name);
     }
 
@@ -104,10 +104,10 @@ public:
     }
 
     bool DoString(const char* chunk, std::string* errstr = nullptr,
-                  const std::function<bool (uint32_t, const LuaObject&)>& callback = nullptr);
+                  const std::function<bool(uint32_t, const LuaObject&)>& callback = nullptr);
 
     bool DoFile(const char* script, std::string* errstr = nullptr,
-                const std::function<bool (uint32_t, const LuaObject&)>& callback = nullptr);
+                const std::function<bool(uint32_t, const LuaObject&)>& callback = nullptr);
 
 private:
     template <typename FuncType, typename... FuncArgType>
@@ -152,6 +152,6 @@ private:
     int m_gc_table_ref;
 };
 
-}
+} // namespace luacpp
 
 #endif
