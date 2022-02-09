@@ -89,7 +89,7 @@ private:
     }
 
     template <typename FuncType, typename... FuncArgType>
-    void DoDefCStyleMemberFunction(lua_State* l, const char* name, const FuncType& f) {
+    void DoDefStandAloneFunction(lua_State* l, const char* name, const FuncType& f) {
         PushInstanceMetatable();
         CreateGenericFunction<FuncType, FuncArgType...>(l, 0, f);
         lua_setfield(l, -2, name);
@@ -122,7 +122,7 @@ private:
         lua_pushcclosure(l, luacpp_member_function<FuncType, FuncArgType...>, 2);
     }
 
-    template<typename FuncType, typename... FuncArgType>
+    template <typename FuncType, typename... FuncArgType>
     void DoDefMemberFunction(lua_State* l, const char* name, const FuncType& f) {
         PushInstanceMetatable();
         CreateMemberFunction<FuncType, FuncArgType...>(l, f);
@@ -151,8 +151,7 @@ private:
     }
 
     template <typename GetterType, typename SetterType>
-    void CreateMemberProperty(lua_State* l, const GetterType& getter,
-                              const SetterType& setter) {
+    void CreateMemberProperty(lua_State* l, const GetterType& getter, const SetterType& setter) {
         lua_createtable(l, 0, 2);
 
         using GetterWrapperType = ValueWrapper<GetterType>;
@@ -199,8 +198,7 @@ private:
     }
 
     template <typename GetterType, typename SetterType>
-    void DoDefMemberProperty(lua_State* l, const char* name, const GetterType& getter,
-                             const SetterType& setter) {
+    void DoDefMemberProperty(lua_State* l, const char* name, const GetterType& getter, const SetterType& setter) {
         PushInstanceMetatable();
         CreateMemberProperty(m_l, getter, setter);
         lua_setfield(m_l, -2, name);
@@ -287,8 +285,7 @@ private:
     }
 
     template <typename GetterType, typename SetterType>
-    void DoDefStaticProperty(lua_State* l, const char* name, const GetterType& getter,
-                             const SetterType& setter) {
+    void DoDefStaticProperty(lua_State* l, const char* name, const GetterType& getter, const SetterType& setter) {
         PushSelf();
         lua_getmetatable(m_l, -1);
         CreateStaticProperty(m_l, getter, setter);
@@ -379,7 +376,6 @@ public:
         return *this;
     }
 
-
     // ----- //
 
     /** member function */
@@ -398,9 +394,9 @@ public:
 
     /** std::function member function */
     template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DefMember(const char* name, const std::function<FuncRetType (FuncArgType...)>& f) {
-        using FuncType = std::function<FuncRetType (FuncArgType...)>;
-        DoDefCStyleMemberFunction<FuncType, FuncArgType...>(m_l, name, f);
+    LuaClass& DefMember(const char* name, const std::function<FuncRetType(FuncArgType...)>& f) {
+        using FuncType = std::function<FuncRetType(FuncArgType...)>;
+        DoDefStandAloneFunction<FuncType, FuncArgType...>(m_l, name, f);
         return *this;
     }
 
@@ -415,7 +411,7 @@ public:
     /** c-style member function */
     template <typename FuncRetType, typename... FuncArgType>
     LuaClass& DefMember(const char* name, FuncRetType (*f)(FuncArgType...)) {
-        DoDefCStyleMemberFunction<decltype(f), FuncArgType...>(m_l, name, f);
+        DoDefStandAloneFunction<decltype(f), FuncArgType...>(m_l, name, f);
         return *this;
     }
 
@@ -458,8 +454,8 @@ public:
 
     /** std::function static member function */
     template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DefStatic(const char* name, const std::function<FuncRetType (FuncArgType...)>& f) {
-        using FuncType = std::function<FuncRetType (FuncArgType...)>;
+    LuaClass& DefStatic(const char* name, const std::function<FuncRetType(FuncArgType...)>& f) {
+        using FuncType = std::function<FuncRetType(FuncArgType...)>;
         DoDefStaticFunction<FuncType, FuncArgType...>(m_l, name, f);
         return *this;
     }
@@ -522,6 +518,6 @@ private:
     LuaClassData* m_data;
 };
 
-}
+} // namespace luacpp
 
 #endif

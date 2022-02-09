@@ -34,11 +34,10 @@ public:
     void SetInteger(int index, lua_Integer);
     void SetInteger(const char* name, lua_Integer);
 
-    bool ForEach(const std::function<bool (uint32_t i /* starting from 0 */,
-                                           const LuaObject& value)>& func) const;
-    bool ForEach(const std::function<bool (const LuaObject& key, const LuaObject& value)>& func) const;
+    bool ForEach(const std::function<bool(uint32_t i /* starting from 0 */, const LuaObject& value)>& func) const;
+    bool ForEach(const std::function<bool(const LuaObject& key, const LuaObject& value)>& func) const;
 };
 
-}
+} // namespace luacpp
 
 #endif

@@ -746,8 +746,7 @@ LuaTable LuaState::CreateTable(const char* name) {
     return ret;
 }
 
-bool LuaState::DoString(const char* chunk, string* errstr,
-                        const function<bool (uint32_t, const LuaObject&)>& callback) {
+bool LuaState::DoString(const char* chunk, string* errstr, const function<bool(uint32_t, const LuaObject&)>& callback) {
     bool ok = (luaL_loadstring(m_l, chunk) == LUA_OK);
     if (!ok) {
         if (errstr) {
@@ -763,8 +762,7 @@ bool LuaState::DoString(const char* chunk, string* errstr,
     return ok;
 }
 
-bool LuaState::DoFile(const char* script, string* errstr,
-                      const function<bool (uint32_t, const LuaObject&)>& callback) {
+bool LuaState::DoFile(const char* script, string* errstr, const function<bool(uint32_t, const LuaObject&)>& callback) {
     bool ok = (luaL_loadfile(m_l, script) == LUA_OK);
     if (!ok) {
         if (errstr) {
@@ -780,4 +778,4 @@ bool LuaState::DoFile(const char* script, string* errstr,
     return ok;
 }
 
-}
+} // namespace luacpp

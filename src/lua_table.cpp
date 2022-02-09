@@ -89,7 +89,7 @@ void LuaTable::SetInteger(const char* name, lua_Integer value) {
     lua_pop(m_l, 1);
 }
 
-bool LuaTable::ForEach(const function<bool (uint32_t i, const LuaObject& value)>& func) const {
+bool LuaTable::ForEach(const function<bool(uint32_t i, const LuaObject& value)>& func) const {
     PushSelf();
     auto len = lua_rawlen(m_l, -1);
 
@@ -106,7 +106,7 @@ bool LuaTable::ForEach(const function<bool (uint32_t i, const LuaObject& value)>
     return true;
 }
 
-bool LuaTable::ForEach(const function<bool (const LuaObject& key, const LuaObject& value)>& func) const {
+bool LuaTable::ForEach(const function<bool(const LuaObject& key, const LuaObject& value)>& func) const {
     PushSelf();
     lua_pushnil(m_l);
     while (lua_next(m_l, -2) != 0) {
@@ -122,4 +122,4 @@ bool LuaTable::ForEach(const function<bool (const LuaObject& key, const LuaObjec
     return true;
 }
 
-}
+} // namespace luacpp
