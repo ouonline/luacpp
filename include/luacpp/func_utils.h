@@ -141,28 +141,13 @@ static void PushValues(lua_State* l, First&& first, Rest&&... rest) {
 
 /* -------------------------------------------------------------------------- */
 
-// function traits for extracting typeinfo from lambda functions
-
 template <typename ClassType>
-struct FunctionTraits final : public FunctionTraits<decltype(&ClassType::operator())> {};
+struct LambdaFunctionTraits final : public LambdaFunctionTraits<decltype(&ClassType::operator())> {};
 
 template <typename ClassType, typename FuncRetType, typename... FuncArgType>
-struct FunctionTraits<FuncRetType(ClassType::*)(FuncArgType...) const> {
-    using ret_type = FuncRetType;
-    using arg_tuple = std::tuple<FuncArgType...>;
-    static constexpr auto argc = sizeof...(FuncArgType);
+struct LambdaFunctionTraits<FuncRetType(ClassType::*)(FuncArgType...) const> {
+    using std_function_type = std::function<FuncRetType(FuncArgType...)>;
 };
-
-template <typename FuncType, std::size_t... Is, typename TraitsType>
-static auto LambdaToFuncImpl(const FuncType& f, const std::index_sequence<Is...>&, const TraitsType&) {
-    return std::function<typename TraitsType::ret_type (std::tuple_element_t<Is, typename TraitsType::arg_tuple>...)>(f);
-}
-
-template <typename FuncType>
-static auto Lambda2Func(const FuncType& f) {
-    using TraitsType = FunctionTraits<FuncType>;
-    return LambdaToFuncImpl(f, std::make_index_sequence<TraitsType::argc>(), TraitsType());
-}
 
 /* -------------------------------------------------------------------------- */
 

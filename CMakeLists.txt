@@ -7,7 +7,7 @@ option(LUACPP_INSTALL "install headers and libs" ON)
 file(GLOB LUACPP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 add_library(luacpp_static STATIC ${LUACPP_SRC})
 target_include_directories(luacpp_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_features(luacpp_static PUBLIC cxx_std_14)
+target_compile_features(luacpp_static PUBLIC cxx_std_11)
 
 if(NOT LUA_INCLUDE_DIR)
     find_package(Lua QUIET)
