@@ -46,8 +46,7 @@ static void TestTable() {
         if (key.GetType() == LUA_TNUMBER) {
             cout << key.ToNumber();
         } else if (key.GetType() == LUA_TSTRING) {
-            auto buf = key.ToStringRef();
-            cout << buf.base;
+            cout << key.ToString();
         } else {
             cout << "unsupported key type -> " << key.GetTypeName() << endl;
             return false;
@@ -56,8 +55,7 @@ static void TestTable() {
         if (value.GetType() == LUA_TNUMBER) {
             cout << " -> " << value.ToNumber() << endl;
         } else if (value.GetType() == LUA_TSTRING) {
-            auto buf = value.ToStringRef();
-            cout << " -> " << buf.base << endl;
+            cout << " -> " << value.ToString() << endl;
         } else {
             cout << " -> unsupported iter value type: " << value.GetTypeName() << endl;
         }
@@ -230,8 +228,7 @@ static void TestDoString() {
                          [] (uint32_t n, const LuaObject& lobj) -> bool {
                              cout << "output from resiter: ";
                              if (n == 0) {
-                                 auto buf = lobj.ToStringRef();
-                                 cout << buf.base << endl;
+                                 cout << lobj.ToString() << endl;
                              } else if (n == 1) {
                                  cout << lobj.ToNumber() << endl;
                              }

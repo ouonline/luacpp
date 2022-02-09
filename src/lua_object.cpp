@@ -25,6 +25,13 @@ LuaStringRef LuaObject::ToStringRef() const {
     return ret;
 }
 
+const char* LuaObject::ToString() const {
+    PushSelf();
+    const char* ret = lua_tostring(m_l, -1);
+    lua_pop(m_l, 1);
+    return ret;
+}
+
 lua_Integer LuaObject::ToInteger() const {
     PushSelf();
     auto ret = lua_tointeger(m_l, -1);
