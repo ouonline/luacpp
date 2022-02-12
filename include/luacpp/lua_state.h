@@ -58,8 +58,19 @@ public:
     /** c-style function */
     template <typename FuncRetType, typename... FuncArgType>
     LuaFunction CreateFunction(FuncRetType (*f)(FuncArgType...), const char* name = nullptr) {
-        using FuncType = FuncRetType (*)(FuncArgType...);
-        return DoCreateFunction<FuncType, FuncArgType...>(f, name);
+        return DoCreateFunction<decltype(f), FuncArgType...>(f, name);
+    }
+
+    /** lua-style function, which can be used to implement variadic argument functions */
+    LuaFunction CreateFunction(int (*f)(lua_State*), const char* name = nullptr) {
+        lua_pushcfunction(m_l, f);
+        LuaFunction ret(m_l, -1);
+        if (name) {
+            lua_setglobal(m_l, name);
+        } else {
+            lua_pop(m_l, 1);
+        }
+        return ret;
     }
 
     /** std::function */
