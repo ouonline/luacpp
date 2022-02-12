@@ -310,7 +310,7 @@ public:
         return *this;
     }
 
-    /** lua-style member function */
+    /** lua-style member function, which can be used to implement variadic argument functions */
     LuaClass& DefMember(const char* name, int (*f)(lua_State*)) {
         PushInstanceMetatable();
         lua_pushcfunction(m_l, f);
@@ -363,7 +363,7 @@ public:
         return *this;
     }
 
-    /** lua-style static member function */
+    /** lua-style function, which can be used to implement variadic argument functions */
     LuaClass& DefStatic(const char* name, int (*f)(lua_State*)) {
         PushSelf();
         lua_getmetatable(m_l, -1);

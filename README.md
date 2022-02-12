@@ -599,6 +599,9 @@ LuaClass& DefMember(const char* name, const FuncType& f);
 /** c-style member function */
 template <typename FuncRetType, typename... FuncArgType>
 LuaClass<T>& DefMember(const char* name, FuncRetType (*f)(FuncArgType...));
+
+/** lua-style member function, which can be used to implement variadic argument functions */
+LuaClass<T>& DefMember(const char* name, int (*f)(lua_State*));
 ```
 
 Exports function `f` to be a member function of this class and `name` as the exported function name in Lua.
@@ -627,6 +630,9 @@ LuaClass<T>& DefStatic(const char* name, FuncRetType (*f)(FuncArgType...));
 /** lambda static member function */
 template <typename FuncType>
 LuaClass<T>& DefStatic(const char* name, const FuncType& f);
+
+/** lua-style function, which can be used to implement variadic argument functions */
+LuaClass<T>& DefStatic(const char* name, int (*f)(lua_State*));
 ```
 
 Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua.
@@ -761,6 +767,9 @@ Creates a new table with table name `name`(if present).
 /** c-style function */
 template <typename FuncRetType, typename... FuncArgType>
 LuaFunction CreateFunction(FuncRetType (*f)(FuncArgType...), const char* name = nullptr);
+
+/** lua-style function, which can be used to implement variadic argument functions */
+LuaFunction CreateFunction(int (*f)(lua_State*), const char* name = nullptr);
 
 /** std::function */
 template <typename FuncRetType, typename... FuncArgType>

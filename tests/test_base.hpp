@@ -166,25 +166,21 @@ static void TestFuncWithBuiltinReferenceTypes() {
     assert(errmsg.empty());
 }
 
+static int variadic_argument_func_demo(lua_State* l) {
+    cout << "get argc = " << lua_gettop(l) << endl;
+    return 0;
+}
+
 static void TestVariadicArguments() {
     LuaState l(luaL_newstate(), true);
-    auto lfunc = l.CreateFunction([](int opt, const LuaObject& args) -> void {
-        uint32_t nr_args = 0;
-        if (args.GetType() == LUA_TTABLE) {
-            LuaTable(args).ForEach([&nr_args](const LuaObject&, const LuaObject&) -> bool {
-                ++nr_args;
-                return true;
-            });
-        }
-        cout << "opt = " << opt << ", args size = " << nr_args << endl;
-    }, "VariadicFunc");
+    auto lfunc = l.CreateFunction(variadic_argument_func_demo, "VariadicFunc");
 
     string errmsg;
     bool ok = l.DoString("VariadicFunc(5)", &errmsg);
     assert(ok);
     assert(errmsg.empty());
 
-    ok = l.DoString("VariadicFunc(123, {'a', ['b'] = 2, ['c'] = 'd'})", &errmsg);
+    ok = l.DoString("VariadicFunc(123, {'a', ['b'] = 2, ['c'] = 'd'}, 'ouonline')", &errmsg);
     assert(ok);
     assert(errmsg.empty());
 }
