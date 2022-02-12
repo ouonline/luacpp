@@ -283,10 +283,12 @@ int main(void) {
     lclass.DefMember("print", &ClassDemo::Print)
         .DefMember<void, const char*>("echo_str", &ClassDemo::Echo) // overloaded function
         .DefMember<void, int>("echo_int", &ClassDemo::Echo)
-        .DefMember("m_value", // default is READWRITE
-                   [](const ClassDemo* c) -> int { return c->m_value; },
-                   [](ClassDemo* c, int v) -> void { c->m_value = v; })
-        .DefStaticReadOnly("st_value", [](const ClassDemo* c) -> int { return c->st_value; });
+        // default is read/write
+        .DefMember<int>("m_value",
+                        [](const ClassDemo* c) -> int { return c->m_value; },
+                        [](ClassDemo* c, int v) -> void { c->m_value = v; })
+        // read only
+        .DefStatic<int>("st_value", [](const ClassDemo* c) -> int { return c->st_value; }, nullptr);
     l.DoString("tc = ClassDemo('ouonline', 5); tc:print();"
                "tc:echo_str('calling class member function from lua')");
 
@@ -303,9 +305,7 @@ int main(void) {
 
 `LuaState::CreateClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. You can register different names with the same c++ class.
 
-`LuaClass::DefMember()` is a template function used to export member functions and properties and `LuaClass::DefStatic()` to export static member functions and properties. Both member functions and staic member functions can be C-style functions or `std::function`s.
-
-Refer to the [Classes and APIs](classes-and-apis) section for `LuaClass::DefMemberReadOnly()`, `LuaClass::DefMemberWriteOnly()`, `LuaClass::DefStaticReadOnly()` and `LuaClass::DefStaticWriteOnly()` to see how to export read-only and write-only properties.
+`LuaClass::DefMember()` is template functions used to export member functions and properties and `LuaClass::DefStatic()` to export static member functions and properties. Member functions and staic member functions can be C-style functions or `std::function`s.
 
 Class member functions should be called with colon operator in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
 
@@ -394,13 +394,13 @@ auto base = l.CreateClass<ClassDemo>("ClassDemo")
     .DefConstructor()
     .DefStatic("StaticEcho", &ClassDemo::StaticEcho)
     .DefMember<const char*, const char*>("echo", &ClassDemo::Echo)
-    .DefMember("m_value",
-                [](const ClassDemo* c) -> int {
-                    return c->m_value;
-                },
-                [](ClassDemo* c, int v) -> void {
-                    c->m_value = v;
-                });
+    .DefMember<int>("m_value",
+                    [](const ClassDemo* c) -> int {
+                        return c->m_value;
+                    },
+                    [](ClassDemo* c, int v) -> void {
+                        c->m_value = v;
+                    });
 
 auto derived1 = l.CreateClass<DerivedDemo1>("DerivedDemo1")
     .AddBaseClass(base)
@@ -604,18 +604,16 @@ LuaClass<T>& DefMember(const char* name, FuncRetType (*f)(FuncArgType...));
 Exports function `f` to be a member function of this class and `name` as the exported function name in Lua.
 
 ```c++
-/** property */
-template <typename GetterType, typename SetterType>
+/**
+   member property
+     - GetterType: (const T*) -> PropertyType
+     - SetterType: (T*, PropertyType) -> void
+*/
+template <typename PropertyType, typename GetterType, typename SetterType>
 LuaClass& DefMember(const char* name, const GetterType& getter, const SetterType& setter);
-
-template <typename GetterType>
-LuaClass& DefMemberReadOnly(const char* name, const GetterType& getter);
-
-template <typename SetterType>
-LuaClass& DefMemberWriteOnly(const char* name, const SetterType& setter);
 ```
 
-Exports a member `name` of this class in Lua. Note that `getter` and `setter` **MUST** be lambda functions. `getter` takes a const pointer of `T` as the first argument and `setter` takes a pointer of `T` as the first argument. See `tests/test_class.hpp` for usage examples.
+Exports a member property `name` of this class in Lua. `nullptr` means that this property cannot be read or written. See `tests/test_class.hpp` for usage examples.
 
 ```c++
 /** std::function static member function */
@@ -634,17 +632,16 @@ LuaClass<T>& DefStatic(const char* name, const FuncType& f);
 Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua.
 
 ```c++
-template <typename GetterType, typename SetterType>
+/**
+   static property.
+     - GetterType: () -> PropertyType
+     - SetterType: (PropertyType) -> void
+*/
+template <typename PropertyType, typename GetterType, typename SetterType>
 LuaClass& DefStatic(const char* name, const GetterType& getter, const SetterType& setter);
-
-template <typename GetterType>
-LuaClass& DefStaticReadOnly(const char* name, const GetterType& getter);
-
-template <typename SetterType>
-LuaClass& DefStaticWriteOnly(const char* name, const SetterType& setter);
 ```
 
-Exports a static member `name` of this class in Lua. Note that `getter` and `setter` **MUST** be lambda functions. `getter` takes a const pointer of `T` as the first argument and `setter` takes a pointer of `T` as the first argument. See `tests/test_class.hpp` for usage examples.
+Exports a static property `name` of this class in Lua. `nullptr` means that this property cannot be read or written. See `tests/test_class.hpp` for usage examples.
 
 [[back to top](#table-of-contents)]
 

@@ -36,20 +36,20 @@ static void TestClassProperty() {
     LuaState l(luaL_newstate(), true);
     auto lclass = l.CreateClass<Point>("Point")
         .DefConstructor()
-        .DefMember("x",
-                   [](const Point* p) ->int {
-                       return p->x;
-                   },
-                   [](Point* p, int v) -> void {
-                       p->x = v;
-                   })
-        .DefMember("y",
-                   [](const Point* p) -> int {
-                       return p->y;
-                   },
-                   [](Point* p, int v) -> void {
-                       p->y = v;
-                   });
+        .DefMember<int>("x",
+                        [](const Point* p) -> int {
+                            return p->x;
+                        },
+                        [](Point* p, int v) -> void {
+                            p->x = v;
+                        })
+        .DefMember<int>("y",
+                        [](const Point* p) -> int {
+                            return p->y;
+                        },
+                        [](Point* p, int v) -> void {
+                            p->y = v;
+                        });
 
     auto lp1 = lclass.CreateUserData();
     auto p1 = lp1.Get<Point>();
@@ -76,14 +76,18 @@ static void TestClassPropertyReadWrite() {
     LuaState l(luaL_newstate(), true);
     auto lclass = l.CreateClass<Point>("Point")
         .DefConstructor()
-        .DefMemberReadOnly("x",
-                           [](const Point* p) ->int {
-                               return p->x;
-                           })
-        .DefMemberWriteOnly("y",
-                            [](Point* p, int v) -> void {
-                                p->y = v;
-                            });
+        // read only
+        .DefMember<int>("x",
+                        [](const Point* p) -> int {
+                            return p->x;
+                        },
+                        nullptr)
+        // write only
+        .DefMember<int>("y",
+                        nullptr,
+                        [](Point* p, int v) -> void {
+                            p->y = v;
+                        });
 
     auto lp1 = lclass.CreateUserData();
     auto p1 = lp1.Get<Point>();
@@ -149,13 +153,13 @@ static void TestClassStaticProperty() {
     LuaState l(luaL_newstate(), true);
 
     l.CreateClass<ClassDemo>("ClassDemo")
-        .DefStatic("st_value",
-                   []() -> int {
-                       return ClassDemo::st_value;
-                   },
-                   [](int v) -> void {
-                       ClassDemo::st_value = v;
-                   });
+        .DefStatic<int>("st_value",
+                        []() -> int {
+                            return ClassDemo::st_value;
+                        },
+                        [](int v) -> void {
+                            ClassDemo::st_value = v;
+                        });
 
     bool ok = l.DoString("vvv = ClassDemo.st_value");
     assert(ok);
@@ -173,10 +177,11 @@ static void TestClassStaticPropertyReadWrite() {
     LuaState l(luaL_newstate(), true);
 
     l.CreateClass<ClassDemo>("ClassDemo")
-        .DefStaticWriteOnly("st_value",
-                            [](int v) -> void {
-                                ClassDemo::st_value = v;
-                            });
+        .DefStatic<int>("st_value",
+                        nullptr,
+                        [](int v) -> void {
+                            ClassDemo::st_value = v;
+                        });
 
     string errmsg;
     bool ok = l.DoString("vvv = ClassDemo.st_value", &errmsg);
@@ -248,13 +253,13 @@ static void TestClassStaticMemberInheritance() {
     auto base = l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor()
         .DefStatic("StaticEcho", &ClassDemo::StaticEcho)
-        .DefStatic("st_value",
-                   []() -> int {
-                       return ClassDemo::st_value;
-                   },
-                   [](int v) -> void {
-                       ClassDemo::st_value = v;
-                   });
+        .DefStatic<int>("st_value",
+                        []() -> int {
+                            return ClassDemo::st_value;
+                        },
+                        [](int v) -> void {
+                            ClassDemo::st_value = v;
+                        });
 
     l.CreateClass<DerivedDemo1>("DerivedDemo1")
         .AddBaseClass(base)
@@ -287,13 +292,13 @@ static void TestClassMemberInheritance() {
         .DefConstructor()
         .DefMember<const char*, const char*>("echo", &ClassDemo::Echo)
         .DefStatic("StaticEcho", &ClassDemo::StaticEcho)
-        .DefMember("m_value",
-                   [](const ClassDemo* c) -> int {
-                       return c->m_value;
-                   },
-                   [](ClassDemo* c, int v) -> void {
-                       c->m_value = v;
-                   });
+        .DefMember<int>("m_value",
+                        [](const ClassDemo* c) -> int {
+                            return c->m_value;
+                        },
+                        [](ClassDemo* c, int v) -> void {
+                            c->m_value = v;
+                        });
 
     l.CreateClass<DerivedDemo1>("DerivedDemo1")
         .AddBaseClass(base)
@@ -327,13 +332,13 @@ static void TestClassMemberInheritance3() {
         .DefConstructor()
         .DefStatic("StaticEcho", &ClassDemo::StaticEcho)
         .DefMember<const char*, const char*>("echo", &ClassDemo::Echo)
-        .DefMember("m_value",
-                   [](const ClassDemo* c) -> int {
-                       return c->m_value;
-                   },
-                   [](ClassDemo* c, int v) -> void {
-                       c->m_value = v;
-                   });
+        .DefMember<int>("m_value",
+                        [](const ClassDemo* c) -> int {
+                            return c->m_value;
+                        },
+                        [](ClassDemo* c, int v) -> void {
+                            c->m_value = v;
+                        });
 
     auto derived1 = l.CreateClass<DerivedDemo1>("DerivedDemo1")
         .AddBaseClass(base)
