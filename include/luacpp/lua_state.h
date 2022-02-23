@@ -13,6 +13,71 @@ extern "C" {
 namespace luacpp {
 
 class LuaState final {
+private:
+    template <typename FuncType, typename... FuncArgType>
+    LuaFunction DoCreateFunctionImpl(const FuncType& f, const char* name) {
+        using WrapperType = ValueWrapper<FuncType>;
+
+        lua_pushinteger(m_l, 0); // argoffset
+        auto wrapper = lua_newuserdatauv(m_l, sizeof(WrapperType), 0);
+        new (wrapper) WrapperType(f);
+
+        lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_gc_table_ref);
+        lua_setmetatable(m_l, -2);
+
+        lua_pushcclosure(m_l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
+
+        LuaFunction ret(m_l, -1);
+        if (name) {
+            lua_setglobal(m_l, name);
+        } else {
+            lua_pop(m_l, 1);
+        }
+        return ret;
+    }
+
+    /** c-style function */
+    template <typename FuncRetType, typename... FuncArgType>
+    LuaFunction DoCreateFunction(FuncRetType (*f)(FuncArgType...), const char* name = nullptr) {
+        return DoCreateFunctionImpl<decltype(f), FuncArgType...>(f, name);
+    }
+
+    /** std::function */
+    template <typename FuncRetType, typename... FuncArgType>
+    LuaFunction DoCreateFunction(const std::function<FuncRetType(FuncArgType...)>& f, const char* name = nullptr) {
+        using FuncType = std::function<FuncRetType(FuncArgType...)>;
+        return DoCreateFunctionImpl<FuncType, FuncArgType...>(f, name);
+    }
+
+    /** lambda function */
+    template <typename FuncType>
+    LuaFunction DoCreateFunction(const FuncType& f, const char* name = nullptr) {
+        typename LambdaFunctionTraits<FuncType>::std_function_type func(f);
+        return DoCreateFunction(func, name);
+    }
+
+    /** lua-style function, which can be used to implement variadic argument functions */
+    LuaFunction DoCreateFunction(int (*f)(lua_State*), const char* name = nullptr) {
+        lua_pushcfunction(m_l, f);
+        LuaFunction ret(m_l, -1);
+        if (name) {
+            lua_setglobal(m_l, name);
+        } else {
+            lua_pop(m_l, 1);
+        }
+        return ret;
+    }
+
+    /* ----------------------- utils for class ------------------------ */
+
+    static int luacpp_index_for_class(lua_State* l);
+    static int luacpp_newindex_for_class(lua_State* l);
+    static int luacpp_index_for_class_instance(lua_State* l);
+    static int luacpp_newindex_for_class_instance(lua_State* l);
+
+    void CreateClassMetatable(lua_State* l);
+    void CreateClassInstanceMetatable(lua_State* l, int (*gc)(lua_State*));
+
 public:
     LuaState(lua_State* l, bool is_owner);
     LuaState(LuaState&&);
@@ -55,36 +120,9 @@ public:
         return LuaObject(m_l);
     }
 
-    /** c-style function */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaFunction CreateFunction(FuncRetType (*f)(FuncArgType...), const char* name = nullptr) {
-        return DoCreateFunction<decltype(f), FuncArgType...>(f, name);
-    }
-
-    /** lua-style function, which can be used to implement variadic argument functions */
-    LuaFunction CreateFunction(int (*f)(lua_State*), const char* name = nullptr) {
-        lua_pushcfunction(m_l, f);
-        LuaFunction ret(m_l, -1);
-        if (name) {
-            lua_setglobal(m_l, name);
-        } else {
-            lua_pop(m_l, 1);
-        }
-        return ret;
-    }
-
-    /** std::function */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaFunction CreateFunction(const std::function<FuncRetType(FuncArgType...)>& f, const char* name = nullptr) {
-        using FuncType = std::function<FuncRetType(FuncArgType...)>;
-        return DoCreateFunction<FuncType, FuncArgType...>(f, name);
-    }
-
-    /** lambda function */
     template <typename FuncType>
     LuaFunction CreateFunction(const FuncType& f, const char* name = nullptr) {
-        typename LambdaFunctionTraits<FuncType>::std_function_type func(f);
-        return CreateFunction(func, name);
+        return DoCreateFunction(f, name);
     }
 
     template <typename T>
@@ -119,41 +157,6 @@ public:
 
     bool DoFile(const char* script, std::string* errstr = nullptr,
                 const std::function<bool(uint32_t, const LuaObject&)>& callback = nullptr);
-
-private:
-    template <typename FuncType, typename... FuncArgType>
-    LuaFunction DoCreateFunction(const FuncType& f, const char* name) {
-        using WrapperType = ValueWrapper<FuncType>;
-
-        lua_pushinteger(m_l, 0); // argoffset
-        auto wrapper = lua_newuserdatauv(m_l, sizeof(WrapperType), 0);
-        new (wrapper) WrapperType(f);
-
-        lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_gc_table_ref);
-        lua_setmetatable(m_l, -2);
-
-        lua_pushcclosure(m_l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
-
-        LuaFunction ret(m_l, -1);
-        if (name) {
-            lua_setglobal(m_l, name);
-        } else {
-            lua_pop(m_l, 1);
-        }
-        return ret;
-    }
-
-    /* ----------------------- utils for class ------------------------ */
-
-    static int luacpp_index_for_class(lua_State* l);
-    static int luacpp_newindex_for_class(lua_State* l);
-    static int luacpp_index_for_class_instance(lua_State* l);
-    static int luacpp_newindex_for_class_instance(lua_State* l);
-
-    void CreateClassMetatable(lua_State* l);
-    void CreateClassInstanceMetatable(lua_State* l, int (*gc)(lua_State*));
-
-    /* ---------------------------------------------------------------- */
 
 private:
     lua_State* m_l;

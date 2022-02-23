@@ -122,8 +122,8 @@ static void TestClassMemberFunction() {
         .DefConstructor()
         .DefMember("set", &ClassDemo::Set)
         .DefMember("print", &ClassDemo::Print)
-        .DefMember("echo_str", (const char* (ClassDemo::*)(const char*) const)(&ClassDemo::Echo)) // overloaded function
-        .DefMember<int, int>("echo_int", &ClassDemo::Echo)
+        .DefMember<const char* (ClassDemo::*)(const char*) const>("echo_str", &ClassDemo::Echo) // overloaded function
+        .DefMember<int (ClassDemo::*)(int) const>("echo_int", &ClassDemo::Echo)
         .DefMember("echo_m", &CMemberPrint)
         .DefMember("echo_s", [](ClassDemo*, const char* msg) -> void {
             cout << "lambda print(str): " << msg << endl;
@@ -133,6 +133,7 @@ static void TestClassMemberFunction() {
     const string chunk = "tc = ClassDemo();"
         "tc:set('content from lua'); tc:print();"
         "var1 = tc:echo_str('" + expected_str + "');"
+        "var2 = tc:echo_int(55555);"
         "tc:echo_m('called by instance');"
         "tc:echo_s('called by instance')";
 
@@ -141,6 +142,9 @@ static void TestClassMemberFunction() {
 
     auto buf = l.Get("var1").ToStringRef();
     assert(string(buf.base, buf.size) ==  expected_str);
+
+    auto var2 = l.Get("var2").ToInteger();
+    assert(var2 == 55555);
 
     string errmsg;
     ok = l.DoString("ClassDemo:lambda_print('error!')", &errmsg);
@@ -290,7 +294,7 @@ static void TestClassMemberInheritance() {
 
     auto base = l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor()
-        .DefMember<const char*, const char*>("echo", &ClassDemo::Echo)
+        .DefMember<const char* (ClassDemo::*)(const char*) const>("echo", &ClassDemo::Echo)
         .DefStatic("StaticEcho", &ClassDemo::StaticEcho)
         .DefMember<int>("m_value",
                         [](const ClassDemo* c) -> int {
@@ -331,7 +335,7 @@ static void TestClassMemberInheritance3() {
     auto base = l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor()
         .DefStatic("StaticEcho", &ClassDemo::StaticEcho)
-        .DefMember<const char*, const char*>("echo", &ClassDemo::Echo)
+        .DefMember<const char* (ClassDemo::*)(const char*) const>("echo", &ClassDemo::Echo)
         .DefMember<int>("m_value",
                         [](const ClassDemo* c) -> int {
                             return c->m_value;
