@@ -33,6 +33,32 @@ private:
         lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_data->gc_table_ref);
     }
 
+    void Init() {
+        PushSelf();
+        m_data = (LuaClassData*)lua_touserdata(m_l, -1);
+        lua_pop(m_l, 1);
+    }
+
+    template <typename FuncType, typename... FuncArgType>
+    void CreateGenericFunction(lua_State* l, int argoffset, const FuncType& f) {
+        using WrapperType = ValueWrapper<FuncType>;
+
+        // upvalue 1: argoffset
+        lua_pushinteger(l, argoffset);
+
+        // upvalue 2: wrapper
+        auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
+        new (wrapper) WrapperType(f);
+
+        // wrapper's destructor
+        PushGcTable();
+        lua_setmetatable(l, -2);
+
+        lua_pushcclosure(l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
+    }
+
+    /* ---------------------------- constructor --------------------------------- */
+
     template <typename... FuncArgType>
     static void InitInstance(T* obj, FuncArgType&&... argv) {
         new (obj) T(std::forward<FuncArgType>(argv)...);
@@ -61,23 +87,7 @@ private:
         return 1;
     }
 
-    template <typename FuncType, typename... FuncArgType>
-    void CreateGenericFunction(lua_State* l, int argoffset, const FuncType& f) {
-        using WrapperType = ValueWrapper<FuncType>;
-
-        // upvalue 1: argoffset
-        lua_pushinteger(l, argoffset);
-
-        // upvalue 2: wrapper
-        auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
-        new (wrapper) WrapperType(f);
-
-        // wrapper's destructor
-        PushGcTable();
-        lua_setmetatable(l, -2);
-
-        lua_pushcclosure(l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
-    }
+    /* --------------------- static member function ----------------------------- */
 
     template <typename FuncType, typename... FuncArgType>
     void DoDefStaticFunction(lua_State* l, const char* name, const FuncType& f) {
@@ -87,6 +97,41 @@ private:
         lua_setfield(l, -2, name);
         lua_pop(l, 2);
     }
+
+    /** std::function static member function */
+    template <typename FuncRetType, typename... FuncArgType>
+    LuaClass& DoDefStatic(const char* name, const std::function<FuncRetType(FuncArgType...)>& f) {
+        using FuncType = std::function<FuncRetType(FuncArgType...)>;
+        DoDefStaticFunction<FuncType, FuncArgType...>(m_l, name, f);
+        return *this;
+    }
+
+    /** C-style static member function */
+    template <typename FuncRetType, typename... FuncArgType>
+    LuaClass& DoDefStatic(const char* name, FuncRetType (*f)(FuncArgType...)) {
+        DoDefStaticFunction<decltype(f), FuncArgType...>(m_l, name, f);
+        return *this;
+    }
+
+    /** lambda static member function */
+    template <typename FuncType>
+    LuaClass& DoDefStatic(const char* name, const FuncType& f) {
+        typename LambdaFunctionTraits<FuncType>::std_function_type func(f);
+        DoDefStatic(name, func);
+        return *this;
+    }
+
+    /** lua-style function, which can be used to implement variadic argument functions */
+    LuaClass& DoDefStatic(const char* name, int (*f)(lua_State*)) {
+        PushSelf();
+        lua_getmetatable(m_l, -1);
+        lua_pushcfunction(m_l, f);
+        lua_setfield(m_l, -2, name);
+        lua_pop(m_l, 2);
+        return *this;
+    }
+
+    /* ------------------------ member function --------------------------------- */
 
     template <typename FuncType, typename... FuncArgType>
     void DoDefStandAloneFunction(lua_State* l, const char* name, const FuncType& f) {
@@ -130,7 +175,53 @@ private:
         lua_pop(l, 1);
     }
 
-    /* -------------------------------------------------------------------------- */
+    /** class member function */
+    template <typename FuncRetType, typename... FuncArgType>
+    LuaClass& DoDefMember(const char* name, FuncRetType (T::*f)(FuncArgType...)) {
+        DoDefMemberFunction<decltype(f), FuncArgType...>(m_l, name, f);
+        return *this;
+    }
+
+    /** class member function with const qualifier */
+    template <typename FuncRetType, typename... FuncArgType>
+    LuaClass& DoDefMember(const char* name, FuncRetType (T::*f)(FuncArgType...) const) {
+        DoDefMemberFunction<decltype(f), FuncArgType...>(m_l, name, f);
+        return *this;
+    }
+
+    /** std::function member function */
+    template <typename FuncRetType, typename... FuncArgType>
+    LuaClass& DoDefMember(const char* name, const std::function<FuncRetType(FuncArgType...)>& f) {
+        using FuncType = std::function<FuncRetType(FuncArgType...)>;
+        DoDefStandAloneFunction<FuncType, FuncArgType...>(m_l, name, f);
+        return *this;
+    }
+
+    /** c-style member function */
+    template <typename FuncRetType, typename... FuncArgType>
+    LuaClass& DoDefMember(const char* name, FuncRetType (*f)(FuncArgType...)) {
+        DoDefStandAloneFunction<decltype(f), FuncArgType...>(m_l, name, f);
+        return *this;
+    }
+
+    /** lambda member function */
+    template <typename FuncType>
+    LuaClass& DoDefMember(const char* name, const FuncType& f) {
+        typename LambdaFunctionTraits<FuncType>::std_function_type func(f);
+        DoDefMember(name, func);
+        return *this;
+    }
+
+    /** lua-style member function, which can be used to implement variadic argument functions */
+    LuaClass& DoDefMember(const char* name, int (*f)(lua_State*)) {
+        PushInstanceMetatable();
+        lua_pushcfunction(m_l, f);
+        lua_setfield(m_l, -2, name);
+        lua_pop(m_l, 1);
+        return *this;
+    }
+
+    /* -------------------- member property ------------------------------------- */
 
     template <typename GetterType>
     static int luacpp_member_property_getter(lua_State* l) {
@@ -175,6 +266,8 @@ private:
         }
     }
 
+    /* --------------------- static property ------------------------------------ */
+
     template <typename GetterType>
     static int luacpp_static_property_getter(lua_State* l) {
         using WrapperType = ValueWrapper<GetterType>;
@@ -214,12 +307,6 @@ private:
             lua_pushcclosure(l, luacpp_static_property_setter<SetterType>, 1);
             lua_setfield(l, -2, "setter");
         }
-    }
-
-    void Init() {
-        PushSelf();
-        m_data = (LuaClassData*)lua_touserdata(m_l, -1);
-        lua_pop(m_l, 1);
     }
 
 public:
@@ -273,49 +360,9 @@ public:
         return *this;
     }
 
-    /** member function */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DefMember(const char* name, FuncRetType (T::*f)(FuncArgType...)) {
-        DoDefMemberFunction<decltype(f), FuncArgType...>(m_l, name, f);
-        return *this;
-    }
-
-    /** member function with const qualifier */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DefMember(const char* name, FuncRetType (T::*f)(FuncArgType...) const) {
-        DoDefMemberFunction<decltype(f), FuncArgType...>(m_l, name, f);
-        return *this;
-    }
-
-    /** std::function member function */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DefMember(const char* name, const std::function<FuncRetType(FuncArgType...)>& f) {
-        using FuncType = std::function<FuncRetType(FuncArgType...)>;
-        DoDefStandAloneFunction<FuncType, FuncArgType...>(m_l, name, f);
-        return *this;
-    }
-
-    /** lambda member function */
     template <typename FuncType>
     LuaClass& DefMember(const char* name, const FuncType& f) {
-        typename LambdaFunctionTraits<FuncType>::std_function_type func(f);
-        DefMember(name, func);
-        return *this;
-    }
-
-    /** c-style member function */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DefMember(const char* name, FuncRetType (*f)(FuncArgType...)) {
-        DoDefStandAloneFunction<decltype(f), FuncArgType...>(m_l, name, f);
-        return *this;
-    }
-
-    /** lua-style member function, which can be used to implement variadic argument functions */
-    LuaClass& DefMember(const char* name, int (*f)(lua_State*)) {
-        PushInstanceMetatable();
-        lua_pushcfunction(m_l, f);
-        lua_setfield(m_l, -2, name);
-        lua_pop(m_l, 1);
+        DoDefMember(name, f);
         return *this;
     }
 
@@ -340,36 +387,9 @@ public:
         return *this;
     }
 
-    /** std::function static member function */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DefStatic(const char* name, const std::function<FuncRetType(FuncArgType...)>& f) {
-        using FuncType = std::function<FuncRetType(FuncArgType...)>;
-        DoDefStaticFunction<FuncType, FuncArgType...>(m_l, name, f);
-        return *this;
-    }
-
-    /** C-style static member function */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DefStatic(const char* name, FuncRetType (*f)(FuncArgType...)) {
-        DoDefStaticFunction<decltype(f), FuncArgType...>(m_l, name, f);
-        return *this;
-    }
-
-    /** lambda static member function */
     template <typename FuncType>
     LuaClass& DefStatic(const char* name, const FuncType& f) {
-        typename LambdaFunctionTraits<FuncType>::std_function_type func(f);
-        DefStatic(name, func);
-        return *this;
-    }
-
-    /** lua-style function, which can be used to implement variadic argument functions */
-    LuaClass& DefStatic(const char* name, int (*f)(lua_State*)) {
-        PushSelf();
-        lua_getmetatable(m_l, -1);
-        lua_pushcfunction(m_l, f);
-        lua_setfield(m_l, -2, name);
-        lua_pop(m_l, 2);
+        DoDefStatic(name, f);
         return *this;
     }
 

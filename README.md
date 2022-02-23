@@ -219,36 +219,38 @@ public:
         cout << "ClassDemo::ClassDemo() is called without value." << endl;
     }
     ClassDemo(const char* msg, int x) {
-        cout << "ClassDemo::ClassDemo() is called with string -> '"
-             << msg << "' and int -> " << x << "." << endl;
-
         if (msg) {
             m_msg = msg;
         }
+        cout << "ClassDemo::ClassDemo() is called with string -> '"
+             << msg << "' and int -> " << x << "." << endl;
     }
     virtual ~ClassDemo() {
         cout << "ClassDemo::~ClassDemo() is called." << endl;
     }
 
     void Set(const char* msg) {
-        cout << "ClassDemo()::Set(msg): '" << msg << "'" << endl;
         m_msg = msg;
+        cout << "ClassDemo()::Set(msg): '" << msg << "'" << endl;
     }
     void Print() const {
         cout << "ClassDemo::Print(msg): '" << m_msg << "'" << endl;
     }
-    void Echo(const char* msg) const {
+    virtual const char* Echo(const char* msg) const {
         cout << "ClassDemo::Echo(string): '" << msg << "'" << endl;
+        return msg;
     }
-    void Echo(int v) const {
+    int Echo(int v) const {
         cout << "ClassDemo::Echo(int): " << v << endl;
+        return v;
     }
-    static void StaticEcho(const char* msg) {
+    static const char* StaticEcho(const char* msg) {
         cout << "ClassDemo::StaticEcho(string): '" << msg << "'" << endl;
+        return msg;
     }
 
-    int m_value;
-    static const int st_value;
+    static int st_value;
+    int m_value = 55555;
 
 private:
     string m_msg;
@@ -281,8 +283,8 @@ int main(void) {
 
     cout << "--------------------------------------------" << endl;
     lclass.DefMember("print", &ClassDemo::Print)
-        .DefMember<void, const char*>("echo_str", &ClassDemo::Echo) // overloaded function
-        .DefMember<void, int>("echo_int", &ClassDemo::Echo)
+        .DefMember<const char* (ClassDemo::*)(const char*) const>("echo_str", &ClassDemo::Echo) // overloaded function
+        .DefMember<int (ClassDemo::*)(int) const>("echo_int", &ClassDemo::Echo)
         // default is read/write
         .DefMember<int>("m_value",
                         [](const ClassDemo* c) -> int { return c->m_value; },
@@ -305,7 +307,7 @@ int main(void) {
 
 `LuaState::CreateClass()` is used to export user-defined classes to Lua. It requires a string `name` as the class's name in the Lua environment, and adds a default constructor and a destructor for this class. You can register different names with the same c++ class.
 
-`LuaClass::DefMember()` is template functions used to export member functions and properties and `LuaClass::DefStatic()` to export static member functions and properties. Member functions and staic member functions can be C-style functions or `std::function`s.
+`LuaClass::DefMember()` is template functions used to export member functions and properties and `LuaClass::DefStatic()` to export static member functions and properties. Member functions and staic member functions can be C-style functions, `std::function`s and lambda functions.
 
 Class member functions should be called with colon operator in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
 
@@ -393,7 +395,7 @@ LuaState l(luaL_newstate(), true);
 auto base = l.CreateClass<ClassDemo>("ClassDemo")
     .DefConstructor()
     .DefStatic("StaticEcho", &ClassDemo::StaticEcho)
-    .DefMember<const char*, const char*>("echo", &ClassDemo::Echo)
+    .DefMember<const char* (ClassDemo::*)(const char*) const>("echo", &ClassDemo::Echo)
     .DefMember<int>("m_value",
                     [](const ClassDemo* c) -> int {
                         return c->m_value;
@@ -458,7 +460,7 @@ Converts this object to a `LuaStringRef` object, which only contains address and
 const char* ToString() const;
 ```
 
-Converts this object to a c-style string.
+Converts this object to a C-style string.
 
 ```c++
 lua_Integer ToInteger() const;
@@ -580,31 +582,11 @@ LuaClass& AddBaseClass(const LuaClass<BaseType>& lclass);
 Connects the derived classes with their base classes.
 
 ```c++
-/** member function */
-template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& DefMember(const char* name, FuncRetType (T::*f)(FuncArgType...));
-
-/** member function with const qualifier */
-template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& DefMember(const char* name, FuncRetType (T::*f)(FuncArgType...) const);
-
-/** std::function member function */
-template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& DefMember(const char* name, const std::function<FuncRetType (FuncArgType...)>& f);
-
-/** lambda member function */
 template <typename FuncType>
 LuaClass& DefMember(const char* name, const FuncType& f);
-
-/** c-style member function */
-template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& DefMember(const char* name, FuncRetType (*f)(FuncArgType...));
-
-/** lua-style member function, which can be used to implement variadic argument functions */
-LuaClass<T>& DefMember(const char* name, int (*f)(lua_State*));
 ```
 
-Exports function `f` to be a member function of this class and `name` as the exported function name in Lua.
+Exports function `f` to be a member function of this class and `name` as the exported function name in Lua. `FuncType` can be C-style functions, class member functions, `std::function`s, lambda functions and lua-style functions.
 
 ```c++
 /**
@@ -619,23 +601,11 @@ LuaClass& DefMember(const char* name, const GetterType& getter, const SetterType
 Exports a member property `name` of this class in Lua. `nullptr` means that this property cannot be read or written. See `tests/test_class.hpp` for usage examples.
 
 ```c++
-/** std::function static member function */
-template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& DefStatic(const char* name, const std::function<FuncRetType (FuncArgType...)>& f);
-
-/** C-style static member function */
-template <typename FuncRetType, typename... FuncArgType>
-LuaClass<T>& DefStatic(const char* name, FuncRetType (*f)(FuncArgType...));
-
-/** lambda static member function */
 template <typename FuncType>
 LuaClass<T>& DefStatic(const char* name, const FuncType& f);
-
-/** lua-style function, which can be used to implement variadic argument functions */
-LuaClass<T>& DefStatic(const char* name, int (*f)(lua_State*));
 ```
 
-Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua.
+Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua. `FuncType` can be C-style functions, `std::function`s, lambda functions and lua-style functions.
 
 ```c++
 /**
@@ -764,23 +734,11 @@ LuaTable CreateTable(const char* name = nullptr);
 Creates a new table with table name `name`(if present).
 
 ```c++
-/** c-style function */
-template <typename FuncRetType, typename... FuncArgType>
-LuaFunction CreateFunction(FuncRetType (*f)(FuncArgType...), const char* name = nullptr);
-
-/** lua-style function, which can be used to implement variadic argument functions */
-LuaFunction CreateFunction(int (*f)(lua_State*), const char* name = nullptr);
-
-/** std::function */
-template <typename FuncRetType, typename... FuncArgType>
-LuaFunction CreateFunction(const std::function<FuncRetType (FuncArgType...)>& f, const char* name = nullptr);
-
-/** lambda function */
 template <typename FuncType>
 LuaFunction CreateFunction(const FuncType& f, const char* name = nullptr);
 ```
 
-Creates a function object from `f` with `name`(if present).
+Creates a function object from `f` with `name`(if present). `FuncType` can be C-style functions, `std::function`s, lambda functions and lua-style c functions.
 
 ```c++
 template<typename T>
