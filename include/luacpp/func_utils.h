@@ -221,10 +221,11 @@ struct DestructorObject {
     virtual ~DestructorObject() {}
 };
 
-template <typename ValueType>
-struct ValueWrapper final : public DestructorObject {
-    ValueWrapper(const ValueType& v) : value(v) {}
-    ValueType value;
+template <typename FuncType>
+struct FuncWrapper final : public DestructorObject {
+    FuncWrapper(const FuncType& v) : f(v) {}
+    FuncWrapper(FuncType&& v) : f(std::move(v)) {}
+    FuncType f;
 };
 
 template <typename T>
@@ -238,8 +239,8 @@ static int luacpp_generic_destructor(lua_State* l) {
 template <typename FuncType, typename... FuncArgType>
 static int luacpp_generic_function(lua_State* l) {
     auto argoffset = lua_tointeger(l, lua_upvalueindex(1));
-    auto wrapper = (ValueWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
-    return FunctionCaller<sizeof...(FuncArgType)>::Execute(wrapper->value, l, argoffset);
+    auto wrapper = (FuncWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
+    return FunctionCaller<sizeof...(FuncArgType)>::Execute(wrapper->f, l, argoffset);
 }
 
 } // namespace luacpp
