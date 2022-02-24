@@ -16,7 +16,7 @@ class LuaState final {
 private:
     template <typename FuncType, typename... FuncArgType>
     LuaFunction DoCreateFunctionImpl(const FuncType& f, const char* name) {
-        using WrapperType = ValueWrapper<FuncType>;
+        using WrapperType = FuncWrapper<FuncType>;
 
         lua_pushinteger(m_l, 0); // argoffset
         auto wrapper = lua_newuserdatauv(m_l, sizeof(WrapperType), 0);
