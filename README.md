@@ -86,7 +86,7 @@ int main(void) {
     l.CreateString("Hello, luacpp from ouonline!", "msg");
     auto lobj = l.Get("msg");
     if (lobj.GetType() == LUA_TSTRING) {
-        cout << "get msg -> " << lobj.ToString << endl;
+        cout << "get msg -> " << lobj.ToString() << endl;
     } else {
         cerr << "unknown object type -> " << lobj.GetTypeName() << endl;
     }
@@ -586,7 +586,7 @@ template <typename FuncType>
 LuaClass& DefMember(const char* name, const FuncType& f);
 ```
 
-Exports function `f` to be a member function of this class and `name` as the exported function name in Lua. `FuncType` can be C-style functions, class member functions, `std::function`s, lambda functions and lua-style functions.
+Exports function `f` to be a member function of this class and `name` as the exported function name in Lua. `FuncType` can be C-style functions, class member functions, `std::function`s, lambda functions and lua-style C functions.
 
 ```c++
 /**
@@ -605,7 +605,7 @@ template <typename FuncType>
 LuaClass<T>& DefStatic(const char* name, const FuncType& f);
 ```
 
-Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua. `FuncType` can be C-style functions, `std::function`s, lambda functions and lua-style functions.
+Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua. `FuncType` can be C-style functions, `std::function`s, lambda functions and lua-style C functions.
 
 ```c++
 /**
@@ -705,11 +705,6 @@ Returns a `nil` object.
 
 ```c++
 LuaObject CreateString(const char* str, const char* name = nullptr);
-```
-
-Sets the variable `name`(if present) to be the string `str` and returns that object.
-
-```c++
 LuaObject CreateString(const char* str, uint64_t len, const char* name = nullptr);
 ```
 
@@ -738,7 +733,7 @@ template <typename FuncType>
 LuaFunction CreateFunction(const FuncType& f, const char* name = nullptr);
 ```
 
-Creates a function object from `f` with `name`(if present). `FuncType` can be C-style functions, `std::function`s, lambda functions and lua-style c functions.
+Creates a function object from `f` with `name`(if present). `FuncType` can be C-style functions, `std::function`s, lambda functions and lua-style C functions.
 
 ```c++
 template<typename T>
