@@ -13,8 +13,7 @@ public:
         if (msg) {
             m_msg = msg;
         }
-        cout << "ClassDemo::ClassDemo() is called with string -> '"
-             << msg << "' and int -> " << x << "." << endl;
+        cout << "ClassDemo::ClassDemo() is called with string -> '" << msg << "' and int -> " << x << "." << endl;
     }
     virtual ~ClassDemo() {
         cout << "ClassDemo::~ClassDemo() is called." << endl;
