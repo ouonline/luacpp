@@ -15,12 +15,12 @@ namespace luacpp {
 class LuaState final {
 private:
     template <typename FuncType, typename... FuncArgType>
-    LuaFunction DoCreateFunctionImpl(const FuncType& f, const char* name) {
+    LuaFunction DoCreateFunctionImpl(FuncType&& f, const char* name, const TypeHolder<FuncArgType...>&) {
         using WrapperType = FuncWrapper<FuncType>;
 
         lua_pushinteger(m_l, 0); // argoffset
         auto wrapper = lua_newuserdatauv(m_l, sizeof(WrapperType), 0);
-        new (wrapper) WrapperType(f);
+        new (wrapper) WrapperType(std::forward<FuncType>(f));
 
         lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_gc_table_ref);
         lua_setmetatable(m_l, -2);
@@ -36,27 +36,22 @@ private:
         return ret;
     }
 
-    /** c-style function */
+    /** `std::function`s and lambda functions */
+    template <typename FuncType>
+    LuaFunction DoCreateFunction(FuncType&& f, const char* name = nullptr) {
+        using Traits = FunctionTraits<FuncType>;
+        // implicitly convert lambda functions to `std::function`s
+        return DoCreateFunctionImpl<typename Traits::std_function_type>(f, name,
+                                                                        typename Traits::argument_type_holder());
+    }
+
+    /** c-style functions */
     template <typename FuncRetType, typename... FuncArgType>
     LuaFunction DoCreateFunction(FuncRetType (*f)(FuncArgType...), const char* name = nullptr) {
-        return DoCreateFunctionImpl<decltype(f), FuncArgType...>(f, name);
+        return DoCreateFunctionImpl(std::forward<decltype(f)>(f), name, TypeHolder<FuncArgType...>());
     }
 
-    /** std::function */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaFunction DoCreateFunction(const std::function<FuncRetType(FuncArgType...)>& f, const char* name = nullptr) {
-        using FuncType = std::function<FuncRetType(FuncArgType...)>;
-        return DoCreateFunctionImpl<FuncType, FuncArgType...>(f, name);
-    }
-
-    /** lambda function */
-    template <typename FuncType>
-    LuaFunction DoCreateFunction(const FuncType& f, const char* name = nullptr) {
-        typename LambdaFunctionTraits<FuncType>::std_function_type func(f);
-        return DoCreateFunction(func, name);
-    }
-
-    /** lua-style function, which can be used to implement variadic argument functions */
+    /** lua-style functions that can be used to implement variadic argument functions */
     LuaFunction DoCreateFunction(int (*f)(lua_State*), const char* name = nullptr) {
         lua_pushcfunction(m_l, f);
         LuaFunction ret(m_l, -1);
@@ -121,8 +116,8 @@ public:
     }
 
     template <typename FuncType>
-    LuaFunction CreateFunction(const FuncType& f, const char* name = nullptr) {
-        return DoCreateFunction(f, name);
+    LuaFunction CreateFunction(FuncType&& f, const char* name = nullptr) {
+        return DoCreateFunction(std::forward<FuncType>(f), name);
     }
 
     template <typename T>

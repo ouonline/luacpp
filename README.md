@@ -583,7 +583,7 @@ Connects the derived classes with their base classes.
 
 ```c++
 template <typename FuncType>
-LuaClass& DefMember(const char* name, const FuncType& f);
+LuaClass& DefMember(const char* name, FuncType&& f);
 ```
 
 Exports function `f` to be a member function of this class and `name` as the exported function name in Lua. `FuncType` can be C-style functions, class member functions, `std::function`s, lambda functions and lua-style C functions.
@@ -595,14 +595,14 @@ Exports function `f` to be a member function of this class and `name` as the exp
      - SetterType: (T*, PropertyType) -> void
 */
 template <typename PropertyType, typename GetterType, typename SetterType>
-LuaClass& DefMember(const char* name, const GetterType& getter, const SetterType& setter);
+LuaClass& DefMember(const char* name, GetterType&& getter, SetterType&& setter);
 ```
 
 Exports a member property `name` of this class in Lua. `nullptr` means that this property cannot be read or written. See `tests/test_class.hpp` for usage examples.
 
 ```c++
 template <typename FuncType>
-LuaClass<T>& DefStatic(const char* name, const FuncType& f);
+LuaClass<T>& DefStatic(const char* name, FuncType&& f);
 ```
 
 Exports function `f` to be a static member function of this class and `name` as the exported function name in Lua. `FuncType` can be C-style functions, `std::function`s, lambda functions and lua-style C functions.
@@ -614,7 +614,7 @@ Exports function `f` to be a static member function of this class and `name` as 
      - SetterType: (PropertyType) -> void
 */
 template <typename PropertyType, typename GetterType, typename SetterType>
-LuaClass& DefStatic(const char* name, const GetterType& getter, const SetterType& setter);
+LuaClass& DefStatic(const char* name, GetterType&& getter, SetterType&& setter);
 ```
 
 Exports a static property `name` of this class in Lua. `nullptr` means that this property cannot be read or written. See `tests/test_class.hpp` for usage examples.
@@ -730,7 +730,7 @@ Creates a new table with table name `name`(if present).
 
 ```c++
 template <typename FuncType>
-LuaFunction CreateFunction(const FuncType& f, const char* name = nullptr);
+LuaFunction CreateFunction(FuncType&& f, const char* name = nullptr);
 ```
 
 Creates a function object from `f` with `name`(if present). `FuncType` can be C-style functions, `std::function`s, lambda functions and lua-style C functions.
