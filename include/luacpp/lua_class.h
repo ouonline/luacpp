@@ -11,6 +11,9 @@ namespace luacpp {
 static constexpr uint32_t CLASS_PARENT_TABLE_IDX = 1;
 static constexpr uint32_t CLASS_INSTANCE_METATABLE_IDX = 2;
 
+static constexpr uint32_t MEMBER_GETTER_IDX = 1;
+static constexpr uint32_t MEMBER_SETTER_IDX = 2;
+
 struct LuaClassData final {
     /** a metatable including only __gc function for various objects(such as FuncWrapper) */
     int gc_table_ref = LUA_REFNIL;
@@ -173,7 +176,7 @@ private:
 
     template <typename GetterType, typename SetterType>
     void CreateMemberProperty(lua_State* l, GetterType&& getter, SetterType&& setter) {
-        lua_createtable(l, 0, 2);
+        lua_createtable(l, 2, 0);
 
         if (getter) {
             using GetterWrapperType = FuncWrapper<GetterType>;
@@ -182,7 +185,7 @@ private:
             PushGcTable(); // wrapper's destructor
             lua_setmetatable(l, -2);
             lua_pushcclosure(l, luacpp_member_property_getter<GetterType>, 1);
-            lua_setfield(l, -2, "getter");
+            lua_rawseti(l, -2, MEMBER_GETTER_IDX);
         }
 
         if (setter) {
@@ -192,7 +195,7 @@ private:
             PushGcTable(); // wrapper's destructor
             lua_setmetatable(l, -2);
             lua_pushcclosure(l, luacpp_member_property_setter<SetterType>, 1);
-            lua_setfield(l, -2, "setter");
+            lua_rawseti(l, -2, MEMBER_SETTER_IDX);
         }
     }
 
@@ -216,7 +219,7 @@ private:
 
     template <typename GetterType, typename SetterType>
     void CreateStaticProperty(lua_State* l, GetterType&& getter, SetterType&& setter) {
-        lua_createtable(l, 0, 2);
+        lua_createtable(l, 2, 0);
 
         if (getter) {
             using GetterWrapperType = FuncWrapper<GetterType>;
@@ -225,7 +228,7 @@ private:
             PushGcTable(); // wrapper's destructor
             lua_setmetatable(l, -2);
             lua_pushcclosure(l, luacpp_static_property_getter<GetterType>, 1);
-            lua_setfield(l, -2, "getter");
+            lua_rawseti(l, -2, MEMBER_GETTER_IDX);
         }
 
         if (setter) {
@@ -235,7 +238,7 @@ private:
             PushGcTable(); // wrapper's destructor
             lua_setmetatable(l, -2);
             lua_pushcclosure(l, luacpp_static_property_setter<SetterType>, 1);
-            lua_setfield(l, -2, "setter");
+            lua_rawseti(l, -2, MEMBER_SETTER_IDX);
         }
     }
 
