@@ -63,7 +63,7 @@ int LuaState::luacpp_index_for_class(lua_State* l) {
     // ----- case 2: is a property ----- //
 
     if (lua_istable(l, -1)) {
-        lua_getfield(l, -1, "getter");
+        lua_rawgeti(l, -1, MEMBER_GETTER_IDX);
         if (lua_isnil(l, -1)) {
             luaL_error(l, "cannot read `%s`.", key);
             return 1;
@@ -162,7 +162,7 @@ int LuaState::luacpp_newindex_for_class(lua_State* l) {
     // ----- case 1: is a property ----- //
 
     if (lua_istable(l, -1)) {
-        lua_getfield(l, -1, "setter");
+        lua_rawgeti(l, -1, MEMBER_SETTER_IDX);
         if (lua_isnil(l, -1)) {
             luaL_error(l, "cannot write `%s`.", key);
             return 0;
@@ -266,7 +266,7 @@ int LuaState::luacpp_index_for_class_instance(lua_State* l) {
     // ----- case 2: is a property ----- //
 
     if (lua_istable(l, -1)) {
-        lua_getfield(l, -1, "getter");
+        lua_rawgeti(l, -1, MEMBER_GETTER_IDX);
         if (lua_isnil(l, -1)) {
             luaL_error(l, "cannot read `%s`.", key);
             return 1;
@@ -484,7 +484,7 @@ int LuaState::luacpp_newindex_for_class_instance(lua_State* l) {
     // ----- case 1: is a property ----- //
 
     if (lua_istable(l, -1)) {
-        lua_getfield(l, -1, "setter");
+        lua_rawgeti(l, -1, MEMBER_SETTER_IDX);
         if (lua_isnil(l, -1)) {
             luaL_error(l, "cannot write `%s`.", key);
             return 0;
@@ -531,7 +531,7 @@ int LuaState::luacpp_newindex_for_class_instance(lua_State* l) {
 
     lua_getfield(l, -1, key);
     if (lua_istable(l, -1)) {
-        lua_getfield(l, -1, "setter");
+        lua_rawgeti(l, -1, MEMBER_SETTER_IDX);
         if (lua_isnil(l, -1)) {
             luaL_error(l, "cannot write `%s`.", key);
             return 0;
