@@ -99,10 +99,13 @@ private:
         lua_pop(l, 2);
     }
 
-    /** c-style functions */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DoDefStatic(const char* name, FuncRetType (*f)(FuncArgType...)) {
-        DoDefStaticFunction(m_l, name, std::forward<decltype(f)>(f));
+    /** c-style functions, `std::function`s and lambda functions */
+    template <typename FuncType>
+    LuaClass& DoDefStatic(const char* name, FuncType&& f) {
+        using ConvertedFuncType = typename If<std::is_pointer<FuncType>::value, FuncType,
+                                              typename FunctionTraits<FuncType>::std_function_type>::type;
+        ConvertedFuncType func(std::forward<FuncType>(f));
+        DoDefStaticFunction(m_l, name, std::forward<ConvertedFuncType>(func));
         return *this;
     }
 
@@ -116,17 +119,9 @@ private:
         return *this;
     }
 
-    /** `std::function`s and lambda functions */
-    template <typename FuncType>
-    LuaClass& DoDefStatic(const char* name, FuncType&& f) {
-        // implicitly convert lambda functions to `std::function`s
-        DoDefStaticFunction<typename FunctionTraits<FuncType>::std_function_type>(m_l, name, f);
-        return *this;
-    }
-
     /* ------------------------ member functions --------------------------------- */
 
-    template <typename FuncType, typename... FuncArgType>
+    template <typename FuncType>
     void DoDefMemberFunction(lua_State* l, int argoffset, const char* name, FuncType&& f) {
         PushInstanceMetatable();
         CreateGenericFunction<FuncType>(l, argoffset, std::forward<FuncType>(f),
@@ -135,40 +130,24 @@ private:
         lua_pop(l, 1);
     }
 
+    /** class member functions, c-style functions, `std::function`s and lambda functions */
+    template <typename FuncType>
+    LuaClass& DoDefMember(const char* name, FuncType&& f) {
+        constexpr int argoffset = (std::is_member_function_pointer<FuncType>::value ? 1 : 0);
+        using ConvertedFuncType =
+            typename If<(std::is_member_function_pointer<FuncType>::value || std::is_pointer<FuncType>::value),
+                        FuncType, typename FunctionTraits<FuncType>::std_function_type>::type;
+        ConvertedFuncType func(std::forward<FuncType>(f));
+        DoDefMemberFunction(m_l, argoffset, name, std::forward<ConvertedFuncType>(func));
+        return *this;
+    }
+
     /** lua-style functions that can be used to implement variadic argument functions */
     LuaClass& DoDefMember(const char* name, int (*f)(lua_State*)) {
         PushInstanceMetatable();
         lua_pushcfunction(m_l, f);
         lua_setfield(m_l, -2, name);
         lua_pop(m_l, 1);
-        return *this;
-    }
-
-    /** c-style functions */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DoDefMember(const char* name, FuncRetType (*f)(FuncArgType...)) {
-        DoDefMemberFunction(m_l, 0, name, std::forward<decltype(f)>(f));
-        return *this;
-    }
-
-    /** class member functions */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DoDefMember(const char* name, FuncRetType (T::*f)(FuncArgType...)) {
-        DoDefMemberFunction(m_l, 1, name, std::forward<decltype(f)>(f));
-        return *this;
-    }
-
-    /** class member functions with const qualifier */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaClass& DoDefMember(const char* name, FuncRetType (T::*f)(FuncArgType...) const) {
-        DoDefMemberFunction(m_l, 1, name, std::forward<decltype(f)>(f));
-        return *this;
-    }
-
-    /** `std::function`s and lambda functions */
-    template <typename FuncType>
-    LuaClass& DoDefMember(const char* name, FuncType&& f) {
-        DoDefMemberFunction<typename FunctionTraits<FuncType>::std_function_type>(m_l, 0, name, f);
         return *this;
     }
 

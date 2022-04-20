@@ -155,20 +155,28 @@ struct FunctionTraits<FuncRetType(FuncArgType...)> {
 };
 
 template <typename FuncRetType, typename... FuncArgType>
-struct FunctionTraits<std::function<FuncRetType(FuncArgType...)>> final
+struct FunctionTraits<FuncRetType (*)(FuncArgType...)> final
     : public FunctionTraits<FuncRetType(FuncArgType...)> {};
 
 template <typename FuncRetType, typename... FuncArgType>
-struct FunctionTraits<FuncRetType (*)(FuncArgType...)> final
+struct FunctionTraits<FuncRetType (&)(FuncArgType...)> final
+    : public FunctionTraits<FuncRetType(FuncArgType...)> {};
+
+template <typename FuncRetType, typename... FuncArgType>
+struct FunctionTraits<std::function<FuncRetType(FuncArgType...)>> final
     : public FunctionTraits<FuncRetType(FuncArgType...)> {};
 
 template <typename ClassType, typename FuncRetType, typename... FuncArgType>
 struct FunctionTraits<FuncRetType (ClassType::*)(FuncArgType...)> final
-    : public FunctionTraits<FuncRetType(FuncArgType...)> {};
+    : public FunctionTraits<FuncRetType(FuncArgType...)> {
+    using class_type = ClassType;
+};
 
 template <typename ClassType, typename FuncRetType, typename... FuncArgType>
 struct FunctionTraits<FuncRetType (ClassType::*)(FuncArgType...) const>
-    : public FunctionTraits<FuncRetType(FuncArgType...)> {};
+    : public FunctionTraits<FuncRetType(FuncArgType...)> {
+    using class_type = ClassType;
+};
 
 // for lambda functions that will be deduced to `FuncRetType (ClassType::*)(FuncArgType...) const`
 template <typename ClassType>
@@ -176,67 +184,73 @@ struct FunctionTraits final : public FunctionTraits<decltype(&ClassType::operato
 
 /* -------------------------------------------------------------------------- */
 
+template <bool, typename A, typename B>
+struct If final {
+    using type = A;
+};
+
+template <typename A, typename B>
+struct If<false, A, B> final {
+    using type = B;
+};
+
+template <typename FuncType, typename... Argv>
+struct FuncWithReturnValue final {
+    FuncWithReturnValue(lua_State* l, const FuncType& f, Argv&&... argv) {
+        PushValue(l, f(std::forward<Argv>(argv)...));
+    }
+    static constexpr int returned_value_num = 1;
+};
+
+template <typename FuncType, typename... Argv>
+struct FuncWithoutReturnValue final {
+    FuncWithoutReturnValue(lua_State*, const FuncType& f, Argv&&... argv) {
+        f(std::forward<Argv>(argv)...);
+    }
+    static constexpr int returned_value_num = 0;
+};
+
+template <typename FuncType, typename... Argv>
+struct ClassMemberFuncWithReturnValue final {
+    ClassMemberFuncWithReturnValue(lua_State* l, const FuncType& f, Argv&&... argv) {
+        auto obj = (typename FunctionTraits<FuncType>::class_type*)lua_touserdata(l, 1);
+        PushValue(l, (obj->*f)(std::forward<Argv>(argv)...));
+    }
+    static constexpr int returned_value_num = 1;
+};
+
+template <typename FuncType, typename... Argv>
+struct ClassMemberFuncWithoutReturnValue final {
+    ClassMemberFuncWithoutReturnValue(lua_State* l, const FuncType& f, Argv&&... argv) {
+        auto obj = (typename FunctionTraits<FuncType>::class_type*)lua_touserdata(l, 1);
+        (obj->*f)(std::forward<Argv>(argv)...);
+    }
+    static constexpr int returned_value_num = 0;
+};
+
 template <uint32_t N>
 struct FunctionCaller final {
     template <typename FuncType, typename... Argv>
-    static int Execute(FuncType&& f, lua_State* l, int argoffset, Argv&&... argv) {
-        return FunctionCaller<N - 1>::Execute(std::forward<FuncType>(f), l, argoffset, ValueConverter(l, N + argoffset),
+    static int Execute(const FuncType& f, lua_State* l, int argoffset, Argv&&... argv) {
+        return FunctionCaller<N - 1>::Execute(f, l, argoffset, ValueConverter(l, N + argoffset),
                                               std::forward<Argv>(argv)...);
     }
 };
 
 template <>
 struct FunctionCaller<0> final {
-    template <typename FuncRetType, typename... FuncArgType, typename... Argv>
-    static int Execute(FuncRetType (*f)(FuncArgType...), lua_State* l, int, Argv&&... argv) {
-        PushValue(l, f(std::forward<Argv>(argv)...));
-        return 1;
-    }
-
-    template <typename... FuncArgType, typename... Argv>
-    static int Execute(void (*f)(FuncArgType...), lua_State*, int, Argv&&... argv) {
-        f(std::forward<Argv>(argv)...);
-        return 0;
-    }
-
-    template <typename FuncRetType, typename... FuncArgType, typename... Argv>
-    static int Execute(const std::function<FuncRetType(FuncArgType...)>& f, lua_State* l, int, Argv&&... argv) {
-        PushValue(l, f(std::forward<Argv>(argv)...));
-        return 1;
-    }
-
-    template <typename... FuncArgType, typename... Argv>
-    static int Execute(const std::function<void(FuncArgType...)>& f, lua_State*, int, Argv&&... argv) {
-        f(std::forward<Argv>(argv)...);
-        return 0;
-    }
-
-    template <typename T, typename FuncRetType, typename... FuncArgType, typename... Argv>
-    static int Execute(FuncRetType (T::*f)(FuncArgType...), lua_State* l, int, Argv&&... argv) {
-        auto obj = (T*)lua_touserdata(l, 1);
-        PushValue(l, (obj->*f)(std::forward<Argv>(argv)...));
-        return 1;
-    }
-
-    template <typename T, typename... FuncArgType, typename... Argv>
-    static int Execute(void (T::*f)(FuncArgType...), lua_State* l, int, Argv&&... argv) {
-        auto obj = (T*)lua_touserdata(l, 1);
-        (obj->*f)(std::forward<Argv>(argv)...);
-        return 0;
-    }
-
-    template <typename T, typename FuncRetType, typename... FuncArgType, typename... Argv>
-    static int Execute(FuncRetType (T::*f)(FuncArgType...) const, lua_State* l, int, Argv&&... argv) {
-        auto obj = (T*)lua_touserdata(l, 1);
-        PushValue(l, (obj->*f)(std::forward<Argv>(argv)...));
-        return 1;
-    }
-
-    template <typename T, typename... FuncArgType, typename... Argv>
-    static int Execute(void (T::*f)(FuncArgType...) const, lua_State* l, int, Argv&&... argv) {
-        auto obj = (T*)lua_touserdata(l, 1);
-        (obj->*f)(std::forward<Argv>(argv)...);
-        return 0;
+    template <typename FuncType, typename... Argv>
+    static int Execute(const FuncType& f, lua_State* l, int, Argv&&... argv) {
+        constexpr bool is_void_ret = std::is_void<typename FunctionTraits<FuncType>::return_type>::value;
+        typename If<std::is_member_function_pointer<FuncType>::value,
+                    typename If<is_void_ret,
+                                ClassMemberFuncWithoutReturnValue<FuncType, Argv...>,
+                                ClassMemberFuncWithReturnValue<FuncType, Argv...>>::type,
+                    typename If<is_void_ret,
+                                FuncWithoutReturnValue<FuncType, Argv...>,
+                                FuncWithReturnValue<FuncType, Argv...>>::type>::type
+            func_executor(l, f, std::forward<Argv>(argv)...);
+        return func_executor.returned_value_num;
     }
 };
 

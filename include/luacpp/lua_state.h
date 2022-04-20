@@ -36,19 +36,15 @@ private:
         return ret;
     }
 
-    /** `std::function`s and lambda functions */
+    /** c-style functions, `std::function`s and lambda functions */
     template <typename FuncType>
     LuaFunction DoCreateFunction(FuncType&& f, const char* name = nullptr) {
         using Traits = FunctionTraits<FuncType>;
-        // implicitly convert lambda functions to `std::function`s
-        return DoCreateFunctionImpl<typename Traits::std_function_type>(f, name,
-                                                                        typename Traits::argument_type_holder());
-    }
-
-    /** c-style functions */
-    template <typename FuncRetType, typename... FuncArgType>
-    LuaFunction DoCreateFunction(FuncRetType (*f)(FuncArgType...), const char* name = nullptr) {
-        return DoCreateFunctionImpl(std::forward<decltype(f)>(f), name, TypeHolder<FuncArgType...>());
+        using ConvertedFuncType =
+            typename If<std::is_pointer<FuncType>::value, FuncType, typename Traits::std_function_type>::type;
+        ConvertedFuncType func(std::forward<FuncType>(f));
+        return DoCreateFunctionImpl(std::forward<ConvertedFuncType>(func), name,
+                                    typename Traits::argument_type_holder());
     }
 
     /** lua-style functions that can be used to implement variadic argument functions */
