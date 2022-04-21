@@ -32,32 +32,11 @@ private:
         lua_getiuservalue(m_l, -1, CLASS_PARENT_TABLE_IDX);
         lua_remove(m_l, -2);
     }
-    void PushGcTable() const {
-        lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_data->gc_table_ref);
-    }
 
     void Init() {
         PushSelf();
         m_data = (LuaClassData*)lua_touserdata(m_l, -1);
         lua_pop(m_l, 1);
-    }
-
-    template <typename FuncType, typename... FuncArgType>
-    void CreateGenericFunction(lua_State* l, int argoffset, FuncType&& f, const TypeHolder<FuncArgType...>&) {
-        using WrapperType = FuncWrapper<FuncType>;
-
-        // upvalue 1: argoffset
-        lua_pushinteger(l, argoffset);
-
-        // upvalue 2: wrapper
-        auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
-        new (wrapper) WrapperType(std::forward<FuncType>(f));
-
-        // wrapper's destructor
-        PushGcTable();
-        lua_setmetatable(l, -2);
-
-        lua_pushcclosure(l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
     }
 
     /* ---------------------------- constructor --------------------------------- */
@@ -78,7 +57,7 @@ private:
         FunctionCaller<sizeof...(FuncArgType) + 1>::Execute(InitInstance<FuncArgType...>, l, 0);
 
         // pops arguments so that the new instance is on the top of lua_State
-        auto argc = sizeof...(FuncArgType);
+        constexpr int argc = sizeof...(FuncArgType);
         lua_pop(l, argc);
 
         lua_pushvalue(l, lua_upvalueindex(1)); // this class
@@ -96,7 +75,7 @@ private:
     void DoDefStaticFunction(lua_State* l, const char* name, FuncType&& f) {
         PushSelf();
         lua_getmetatable(l, -1);
-        CreateGenericFunction<FuncType>(l, 1, std::forward<FuncType>(f),
+        CreateGenericFunction<FuncType>(l, m_data->gc_table_ref, 1, std::forward<FuncType>(f),
                                         typename FunctionTraits<FuncType>::argument_type_holder());
         lua_setfield(l, -2, name);
         lua_pop(l, 2);
@@ -127,7 +106,7 @@ private:
     template <typename FuncType>
     void DoDefMemberFunction(lua_State* l, int argoffset, const char* name, FuncType&& f) {
         PushInstanceMetatable();
-        CreateGenericFunction<FuncType>(l, argoffset, std::forward<FuncType>(f),
+        CreateGenericFunction<FuncType>(l, m_data->gc_table_ref, argoffset, std::forward<FuncType>(f),
                                         typename FunctionTraits<FuncType>::argument_type_holder());
         lua_setfield(l, -2, name);
         lua_pop(l, 1);
@@ -156,91 +135,39 @@ private:
 
     /* -------------------- member properties ------------------------------------- */
 
-    template <typename GetterType>
-    static int luacpp_member_property_getter(lua_State* l) {
-        using WrapperType = FuncWrapper<GetterType>;
-        auto ud = (T*)lua_touserdata(l, 1);
-        auto wrapper = (WrapperType*)lua_touserdata(l, lua_upvalueindex(1));
-        PushValue(l, wrapper->f(ud));
-        return 1;
-    }
-
-    template <typename SetterType>
-    static int luacpp_member_property_setter(lua_State* l) {
-        using WrapperType = FuncWrapper<SetterType>;
-        auto ud = (T*)lua_touserdata(l, 1);
-        auto wrapper = (WrapperType*)lua_touserdata(l, lua_upvalueindex(1));
-        wrapper->f(ud, ValueConverter(l, 2));
-        return 0;
-    }
-
     template <typename GetterType, typename SetterType>
     void CreateMemberProperty(lua_State* l, GetterType&& getter, SetterType&& setter) {
         lua_createtable(l, 2, 0);
-
         if (getter) {
-            using GetterWrapperType = FuncWrapper<GetterType>;
-            auto wrapper = lua_newuserdatauv(l, sizeof(GetterWrapperType), 0);
-            new (wrapper) GetterWrapperType(std::forward<GetterType>(getter));
-            PushGcTable(); // wrapper's destructor
-            lua_setmetatable(l, -2);
-            lua_pushcclosure(l, luacpp_member_property_getter<GetterType>, 1);
+            CreateGenericFunction(l, m_data->gc_table_ref, 0, std::forward<GetterType>(getter),
+                                  typename FunctionTraits<GetterType>::argument_type_holder());
             lua_rawseti(l, -2, MEMBER_GETTER_IDX);
         }
-
         if (setter) {
-            using SetterWrapperType = FuncWrapper<SetterType>;
-            auto wrapper = lua_newuserdatauv(l, sizeof(SetterWrapperType), 0);
-            new (wrapper) SetterWrapperType(std::forward<SetterType>(setter));
-            PushGcTable(); // wrapper's destructor
-            lua_setmetatable(l, -2);
-            lua_pushcclosure(l, luacpp_member_property_setter<SetterType>, 1);
+            CreateGenericFunction(l, m_data->gc_table_ref, 0, std::forward<SetterType>(setter),
+                                  typename FunctionTraits<SetterType>::argument_type_holder());
             lua_rawseti(l, -2, MEMBER_SETTER_IDX);
         }
     }
 
     /* --------------------- static properties ------------------------------------ */
 
-    template <typename GetterType>
-    static int luacpp_static_property_getter(lua_State* l) {
-        using WrapperType = FuncWrapper<GetterType>;
-        auto wrapper = (WrapperType*)lua_touserdata(l, lua_upvalueindex(1));
-        PushValue(l, wrapper->f());
-        return 1;
-    }
-
-    template <typename SetterType>
-    static int luacpp_static_property_setter(lua_State* l) {
-        using WrapperType = FuncWrapper<SetterType>;
-        auto wrapper = (WrapperType*)lua_touserdata(l, lua_upvalueindex(1));
-        wrapper->f(ValueConverter(l, 2));
-        return 0;
-    }
-
     template <typename GetterType, typename SetterType>
     void CreateStaticProperty(lua_State* l, GetterType&& getter, SetterType&& setter) {
         lua_createtable(l, 2, 0);
-
         if (getter) {
-            using GetterWrapperType = FuncWrapper<GetterType>;
-            auto wrapper = lua_newuserdatauv(l, sizeof(GetterWrapperType), 0);
-            new (wrapper) GetterWrapperType(std::forward<GetterType>(getter));
-            PushGcTable(); // wrapper's destructor
-            lua_setmetatable(l, -2);
-            lua_pushcclosure(l, luacpp_static_property_getter<GetterType>, 1);
+            CreateGenericFunction(l, m_data->gc_table_ref, 1, std::forward<GetterType>(getter),
+                                  typename FunctionTraits<GetterType>::argument_type_holder());
             lua_rawseti(l, -2, MEMBER_GETTER_IDX);
         }
-
         if (setter) {
-            using SetterWrapperType = FuncWrapper<SetterType>;
-            auto wrapper = lua_newuserdatauv(l, sizeof(SetterWrapperType), 0);
-            new (wrapper) SetterWrapperType(std::forward<SetterType>(setter));
-            PushGcTable(); // wrapper's destructor
-            lua_setmetatable(l, -2);
-            lua_pushcclosure(l, luacpp_static_property_setter<SetterType>, 1);
+            CreateGenericFunction(l, m_data->gc_table_ref, 1, std::forward<SetterType>(setter),
+                                  typename FunctionTraits<SetterType>::argument_type_holder());
             lua_rawseti(l, -2, MEMBER_SETTER_IDX);
         }
     }
+
+    /* -------------------------------------------------------------------------- */
 
 public:
     LuaClass(lua_State* l, int index) : LuaObject(l, index) {
