@@ -5,6 +5,7 @@ extern "C" {
 #include "lua.h"
 }
 
+#include "lua_52_53.h"
 #include "lua_string_ref.h"
 #include <functional>
 
@@ -278,6 +279,26 @@ static int luacpp_generic_function(lua_State* l) {
     auto argoffset = lua_tointeger(l, lua_upvalueindex(1));
     auto wrapper = (FuncWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
     return FunctionCaller<sizeof...(FuncArgType)>::Execute(wrapper->f, l, argoffset);
+}
+
+// pushes an instance of `luacpp_generic_function`
+template <typename FuncType, typename... FuncArgType>
+static void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset, FuncType&& f,
+                                  const TypeHolder<FuncArgType...>&) {
+    using WrapperType = FuncWrapper<FuncType>;
+
+    // upvalue 1: argoffset
+    lua_pushinteger(l, argoffset);
+
+    // upvalue 2: wrapper
+    auto wrapper = lua_newuserdatauv(l, sizeof(WrapperType), 0);
+    new (wrapper) WrapperType(std::forward<FuncType>(f));
+
+    // wrapper's destructor
+    lua_rawgeti(l, LUA_REGISTRYINDEX, gc_table_ref);
+    lua_setmetatable(l, -2);
+
+    lua_pushcclosure(l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
 }
 
 } // namespace luacpp

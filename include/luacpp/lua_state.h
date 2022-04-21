@@ -14,18 +14,10 @@ namespace luacpp {
 
 class LuaState final {
 private:
-    template <typename FuncType, typename... FuncArgType>
-    LuaFunction DoCreateFunctionImpl(FuncType&& f, const char* name, const TypeHolder<FuncArgType...>&) {
-        using WrapperType = FuncWrapper<FuncType>;
-
-        lua_pushinteger(m_l, 0); // argoffset
-        auto wrapper = lua_newuserdatauv(m_l, sizeof(WrapperType), 0);
-        new (wrapper) WrapperType(std::forward<FuncType>(f));
-
-        lua_rawgeti(m_l, LUA_REGISTRYINDEX, m_gc_table_ref);
-        lua_setmetatable(m_l, -2);
-
-        lua_pushcclosure(m_l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
+    template <typename FuncType>
+    LuaFunction DoCreateFunctionImpl(FuncType&& f, const char* name) {
+        CreateGenericFunction(m_l, m_gc_table_ref, 0, std::forward<FuncType>(f),
+                              typename FunctionTraits<FuncType>::argument_type_holder());
 
         LuaFunction ret(m_l, -1);
         if (name) {
@@ -43,8 +35,7 @@ private:
         using ConvertedFuncType =
             typename If<std::is_pointer<FuncType>::value, FuncType, typename Traits::std_function_type>::type;
         ConvertedFuncType func(std::forward<FuncType>(f));
-        return DoCreateFunctionImpl(std::forward<ConvertedFuncType>(func), name,
-                                    typename Traits::argument_type_holder());
+        return DoCreateFunctionImpl(std::forward<ConvertedFuncType>(func), name);
     }
 
     /** lua-style functions that can be used to implement variadic argument functions */
