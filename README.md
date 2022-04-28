@@ -7,15 +7,14 @@
     - [Calling Functions](#calling-functions)
     - [Exporting and Using User-defined Types](#exporting-and-using-user-defined-types)
     - [Class Inheritance](#class-inheritance)
-* [Classes and APIs](#classes-and-apis)
+* [Limitations](#limitations)
+* [API Reference](#api-reference)
     - [LuaObject](#luaobject)
     - [LuaTable](#luatable)
     - [LuaFunction](#luafunction)
     - [LuaClass](#luaclass)
     - [LuaUserData](#luauserdata)
     - [LuaState](#luastate)
-* [Notes](#notes)
-* [License](#license)
 
 -----
 
@@ -77,7 +76,7 @@ Let's start with a simple example, the famous `Hello, world!`:
 #include <iostream>
 using namespace std;
 
-#include "luacpp.h"
+#include "luacpp/luacpp.h"
 using namespace luacpp;
 
 int main(void) {
@@ -109,7 +108,7 @@ In this example, we set the variable `msg`'s value to be a string "Hello, luacpp
 #include <iostream>
 using namespace std;
 
-#include "luacpp.h"
+#include "luacpp/luacpp.h"
 using namespace luacpp;
 
 int main(void) {
@@ -165,7 +164,7 @@ We can use `LuaState::CreateTable()` to create a new empty table and use `LuaTab
 #include <iostream>
 using namespace std;
 
-#include "luacpp.h"
+#include "luacpp/luacpp.h"
 using namespace luacpp;
 
 int main(void) {
@@ -249,7 +248,7 @@ public:
         return msg;
     }
 
-    static int st_value;
+    static const int st_value;
     int m_value = 55555;
 
 private:
@@ -265,7 +264,7 @@ Then we see how to export this class to the Lua environment:
 #include <iostream>
 using namespace std;
 
-#include "luacpp.h"
+#include "luacpp/luacpp.h"
 using namespace luacpp;
 
 int main(void) {
@@ -290,7 +289,7 @@ int main(void) {
                         [](const ClassDemo* c) -> int { return c->m_value; },
                         [](ClassDemo* c, int v) -> void { c->m_value = v; })
         // read only
-        .DefStatic<int>("st_value", [](const ClassDemo* c) -> int { return c->st_value; }, nullptr);
+        .DefStatic<int>("st_value", []() -> int { return ClassDemo::st_value; }, nullptr);
     l.DoString("tc = ClassDemo('ouonline', 5); tc:print();"
                "tc:echo_str('calling class member function from lua')");
 
@@ -317,7 +316,7 @@ The following snippet displays how to use `LuaUserData` to exchange data between
 #include <iostream>
 using namespace std;
 
-#include "luacpp.h"
+#include "luacpp/luacpp.h"
 using namespace luacpp;
 
 int main(void) {
@@ -352,7 +351,7 @@ The following example is similar to the previous one, except that we modify the 
 #include <iostream>
 using namespace std;
 
-#include "luacpp.h"
+#include "luacpp/luacpp.h"
 using namespace luacpp;
 
 int main(void) {
@@ -418,7 +417,68 @@ auto derived2 = l.CreateClass<DerivedDemo2>("DerivedDemo2")
 
 -----
 
-# Classes and APIs
+# Limitations
+
+Currently `luacpp` supports exporting functions with the following argument types:
+
+* basic types(`bool`, `float`, `double` and integers)
+* const reference of luacpp builtin types(`LuaObject`, `LuaTable`, `LuaFunction`, `LuaUserData` and `LuaStringRef`)
+* pointers.
+
+For example:
+
+```c++
+l.CreateFunction([](int) -> void {}); // ok
+l.CreateFunction([](int*) -> void {}); // ok
+l.CreateFunction([](const int*) -> void {}); // ok
+l.CreateFunction([](int&) -> void {}); // error: reference of basic types
+l.CreateFunction([](const int&) -> void {}); // error: reference of basic types
+l.CreateFunction([](int&&) -> void {}); // error: reference of basic types
+
+l.CreateFunction([](LuaObject*) -> void {}); // ok
+l.CreateFunction([](const LuaObject*) -> void {}); // ok
+l.CreateFunction([](const LuaObject&) -> void {}); // ok
+l.CreateFunction([](LuaObject) -> void {}); // ok but not recommended: may cause extra constructions
+l.CreateFunction([](LuaObject&) -> void {}); // error: non-const reference of builtin types
+l.CreateFunction([](LuaObject&&) -> void {}); // error: reference of builtin types
+
+l.CreateFunction([](UserType*) -> void {}); // ok
+l.CreateFunction([](const UserType*) -> void {}); // ok
+l.CreateFunction([](UserType) -> void {}); // error: passed by value
+l.CreateFunction([](UserType&) -> void {}); // error: reference of user defined types
+l.CreateFunction([](const UserType&) -> void {}); // error: reference of user defined types
+l.CreateFunction([](UserType&&) -> void {}); // error: reference of user defined types
+```
+
+Types of returned values can be one of:
+
+* basic types(`bool`, `float`, `double` and integers)
+* builtin types(`LuaObject`, `LuaTable`, `LuaFunction`, `LuaUserData` and `LuaStringRef`)
+* pointers.
+
+For example:
+
+```c++
+l.CreateFunction([]() -> int {...}); // ok
+l.CreateFunction([]() -> int* {...}); // ok
+l.CreateFunction([]() -> int& {...}); // error: reference
+l.CreateFunction([]() -> const int& {...}); // error: reference
+
+l.CreateFunction([]() -> LuaObject {...}); // ok
+l.CreateFunction([]() -> LuaObject* {...}); // ok
+l.CreateFunction([]() -> LuaObject& {...}); // error: reference
+l.CreateFunction([]() -> const LuaObject& {...}); // error: reference
+
+l.CreateFunction([]() -> UserType* {...}); // ok
+l.CreateFunction([]() -> UserType {...}); // error: values of user defined types
+l.CreateFunction([]() -> UserType& {...}); // error: reference
+l.CreateFunction([]() -> const UserType& {...}); // error: reference
+```
+
+[[back to top](#table-of-contents)]
+-----
+
+# API Reference
 
 This section describes all classes and functions provided by `lua-cpp`.
 
@@ -764,16 +824,3 @@ bool DoFile(const char* script, std::string* errstr = nullptr,
 Loads and evaluates the Lua script `script`. The rest of arguments, `errstr` and `callback`, have the same meaning as in `LuaFunction::Execute()`.
 
 [[back to top](#table-of-contents)]
-
------
-
-# Notes
-
-* Class member functions should be called with colon operator, in the form of `object:func(...)`, to ensure the object itself is the first argument passed to func. Otherwise you need to do it manually, like `object.func(object, ...)`.
-* Currently `luacpp` doesn't support passing and returning values by reference. Only bool/int(8,16,32,64)/float/double/pointer/LuaObject/LuaTable/LuaFunction/LuaUserData are supported. You should export functions with supported types.
-
------
-
-# License
-
-This project is distributed under the MIT License.

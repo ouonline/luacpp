@@ -154,16 +154,46 @@ static void TestFuncWithoutReturnValue() {
 
 static void TestFuncWithBuiltinReferenceTypes() {
     LuaState l(luaL_newstate(), true);
-    auto lobj = l.CreateInteger(53142, "var");
-    auto lfunc = l.CreateFunction([](const LuaObject& lobj) -> void {
-        cout << "empty function for testing reference arguments." << endl;
+    constexpr int value = 53142;
+    auto lobj = l.CreateInteger(value, "var");
+    auto lfunc = l.CreateFunction([&value](const LuaObject& lobj) -> void {
         cout << "value = " << lobj.ToInteger() << endl;
+        assert(lobj.ToInteger() == value);
     });
 
     string errmsg;
     bool ok = lfunc.Execute(nullptr, &errmsg, lobj);
     assert(ok);
     assert(errmsg.empty());
+}
+
+static void TestFuncWithBuiltinPointerTypes() {
+    LuaState l(luaL_newstate(), true);
+    constexpr int value = 53142;
+    auto lobj = l.CreateInteger(value, "var");
+    auto lfunc = l.CreateFunction([&value](const LuaObject* lobj) -> void {
+        cout << "value = " << lobj->ToInteger() << endl;
+        assert(lobj->ToInteger() == value);
+    });
+
+    string errmsg;
+    bool ok = lfunc.Execute(nullptr, &errmsg, &lobj);
+    assert(ok);
+    assert(errmsg.empty());
+}
+
+static void TestFuncWithPointerToBasicTypes() {
+    LuaState l(luaL_newstate(), true);
+    int v = 123;
+    auto lfunc = l.CreateFunction([](int* v) -> void {
+        *v = 456;
+    });
+
+    string errmsg;
+    bool ok = lfunc.Execute(nullptr, &errmsg, &v);
+    assert(ok);
+    assert(errmsg.empty());
+    assert(v == 456);
 }
 
 static int variadic_argument_func_demo(lua_State* l) {
