@@ -16,6 +16,9 @@ class LuaTable;
 class LuaFunction;
 class LuaUserData;
 
+template <typename T>
+class LuaClass;
+
 /* -------------------------------------------------------------------------- */
 
 class ValueConverter final {
@@ -129,7 +132,16 @@ static inline void PushValue(lua_State* l, const LuaStringRef& arg) {
     lua_pushlstring(l, (const char*)arg.base, arg.size);
 }
 
-void PushValue(lua_State* l, const LuaObject& obj);
+void PushValue(lua_State* l, const LuaObject&);
+
+template <typename T>
+void PushValue(lua_State* l, const LuaClass<T>& cls) {
+    lua_rawgeti(l, LUA_REGISTRYINDEX, cls.GetRefIndex());
+}
+
+void PushValue(lua_State* l, const LuaTable&);
+void PushValue(lua_State* l, const LuaUserData&);
+void PushValue(lua_State* l, const LuaFunction&);
 
 template <typename T>
 static inline void PushValue(lua_State* l, T* arg) {
