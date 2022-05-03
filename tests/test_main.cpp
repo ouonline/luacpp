@@ -1,9 +1,9 @@
 #include "test_base.hpp"
 #include "test_class.hpp"
-#include <map>
+#include <vector>
 using namespace std;
 
-static const map<string, void (*)()> g_test_suite = {
+static const vector<pair<string, void (*)()>> g_test_suite = {
     // ----- test base ----- //
 
     {"TestSetGet", TestSetGet},

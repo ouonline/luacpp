@@ -25,4 +25,16 @@ void PushValue(lua_State* l, const LuaObject& obj) {
     lua_rawgeti(l, LUA_REGISTRYINDEX, obj.GetRefIndex());
 }
 
+void PushValue(lua_State* l, const LuaTable& tbl) {
+    lua_rawgeti(l, LUA_REGISTRYINDEX, tbl.GetRefIndex());
+}
+
+void PushValue(lua_State* l, const LuaFunction& func) {
+    lua_rawgeti(l, LUA_REGISTRYINDEX, func.GetRefIndex());
+}
+
+void PushValue(lua_State* l, const LuaUserData& ud) {
+    lua_rawgeti(l, LUA_REGISTRYINDEX, ud.GetRefIndex());
+}
+
 } // namespace luacpp

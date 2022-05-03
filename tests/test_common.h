@@ -15,8 +15,24 @@ public:
         }
         cout << "ClassDemo::ClassDemo() is called with string -> '" << msg << "' and int -> " << x << "." << endl;
     }
+    ClassDemo(const ClassDemo& rhs) {
+        if (this != &rhs) {
+            m_value = rhs.m_value;
+            m_msg = rhs.m_msg;
+            cout << "ClassDemo's copy constructor is called." << endl;
+        }
+    }
     virtual ~ClassDemo() {
         cout << "ClassDemo::~ClassDemo() is called." << endl;
+    }
+
+    ClassDemo& operator=(const ClassDemo& rhs) {
+        if (this != &rhs) {
+            m_value = rhs.m_value;
+            m_msg = rhs.m_msg;
+            cout << "ClassDemo's copy assignment is called." << endl;
+        }
+        return *this;
     }
 
     void Set(const char* msg) {

@@ -7,7 +7,7 @@
     - [Calling Functions](#calling-functions)
     - [Exporting and Using User-defined Types](#exporting-and-using-user-defined-types)
     - [Class Inheritance](#class-inheritance)
-* [Limitations](#limitations)
+* [Notes](#notes)
 * [API Reference](#api-reference)
     - [LuaObject](#luaobject)
     - [LuaTable](#luatable)
@@ -417,17 +417,28 @@ auto derived2 = l.CreateClass<DerivedDemo2>("DerivedDemo2")
 
 -----
 
-# Limitations
+# Notes
+
+Builtin types(`LuaObject`, `LuaTable`, `LuaFunction`, `LuaUserData` and `LuaStringRef`) should only be used in exported functions. Don't use them in normal c++ functions.
 
 Currently `luacpp` supports exporting functions with the following argument types:
 
 * basic types(`bool`, `float`, `double` and integers)
-* const reference of luacpp builtin types(`LuaObject`, `LuaTable`, `LuaFunction`, `LuaUserData` and `LuaStringRef`)
-* pointers.
+* const reference of luacpp builtin types
+* pointers to basic types and user-defined types.
 
 For example:
 
 ```c++
+// builtin types
+l.CreateFunction([](const LuaObject&) -> void {}); // ok
+l.CreateFunction([](LuaObject*) -> void {}); // ok but not recommended: will get the pointer itself
+l.CreateFunction([](const LuaObject*) -> void {}); // ok but not recommended: will get the pointer itself
+l.CreateFunction([](LuaObject) -> void {}); // ok but not recommended: may cause extra constructions
+l.CreateFunction([](LuaObject&) -> void {}); // error: non-const reference of builtin types
+l.CreateFunction([](LuaObject&&) -> void {}); // error: reference of builtin types
+
+// basic types
 l.CreateFunction([](int) -> void {}); // ok
 l.CreateFunction([](int*) -> void {}); // ok
 l.CreateFunction([](const int*) -> void {}); // ok
@@ -435,44 +446,50 @@ l.CreateFunction([](int&) -> void {}); // error: reference of basic types
 l.CreateFunction([](const int&) -> void {}); // error: reference of basic types
 l.CreateFunction([](int&&) -> void {}); // error: reference of basic types
 
-l.CreateFunction([](LuaObject*) -> void {}); // ok
-l.CreateFunction([](const LuaObject*) -> void {}); // ok
-l.CreateFunction([](const LuaObject&) -> void {}); // ok
-l.CreateFunction([](LuaObject) -> void {}); // ok but not recommended: may cause extra constructions
-l.CreateFunction([](LuaObject&) -> void {}); // error: non-const reference of builtin types
-l.CreateFunction([](LuaObject&&) -> void {}); // error: reference of builtin types
-
+// user-defined types
 l.CreateFunction([](UserType*) -> void {}); // ok
 l.CreateFunction([](const UserType*) -> void {}); // ok
 l.CreateFunction([](UserType) -> void {}); // error: passed by value
-l.CreateFunction([](UserType&) -> void {}); // error: reference of user defined types
-l.CreateFunction([](const UserType&) -> void {}); // error: reference of user defined types
-l.CreateFunction([](UserType&&) -> void {}); // error: reference of user defined types
+l.CreateFunction([](UserType&) -> void {}); // error: reference of user-defined types
+l.CreateFunction([](const UserType&) -> void {}); // error: reference of user-defined types
+l.CreateFunction([](UserType&&) -> void {}); // error: reference of user-defined types
 ```
 
 Types of returned values can be one of:
 
 * basic types(`bool`, `float`, `double` and integers)
 * builtin types(`LuaObject`, `LuaTable`, `LuaFunction`, `LuaUserData` and `LuaStringRef`)
-* pointers.
+* pointers to user-defined types.
 
 For example:
 
 ```c++
-l.CreateFunction([]() -> int {...}); // ok
-l.CreateFunction([]() -> int* {...}); // ok
-l.CreateFunction([]() -> int& {...}); // error: reference
-l.CreateFunction([]() -> const int& {...}); // error: reference
-
-l.CreateFunction([]() -> LuaObject {...}); // ok
-l.CreateFunction([]() -> LuaObject* {...}); // ok
+// builtin types
+l.CreateFunction([]() -> LuaObject {...}); // ok, will be converted to lua types
+l.CreateFunction([]() -> LuaObject* {...}); // error: pointers to
 l.CreateFunction([]() -> LuaObject& {...}); // error: reference
 l.CreateFunction([]() -> const LuaObject& {...}); // error: reference
 
-l.CreateFunction([]() -> UserType* {...}); // ok
-l.CreateFunction([]() -> UserType {...}); // error: values of user defined types
+// basic types
+l.CreateFunction([]() -> int {...}); // ok
+l.CreateFunction([]() -> int* {...}); // ok, will be converted to a light user data in lua(not the value pointed by it)
+l.CreateFunction([]() -> int& {...}); // error: reference
+l.CreateFunction([]() -> const int& {...}); // error: reference
+
+// user-defined types
+l.CreateFunction([]() -> UserType* {...}); // ok, will be converted to a light user data in lua
+l.CreateFunction([]() -> UserType {...}); // error: values of user-defined types
 l.CreateFunction([]() -> UserType& {...}); // error: reference
 l.CreateFunction([]() -> const UserType& {...}); // error: reference
+```
+
+If you want to return a user-defined types, you can do this like:
+
+```c++
+l.CreateFunction([]() -> LuaUserData {
+    LuaClass<T> lclass = l.Get("UserType");
+    return lclass.CreateUserData(args...); // `args...` are parameters that will be passed to `UserType`s constructor.
+})
 ```
 
 [[back to top](#table-of-contents)]
