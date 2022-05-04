@@ -84,8 +84,8 @@ private:
     /** c-style functions, `std::function`s and lambda functions */
     template <typename FuncType>
     LuaClass& DoDefStatic(const char* name, FuncType&& f) {
-        using ConvertedFuncType = typename If<std::is_pointer<FuncType>::value, FuncType,
-                                              typename FunctionTraits<FuncType>::std_function_type>::type;
+        using ConvertedFuncType = typename std::conditional<std::is_pointer<FuncType>::value, FuncType,
+                                                            typename FunctionTraits<FuncType>::std_function_type>::type;
         ConvertedFuncType func(std::forward<FuncType>(f));
         DoDefStaticFunction(m_l, name, std::forward<ConvertedFuncType>(func));
         return *this;
@@ -117,8 +117,9 @@ private:
     LuaClass& DoDefMember(const char* name, FuncType&& f) {
         constexpr int argoffset = (std::is_member_function_pointer<FuncType>::value ? 1 : 0);
         using ConvertedFuncType =
-            typename If<(std::is_member_function_pointer<FuncType>::value || std::is_pointer<FuncType>::value),
-                        FuncType, typename FunctionTraits<FuncType>::std_function_type>::type;
+            typename std::conditional<(std::is_member_function_pointer<FuncType>::value ||
+                                       std::is_pointer<FuncType>::value),
+                                      FuncType, typename FunctionTraits<FuncType>::std_function_type>::type;
         ConvertedFuncType func(std::forward<FuncType>(f));
         DoDefMemberFunction(m_l, argoffset, name, std::forward<ConvertedFuncType>(func));
         return *this;
