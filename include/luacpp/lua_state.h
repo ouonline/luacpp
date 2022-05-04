@@ -32,8 +32,8 @@ private:
     template <typename FuncType>
     LuaFunction DoCreateFunction(FuncType&& f, const char* name = nullptr) {
         using Traits = FunctionTraits<FuncType>;
-        using ConvertedFuncType =
-            typename If<std::is_pointer<FuncType>::value, FuncType, typename Traits::std_function_type>::type;
+        using ConvertedFuncType = typename std::conditional<std::is_pointer<FuncType>::value, FuncType,
+                                                            typename Traits::std_function_type>::type;
         ConvertedFuncType func(std::forward<FuncType>(f));
         return DoCreateFunctionImpl(std::forward<ConvertedFuncType>(func), name);
     }
