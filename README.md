@@ -34,7 +34,7 @@ Prerequisites
 * GCC >= 4.9 with c++11 support
 * CMake >= 3.10 (optional)
 
-Building with pre-installed lua package:
+Building with pre-installed Lua package:
 
 ```bash
 mkdir build
@@ -42,7 +42,15 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j
 ```
 
-or specify lua headers manually:
+or building with Lua source by specifying `LUA_SRC_DIR`:
+
+```bash
+mkdir build
+cmake -DCMAKE_BUILD_TYPE=Release -DLUA_SRC_DIR=/path/to/lua/src ..
+make -j
+```
+
+If you have a Lua binary package, specify the header directories through `LUA_INCLUDE_DIR` manually:
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Release -DLUA_INCLUDE_DIR=/path/to/lua/include/dir ..
@@ -54,10 +62,10 @@ and build tests:
 cmake -DCMAKE_BUILD_TYPE=Debug -DLUACPP_BUILD_TESTS=ON ..
 ```
 
-or
+or specifying `LUA_INCLUDE_DIR` and `LUA_LIBRARIES`:
 
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Debug -DLUACPP_BUILD_TESTS=ON -DLUA_INCLUDE_DIR=/path/to/lua/include/dir -DLUA_LIBRARIES=/path/to/lua/libs ..
+cmake -DCMAKE_BUILD_TYPE=Debug -DLUACPP_BUILD_TESTS=ON -DLUA_INCLUDE_DIR=/path/to/lua/include/dir -DLUA_LIBRARIES=/path/to/lua/<liblua.a|liblua.lib> ..
 ```
 
 [[back to top](#table-of-contents)]
