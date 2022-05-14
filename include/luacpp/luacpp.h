@@ -1,7 +1,6 @@
 #ifndef __LUA_CPP_LUACPP_H__
 #define __LUA_CPP_LUACPP_H__
 
-#include "lua_user_data.h"
 #include "lua_object.h"
 #include "lua_table.h"
 #include "lua_function.h"

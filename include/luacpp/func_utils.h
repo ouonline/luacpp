@@ -80,11 +80,11 @@ private:
 
 /* -------------------------------------------------------------------------- */
 
-static inline void PushValue(lua_State* l, const char* arg) {
+inline void PushValue(lua_State* l, const char* arg) {
     lua_pushstring(l, arg);
 }
 
-static inline void PushValue(lua_State* l, const LuaStringRef& arg) {
+inline void PushValue(lua_State* l, const LuaStringRef& arg) {
     lua_pushlstring(l, (const char*)arg.base, arg.size);
 }
 
@@ -120,7 +120,7 @@ struct PointerPusher final {
 };
 
 template <typename T>
-static void PushValue(lua_State* l, T arg) {
+void PushValue(lua_State* l, T arg) {
     typename std::conditional<
         std::is_integral<T>::value, IntegerPusher<T>,
         typename std::conditional<std::is_floating_point<T>::value, FloatPusher<T>,
@@ -128,10 +128,10 @@ static void PushValue(lua_State* l, T arg) {
                                                             void>::type>::type>::type pusher(l, arg);
 }
 
-static inline void PushValues(lua_State*) {}
+inline void PushValues(lua_State*) {}
 
 template <typename First, typename... Rest>
-static void PushValues(lua_State* l, First&& first, Rest&&... rest) {
+void PushValues(lua_State* l, First&& first, Rest&&... rest) {
     PushValue(l, std::forward<First>(first));
     PushValues(l, std::forward<Rest>(rest)...);
 }
@@ -233,7 +233,7 @@ struct FunctionCaller<0> final {
                                       ClassMemberFuncWithReturnValue<FuncType, Argv...>>::type,
             typename std::conditional<is_void_ret, FuncWithoutReturnValue<FuncType, Argv...>,
                                       FuncWithReturnValue<FuncType, Argv...>>::type>::type
-        func_executor(l, f, std::forward<Argv>(argv)...);
+            func_executor(l, f, std::forward<Argv>(argv)...);
         return func_executor.returned_value_num;
     }
 };
@@ -256,7 +256,7 @@ struct FuncWrapper final : public DestructorObject {
 };
 
 template <typename T>
-static int luacpp_generic_destructor(lua_State* l) {
+int luacpp_generic_destructor(lua_State* l) {
     auto ud = (T*)lua_touserdata(l, 1);
     ud->~T();
     return 0;
@@ -264,7 +264,7 @@ static int luacpp_generic_destructor(lua_State* l) {
 
 /** FuncType may be a c-style function or a std::function or a callable object */
 template <typename FuncType, typename... FuncArgType>
-static int luacpp_generic_function(lua_State* l) {
+int luacpp_generic_function(lua_State* l) {
     auto argoffset = lua_tointeger(l, lua_upvalueindex(1));
     auto wrapper = (FuncWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
     return FunctionCaller<sizeof...(FuncArgType)>::Execute(wrapper->f, l, argoffset);
@@ -272,8 +272,8 @@ static int luacpp_generic_function(lua_State* l) {
 
 // pushes an instance of `luacpp_generic_function`
 template <typename FuncType, typename... FuncArgType>
-static void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset, FuncType&& f,
-                                  const TypeHolder<FuncArgType...>&) {
+void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset, FuncType&& f,
+                           const TypeHolder<FuncArgType...>&) {
     using WrapperType = FuncWrapper<FuncType>;
 
     // upvalue 1: argoffset

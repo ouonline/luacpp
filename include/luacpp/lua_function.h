@@ -2,7 +2,6 @@
 #define __LUA_CPP_LUA_FUNCTION_H__
 
 #include "lua_object.h"
-#include "lua_user_data.h"
 #include "func_utils.h"
 #include <string>
 

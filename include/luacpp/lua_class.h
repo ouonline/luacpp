@@ -1,8 +1,8 @@
 #ifndef __LUA_CPP_LUA_CLASS_H__
 #define __LUA_CPP_LUA_CLASS_H__
 
+#include "lua_object.h"
 #include "lua_52_53.h"
-#include "lua_user_data.h"
 #include "func_utils.h"
 #include <stdint.h>
 
@@ -267,7 +267,7 @@ public:
     }
 
     template <typename... Argv>
-    LuaUserData CreateUserData(Argv&&... argv) const {
+    LuaObject CreateInstance(Argv&&... argv) const {
         auto ud = lua_newuserdatauv(m_l, sizeof(T), 1);
         new (ud) T(std::forward<Argv>(argv)...);
 
@@ -277,7 +277,7 @@ public:
         PushInstanceMetatable();
         lua_setmetatable(m_l, -2);
 
-        LuaUserData ret(m_l, -1);
+        LuaObject ret(m_l, -1);
         lua_pop(m_l, 1);
         return ret;
     }

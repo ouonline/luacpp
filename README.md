@@ -13,7 +13,6 @@
     - [LuaTable](#luatable)
     - [LuaFunction](#luafunction)
     - [LuaClass](#luaclass)
-    - [LuaUserData](#luauserdata)
     - [LuaState](#luastate)
 
 -----
@@ -318,7 +317,7 @@ int main(void) {
 
 Class member functions should be called with colon operator in the form of `object:func()`, to ensure the object itself is the first argument passed to `func`. Otherwise you need to do it manually, like `object.func(object, <other arguments>)`.
 
-The following snippet displays how to use `LuaUserData` to exchange data between C++ and Lua:
+The following snippet displays how to use userdata to exchange data between C++ and Lua:
 
 ```c++
 #include <iostream>
@@ -337,21 +336,21 @@ int main(void) {
         })
         .DefMember("print", &ClassDemo::Print);
 
-    auto lud = lclass.CreateUserData("ouonline", 5);
-    auto ud = lud.Get<ClassDemo>();
+    auto lud = lclass.CreateInstance("ouonline", 5);
+    auto ud = static_cast<ClassDemo*>(lud.ToPointer());
     ud->Set("in lua: Print test data from cpp");
     l.Set("tc", lud);
     l.DoString("tc:print()");
 
     l.DoString("obj = tc:get_object_addr();");
-    auto obj_addr = LuaUserData(l.Get("obj")).Get<ClassDemo>();
-    assert(ud == obj_addr);
+    auto obj_addr = static_cast<ClassDemo*>(l.Get("obj").ToPointer());
+    // ud == obj_addr;
 
     return 0;
 }
 ```
 
-We create a `LuaUserData` object of type `ClassDemo` by calling `LuaClass::CreateUserData()` and set its name to be `tc` in the Lua environment. Then we set its content to be a string, which is printed by calling `LuaState::DoString()`.
+We create a userdata object of type `ClassDemo` by calling `LuaClass::CreateInstance()` and set its name to be `tc` in the Lua environment. Then we set its content to be a string, which is printed by calling `LuaState::DoString()`.
 
 The following example is similar to the previous one, except that we modify the object's content in the Lua environment but print it in C++.
 
@@ -369,7 +368,7 @@ int main(void) {
         .DefConstructor<const char*, int>()
         .DefMember("set", &ClassDemo::Set);
     l.DoString("tc = ClassDemo('ouonline', 3); tc:set('in cpp: Print test data from lua')");
-    LuaUserData(l.Get("tc")).Get<ClassDemo>()->Print();
+    static_cast<ClassDemo*>(l.Get("tc").ToPointer())->Print();
 
     return 0;
 }
@@ -427,7 +426,7 @@ auto derived2 = l.CreateClass<DerivedDemo2>("DerivedDemo2")
 
 # Notes
 
-Builtin types(`LuaObject`, `LuaTable`, `LuaFunction`, `LuaUserData` and `LuaStringRef`) should only be used in exported functions. Don't use them in normal c++ functions.
+Builtin types(`LuaObject`, `LuaTable`, `LuaFunction` and `LuaStringRef`) should only be used in exported functions. Don't use them in normal c++ functions.
 
 Currently `luacpp` supports exporting functions with the following argument types:
 
@@ -466,7 +465,7 @@ l.CreateFunction([](UserType&&) -> void {}); // error: reference of user-defined
 Types of returned values can be one of:
 
 * basic types(`bool`, `float`, `double` and integers)
-* builtin types(`LuaObject`, `LuaTable`, `LuaFunction`, `LuaUserData` and `LuaStringRef`)
+* builtin types(`LuaObject`, `LuaTable`, `LuaFunction` and `LuaStringRef`)
 * pointers to user-defined types.
 
 For example:
@@ -494,9 +493,9 @@ l.CreateFunction([]() -> const UserType& {...}); // error: reference
 If you want to return a user-defined types, you can do this like:
 
 ```c++
-l.CreateFunction([]() -> LuaUserData {
+l.CreateFunction([]() -> LuaObject {
     LuaClass<T> lclass = l.Get("UserType");
-    return lclass.CreateUserData(args...); // `args...` are parameters that will be passed to `UserType`s constructor.
+    return lclass.CreateInstance(args...); // `args...` are parameters that will be passed to `UserType`s constructor.
 })
 ```
 
@@ -559,6 +558,12 @@ lua_Number ToNumber() const;
 
 Converts this object to a (floating point) number.
 
+```c++
+void* ToPointer() const;
+```
+
+Converts this object to a pointer.
+
 [[back to top](#table-of-contents)]
 
 ## LuaTable
@@ -576,42 +581,84 @@ LuaObject Get(int index) const;
 LuaObject Get(const char* name) const;
 ```
 
-Gets an object by its `index` or `name` in this table.
+Returns an object by its `index` or `name` in this table.
+
+```c++
+const char* GetString(int index) const;
+const char* GetString(const char* name) const;
+```
+
+Returns the object in the specified `index` or associated with `name` as a C-style string.
+
+```c++
+LuaStringRef GetStringRef(int index) const;
+LuaStringRef GetStringRef(const char* name) const;
+```
+
+Returns the object in the specified `index` or associated with `name` as a `LuaStringRef` object.
+
+```c++
+lua_Number GetNumber(int index) const;
+lua_Number GetNumber(const char* name) const;
+```
+
+Returns the object in the specified `index` or associated with `name` as a floating point number.
+
+```c++
+lua_Integer GetInteger(int index) const;
+lua_Integer GetInteger(const char* name) const;
+```
+
+Returns the object in the specified `index` or associated with `name` as an integer.
+
+```c++
+void* GetPointer(int index) const;
+void* GetPointer(const char* name) const;
+```
+
+Returns the object in the specified `index` or associated with `name` as a pointer.
 
 ```c++
 void Set(int index, const LuaObject& lobj);
 void Set(const char* name, const LuaObject& lobj)
 ```
 
-Sets the value at `index` or `name` to be the object `lobj`. Note that `lobj` and this table **MUST** be created by the same LuaState.
+Sets the value at `index` or `name` to the object `lobj`. Note that `lobj` and this table **MUST** be created by the same LuaState.
 
 ```c++
 void SetString(int index, const char* str);
 void SetString(const char* name, const char* str);
 ```
 
-Sets the value at `index` or `name` to be the string `str`.
+Sets the value at `index` or `name` to the string `str`.
 
 ```c++
 void SetString(int index, const char* str, uint64_t len);
 void SetString(const char* name, const char* str, uint64_t len)
 ```
 
-Sets the value at `index` or `name` to be the string `str` with length `len`.
+Sets the value at `index` or `name` to the string `str` with length `len`.
 
 ```c++
 void SetNumber(int index, lua_Number n);
 void SetNumber(const char* name, lua_Number n);
 ```
 
-Sets the value at `index` or `name` to be a (floating) number `n`.
+Sets the value at `index` or `name` to a (floating) number `n`.
 
 ```c++
 void SetInteger(int index, lua_Integer n);
 void SetInteger(const char* name, lua_Integer n);
 ```
 
-Sets the value at `index` or `name` to be an integer `n`.
+Sets the value at `index` or `name` to the integer `n`.
+
+```c++
+void SetPointer(int index, void* p);
+void SetPointer(const char* name, void* p);
+```
+
+Sets the value at `index` or `name` to the pointer `p`.
 
 ```c++
 bool ForEach(const std::function<bool (uint32_t i, const LuaObject& value)>& func) const;
@@ -703,25 +750,6 @@ LuaClass& DefStatic(const char* name, GetterType&& getter, SetterType&& setter);
 ```
 
 Exports a static property `name` of this class in Lua. `nullptr` means that this property cannot be read or written. See `tests/test_class.hpp` for usage examples.
-
-[[back to top](#table-of-contents)]
-
-## LuaUserData
-
-`LuaUserData` (inherits from `LuaObject`) represents the userdata type in Lua.
-
-```c++
-LuaUserData(lua_State* l, int index);
-```
-
-Creates a `LuaUserData` with the object located in `index` of the lua_State `l`.
-
-```c++
-template<typename T>
-T* Get() const;
-```
-
-Gets the real data of type `T`.
 
 [[back to top](#table-of-contents)]
 
@@ -829,10 +857,10 @@ Exports a new type `T` with the name `name`. If `name` is already exported, that
 
 ```c++
 template<typename... Argv>
-LuaUserData CreateUserData(Argv&&... argv) const;
+LuaObject CreateInstance(Argv&&... argv) const;
 ```
 
-Creates a `LuaUserData` instance. The arguments `argv` are passed to the constructor of `T` to create an instance.
+Creates an instance of this class. The arguments `argv` are passed to the constructor of `T`. The newly created instance can be obtained by calling `LuaObject::ToPointer()`.
 
 ```c++
 bool DoString(const char* chunk, std::string* errstr = nullptr,

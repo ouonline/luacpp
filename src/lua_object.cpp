@@ -1,7 +1,6 @@
 #include "luacpp/lua_object.h"
 #include "luacpp/lua_table.h"
 #include "luacpp/lua_function.h"
-#include "luacpp/lua_user_data.h"
 #include <string>
 using namespace std;
 
@@ -42,6 +41,13 @@ lua_Integer LuaObject::ToInteger() const {
 lua_Number LuaObject::ToNumber() const {
     PushSelf();
     auto ret = lua_tonumber(m_l, -1);
+    lua_pop(m_l, 1);
+    return ret;
+}
+
+void* LuaObject::ToPointer() const {
+    PushSelf();
+    auto ret = lua_touserdata(m_l, -1);
     lua_pop(m_l, 1);
     return ret;
 }

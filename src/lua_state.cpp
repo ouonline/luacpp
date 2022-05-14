@@ -677,6 +677,11 @@ LuaState::~LuaState() {
     }
 }
 
+void LuaState::Set(const char* name, const LuaObject& lobj) {
+    PushValue(m_l, lobj);
+    lua_setglobal(m_l, name);
+}
+
 LuaObject LuaState::Get(const char* name) const {
     lua_getglobal(m_l, name);
     LuaObject ret(m_l, -1);
@@ -684,9 +689,40 @@ LuaObject LuaState::Get(const char* name) const {
     return ret;
 }
 
-void LuaState::Set(const char* name, const LuaObject& lobj) {
-    PushValue(m_l, lobj);
-    lua_setglobal(m_l, name);
+const char* LuaState::GetString(const char* name) const {
+    lua_getglobal(m_l, name);
+    const char* str = lua_tostring(m_l, -1);
+    lua_pop(m_l, 1);
+    return str;
+}
+
+LuaStringRef LuaState::GetStringRef(const char* name) const {
+    lua_getglobal(m_l, name);
+    size_t len = 0;
+    const char* str = lua_tolstring(m_l, -1, &len);
+    lua_pop(m_l, 1);
+    return LuaStringRef(str, len);
+}
+
+lua_Number LuaState::GetNumber(const char* name) const {
+    lua_getglobal(m_l, name);
+    auto value = lua_tonumber(m_l, -1);
+    lua_pop(m_l, 1);
+    return value;
+}
+
+lua_Integer LuaState::GetInteger(const char* name) const {
+    lua_getglobal(m_l, name);
+    auto value = lua_tointeger(m_l, -1);
+    lua_pop(m_l, 1);
+    return value;
+}
+
+void* LuaState::GetPointer(const char* name) const {
+    lua_getglobal(m_l, name);
+    auto ptr = lua_touserdata(m_l, -1);
+    lua_pop(m_l, 1);
+    return ptr;
 }
 
 LuaObject LuaState::CreateString(const char* str, const char* name) {
@@ -724,6 +760,17 @@ LuaObject LuaState::CreateNumber(lua_Number value, const char* name) {
 
 LuaObject LuaState::CreateInteger(lua_Integer value, const char* name) {
     lua_pushinteger(m_l, value);
+    LuaObject ret(m_l, -1);
+    if (name) {
+        lua_setglobal(m_l, name);
+    } else {
+        lua_pop(m_l, 1);
+    }
+    return ret;
+}
+
+LuaObject LuaState::CreatePointer(void* ptr, const char* name) {
+    lua_pushlightuserdata(m_l, ptr);
     LuaObject ret(m_l, -1);
     if (name) {
         lua_setglobal(m_l, name);

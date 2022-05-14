@@ -17,8 +17,27 @@ public:
     LuaTable& operator=(LuaTable&&) = default;
     LuaTable& operator=(const LuaTable&) = default;
 
+    // ----- getters ----- //
+
     LuaObject Get(int index) const;
     LuaObject Get(const char* name) const;
+
+    const char* GetString(int index) const;
+    const char* GetString(const char* name) const;
+
+    LuaStringRef GetStringRef(int index) const;
+    LuaStringRef GetStringRef(const char* name) const;
+
+    lua_Number GetNumber(int index) const;
+    lua_Number GetNumber(const char* name) const;
+
+    lua_Integer GetInteger(int index) const;
+    lua_Integer GetInteger(const char* name) const;
+
+    void* GetPointer(int index) const;
+    void* GetPointer(const char* name) const;
+
+    // ----- setters ----- //
 
     void Set(int index, const LuaObject& lobj);
     void Set(const char* name, const LuaObject& lobj);
@@ -33,6 +52,11 @@ public:
 
     void SetInteger(int index, lua_Integer);
     void SetInteger(const char* name, lua_Integer);
+
+    void SetPointer(int index, void*);
+    void SetPointer(const char* name, void*);
+
+    // ----- //
 
     bool ForEach(const std::function<bool(uint32_t i /* starting from 0 */, const LuaObject& value)>& func) const;
     bool ForEach(const std::function<bool(const LuaObject& key, const LuaObject& value)>& func) const;

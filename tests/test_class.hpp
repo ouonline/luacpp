@@ -51,8 +51,8 @@ static void TestClassProperty() {
                             p->y = v;
                         });
 
-    auto lp1 = lclass.CreateUserData();
-    auto p1 = lp1.Get<Point>();
+    auto lp1 = lclass.CreateInstance();
+    auto p1 = static_cast<Point*>(lp1.ToPointer());
     assert(p1->x == 10);
     assert(p1->y == 20);
 
@@ -63,8 +63,8 @@ static void TestClassProperty() {
     assert(p1->x == 12345);
     assert(p1->y == 54321);
 
-    auto lp2 = LuaUserData(l.Get("p2"));
-    auto p2 = lp2.Get<Point>();
+    auto lp2 = l.Get("p2");
+    auto p2 = static_cast<Point*>(lp2.ToPointer());
     assert(p2->x == 10);
     assert(p2->y == 20);
 
@@ -89,8 +89,8 @@ static void TestClassPropertyReadWrite() {
                             p->y = v;
                         });
 
-    auto lp1 = lclass.CreateUserData();
-    auto p1 = lp1.Get<Point>();
+    auto lp1 = lclass.CreateInstance();
+    auto p1 = static_cast<Point*>(lp1.ToPointer());
     assert(p1->x == 10);
     assert(p1->y == 20);
 
@@ -321,8 +321,8 @@ static void TestClassMemberInheritance() {
     assert(ok);
     assert(errmsg.empty());
 
-    auto lud = LuaUserData(l.Get("d1"));
-    assert(lud.Get<DerivedDemo1>()->m_value == 35142);
+    auto lud = l.Get("d1");
+    assert(static_cast<DerivedDemo1*>(lud.ToPointer())->m_value == 35142);
 
     ok = l.DoString("d1:StaticEcho('derived instance')", &errmsg);
     assert(ok);
@@ -365,9 +365,9 @@ static void TestClassMemberInheritance3() {
     assert(ok);
     assert(errmsg.empty());
 
-    auto lud = LuaUserData(l.Get("d2"));
-    assert(lud.Get<DerivedDemo1>()->m_value == 35142);
-    assert(lud.Get<DerivedDemo2>()->m_value == 35142);
+    auto lud = l.Get("d2");
+    assert(static_cast<DerivedDemo1*>(lud.ToPointer())->m_value == 35142);
+    assert(static_cast<DerivedDemo2*>(lud.ToPointer())->m_value == 35142);
 
     ok = l.DoString("d2:StaticEcho('derived instance2')", &errmsg);
     assert(ok);
