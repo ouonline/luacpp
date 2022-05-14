@@ -7,7 +7,7 @@
 
 namespace luacpp {
 
-static inline void* lua_newuserdatauv(lua_State* l, size_t sz, int nuvalue) {
+inline void* lua_newuserdatauv(lua_State* l, size_t sz, int nuvalue) {
     auto ret = lua_newuserdata(l, sz);
     if (nuvalue > 0) {
         lua_createtable(l, nuvalue, 0);
@@ -16,7 +16,7 @@ static inline void* lua_newuserdatauv(lua_State* l, size_t sz, int nuvalue) {
     return ret;
 }
 
-static inline int lua_getiuservalue(lua_State* l, int idx, int n) {
+inline int lua_getiuservalue(lua_State* l, int idx, int n) {
     lua_getuservalue(l, idx);
     if (!lua_istable(l, -1)) {
         lua_pop(l, 1);
@@ -29,7 +29,7 @@ static inline int lua_getiuservalue(lua_State* l, int idx, int n) {
     return lua_type(l, -1);
 }
 
-static inline int lua_setiuservalue(lua_State* l, int idx, int n) {
+inline int lua_setiuservalue(lua_State* l, int idx, int n) {
     lua_getuservalue(l, idx);
     if (!lua_istable(l, -1)) {
         lua_pop(l, 2);

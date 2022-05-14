@@ -14,6 +14,14 @@ static void TestSetGet() {
     auto lobj = l.CreateInteger(value);
     assert(lobj.GetType() == LUA_TNUMBER);
     assert(lobj.ToNumber() == value);
+
+    l.CreateInteger(321, "123");
+    assert(l.GetInteger("123") == 321);
+
+    auto p = (void*)0x12345678;
+    auto lp = l.CreatePointer(p, "rp");
+    assert(l.GetPointer("rp") == p);
+    assert(lp.ToPointer() == p);
 }
 
 static void TestNil() {
@@ -95,6 +103,23 @@ static void TestTable() {
         }
         return true;
     });
+}
+
+static void TestTableGetSet() {
+    LuaState l(luaL_newstate(), true);
+    auto ltable = l.CreateTable();
+
+    ltable.SetInteger(123, 456);
+    assert(ltable.GetInteger(123) == 456);
+
+    ltable.SetInteger("123", 456);
+    assert(ltable.GetInteger("123") == 456);
+
+    auto p = (void*)0x3355378434;
+    ltable.SetPointer("randomp", p);
+    assert(ltable.GetPointer("randomp") == p);
+    ltable.SetPointer(531, p);
+    assert(ltable.GetPointer(531) == p);
 }
 
 static void TestFuncWithReturnValue() {
@@ -225,14 +250,14 @@ static void TestUserdata1() {
         })
         .DefMember("print", &ClassDemo::Print);
 
-    auto lud = lclass.CreateUserData("ouonline", 5);
-    auto ud = lud.Get<ClassDemo>();
+    auto lud = lclass.CreateInstance("ouonline", 5);
+    auto ud = static_cast<ClassDemo*>(lud.ToPointer());
     ud->Set("in lua: Print test data from cpp");
     l.Set("tc", lud);
     l.DoString("tc:print()");
 
     l.DoString("obj = tc:get_object_addr();");
-    auto obj_addr = LuaUserData(l.Get("obj")).Get<ClassDemo>();
+    auto obj_addr = static_cast<ClassDemo*>(l.Get("obj").ToPointer());
 
     assert(ud == obj_addr);
 }
@@ -244,7 +269,7 @@ static void TestUserdata2() {
         .DefConstructor<const char*, int>()
         .DefMember("set", &ClassDemo::Set);
     l.DoString("tc = ClassDemo('ouonline', 3); tc:set('in cpp: Print test data from lua')");
-    LuaUserData(l.Get("tc")).Get<ClassDemo>()->Print();
+    static_cast<ClassDemo*>(l.Get("tc").ToPointer())->Print();
 }
 
 static void TestDoString() {

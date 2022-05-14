@@ -69,8 +69,14 @@ public:
     LuaState& operator=(LuaState&&);
     LuaState& operator=(const LuaState&) = delete;
 
-    LuaObject Get(const char* name) const;
     void Set(const char* name, const LuaObject& lobj);
+
+    LuaObject Get(const char* name) const;
+    const char* GetString(const char* name) const;
+    LuaStringRef GetStringRef(const char* name) const;
+    lua_Number GetNumber(const char* name) const;
+    lua_Integer GetInteger(const char* name) const;
+    void* GetPointer(const char* name) const;
 
     void Push(const LuaObject& lobj) {
         PushValue(m_l, lobj);
@@ -87,6 +93,9 @@ public:
     void PushInteger(lua_Integer value) {
         lua_pushinteger(m_l, value);
     }
+    void PushPointer(void* ptr) {
+        lua_pushlightuserdata(m_l, ptr);
+    }
     void PushNil() {
         lua_pushnil(m_l);
     }
@@ -95,6 +104,7 @@ public:
     LuaObject CreateString(const char* str, uint64_t len, const char* name = nullptr);
     LuaObject CreateNumber(lua_Number value, const char* name = nullptr);
     LuaObject CreateInteger(lua_Integer value, const char* name = nullptr);
+    LuaObject CreatePointer(void* ptr, const char* name = nullptr);
 
     LuaTable CreateTable(const char* name = nullptr);
 

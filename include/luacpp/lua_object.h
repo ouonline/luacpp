@@ -88,6 +88,7 @@ public:
     lua_Integer ToInteger() const;
     LuaStringRef ToStringRef() const;
     const char* ToString() const;
+    void* ToPointer() const;
 
 protected:
     void PushSelf() const {

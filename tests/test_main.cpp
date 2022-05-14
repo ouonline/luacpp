@@ -10,6 +10,7 @@ static const vector<pair<string, void (*)()>> g_test_suite = {
     {"TestNil", TestNil},
     {"TestString", TestString},
     {"TestTable", TestTable},
+    {"TestTableGetSet", TestTableGetSet},
     {"TestFuncWithReturnValue", TestFuncWithReturnValue},
     {"TestFuncWithoutReturnValue", TestFuncWithoutReturnValue},
     {"TestFuncWithBuiltinReferenceTypes", TestFuncWithBuiltinReferenceTypes},
