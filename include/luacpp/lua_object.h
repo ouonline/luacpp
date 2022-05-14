@@ -14,7 +14,6 @@ namespace luacpp {
 
 class LuaTable;
 class LuaFunction;
-class LuaUserData;
 
 class LuaObject {
 public:

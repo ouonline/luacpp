@@ -14,7 +14,6 @@ namespace luacpp {
 class LuaObject;
 class LuaTable;
 class LuaFunction;
-class LuaUserData;
 
 template <typename T>
 class LuaClass;
@@ -38,7 +37,6 @@ public:
     operator LuaObject() const;
     operator LuaTable() const;
     operator LuaFunction() const;
-    operator LuaUserData() const;
 
     // ----- //
 
@@ -90,7 +88,6 @@ inline void PushValue(lua_State* l, const LuaStringRef& arg) {
 
 void PushValue(lua_State* l, const LuaObject&);
 void PushValue(lua_State* l, const LuaTable&);
-void PushValue(lua_State* l, const LuaUserData&);
 void PushValue(lua_State* l, const LuaFunction&);
 
 template <typename T>
