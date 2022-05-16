@@ -1,8 +1,4 @@
 #include "luacpp/lua_object.h"
-#include "luacpp/lua_table.h"
-#include "luacpp/lua_function.h"
-#include <string>
-using namespace std;
 
 namespace luacpp {
 

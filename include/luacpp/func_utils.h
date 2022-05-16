@@ -240,7 +240,7 @@ struct DestructorObject {
 };
 
 /*
-  All `FuncWrapper` instances use the same metatable in order to save memory.
+  All `FuncWrapper` instances share the same metatable in order to save memory.
   According to the c++ standard, converting a void*, which is converted from a pointer to derived class, to its base
   class pointer, is not save. But `DestructorObject` is an empty class so that the address of `DestructorObject` and
   `FuncWrapper` are the same in our case.

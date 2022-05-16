@@ -3,38 +3,40 @@
 #include <vector>
 using namespace std;
 
+#define TEST_CASE(func) {#func, func}
+
 static const vector<pair<string, void (*)()>> g_test_suite = {
     // ----- test base ----- //
 
-    {"TestSetGet", TestSetGet},
-    {"TestNil", TestNil},
-    {"TestString", TestString},
-    {"TestTable", TestTable},
-    {"TestTableGetSet", TestTableGetSet},
-    {"TestFuncWithReturnValue", TestFuncWithReturnValue},
-    {"TestFuncWithoutReturnValue", TestFuncWithoutReturnValue},
-    {"TestFuncWithBuiltinReferenceTypes", TestFuncWithBuiltinReferenceTypes},
-    {"TestVariadicArguments", TestVariadicArguments},
-    {"TestUserdata1", TestUserdata1},
-    {"TestUserdata2", TestUserdata2},
-    {"TestDoString", TestDoString},
-    {"TestDoFile", TestDoFile},
+    TEST_CASE(TestSetGet),
+    TEST_CASE(TestNil),
+    TEST_CASE(TestString),
+    TEST_CASE(TestTable),
+    TEST_CASE(TestTableGetSet),
+    TEST_CASE(TestFuncWithReturnValue),
+    TEST_CASE(TestFuncWithoutReturnValue),
+    TEST_CASE(TestFuncWithBuiltinReferenceTypes),
+    TEST_CASE(TestVariadicArguments),
+    TEST_CASE(TestUserdata1),
+    TEST_CASE(TestUserdata2),
+    TEST_CASE(TestDoString),
+    TEST_CASE(TestDoFile),
 
     // ----- test class ----- //
 
-    {"TestClass", TestClass},
-    {"TestClassConstructor", TestClassConstructor},
-    {"TestClassProperty", TestClassProperty},
-    {"TestClassPropertyReadWrite", TestClassPropertyReadWrite},
-    {"TestClassMemberFunction", TestClassMemberFunction},
-    {"TestClassLuaMemberFunction", TestClassLuaMemberFunction},
-    {"TestClassStaticProperty", TestClassStaticProperty},
-    {"TestClassStaticPropertyReadWrite", TestClassStaticPropertyReadWrite},
-    {"TestClassStaticMemberFunction", TestClassStaticMemberFunction},
-    {"TestClassLuaStaticMemberFunction", TestClassLuaStaticMemberFunction},
-    {"TestClassStaticMemberInheritance", TestClassStaticMemberInheritance},
-    {"TestClassMemberInheritance", TestClassMemberInheritance},
-    {"TestClassMemberInheritance3", TestClassMemberInheritance3},
+    TEST_CASE(TestClass),
+    TEST_CASE(TestClassConstructor),
+    TEST_CASE(TestClassProperty),
+    TEST_CASE(TestClassPropertyReadWrite),
+    TEST_CASE(TestClassMemberFunction),
+    TEST_CASE(TestClassLuaMemberFunction),
+    TEST_CASE(TestClassStaticProperty),
+    TEST_CASE(TestClassStaticPropertyReadWrite),
+    TEST_CASE(TestClassStaticMemberFunction),
+    TEST_CASE(TestClassLuaStaticMemberFunction),
+    TEST_CASE(TestClassStaticMemberInheritance),
+    TEST_CASE(TestClassMemberInheritance),
+    TEST_CASE(TestClassMemberInheritance3),
 };
 
 int main(void) {

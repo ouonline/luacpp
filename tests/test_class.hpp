@@ -1,5 +1,8 @@
 #include "test_common.h"
 
+#undef NDEBUG
+#include <assert.h>
+
 int ClassDemo::st_value = 42;
 
 static void TestClass() {
