@@ -19,6 +19,11 @@ if(LUA_SRC_DIR)
     list(REMOVE_ITEM LUA_SRC ${LUA_SRC_DIR}/lua.c ${LUA_SRC_DIR}/luac.c)
     add_library(lua_static STATIC ${LUA_SRC})
     set_target_properties(lua_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+        target_compile_definitions(lua_static PRIVATE LUA_USE_POSIX)
+    endif()
+
     set(LUA_INCLUDE_DIR ${LUA_SRC_DIR})
     set(LUA_LIBRARIES lua_static)
 endif()
