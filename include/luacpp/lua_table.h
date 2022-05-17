@@ -2,15 +2,16 @@
 #define __LUA_CPP_LUA_TABLE_H__
 
 #include "lua_object.h"
+#include "lua_function.h"
 #include <functional>
 
 namespace luacpp {
 
-class LuaTable final : public LuaObject {
+class LuaTable final : public LuaRefObject {
 public:
-    LuaTable(lua_State* l, int index) : LuaObject(l, index) {}
-    LuaTable(LuaObject&& lobj) : LuaObject(std::move(lobj)) {}
-    LuaTable(const LuaObject& lobj) : LuaObject(lobj) {}
+    LuaTable(lua_State* l, int index) : LuaRefObject(l, index) {}
+    LuaTable(LuaObject&& lobj) : LuaRefObject(std::move(lobj)) {}
+    LuaTable(const LuaObject& lobj) : LuaRefObject(lobj) {}
     LuaTable(LuaTable&&) = default;
     LuaTable(const LuaTable&) = default;
 
@@ -19,14 +20,42 @@ public:
 
     // ----- getters ----- //
 
-    LuaObject Get(int index) const;
-    LuaObject Get(const char* name) const;
+    LuaObject Get(int index) const {
+        return GenericGetObject<LuaObject>(index);
+    }
+    LuaObject Get(const char* name) const {
+        return GenericGetObject<LuaObject>(name);
+    }
 
-    const char* GetString(int index) const;
-    const char* GetString(const char* name) const;
+    LuaTable GetTable(int index) const {
+        return GenericGetObject<LuaTable>(index);
+    }
+    LuaTable GetTable(const char* name) const {
+        return GenericGetObject<LuaTable>(name);
+    }
+
+    LuaFunction GetFunction(int index) const {
+        return GenericGetObject<LuaFunction>(index);
+    }
+    LuaFunction GetFunction(const char* name) const {
+        return GenericGetObject<LuaFunction>(name);
+    }
+
+    template <typename T>
+    LuaClass<T> GetClass(int index) const {
+        return GenericGetObject<LuaClass<T>>(index);
+    }
+
+    template <typename T>
+    LuaClass<T> GetClass(const char* name) const {
+        return GenericGetObject<LuaClass<T>>(name);
+    }
 
     LuaStringRef GetStringRef(int index) const;
     LuaStringRef GetStringRef(const char* name) const;
+
+    const char* GetString(int index) const;
+    const char* GetString(const char* name) const;
 
     lua_Number GetNumber(int index) const;
     lua_Number GetNumber(const char* name) const;
@@ -39,8 +68,8 @@ public:
 
     // ----- setters ----- //
 
-    void Set(int index, const LuaObject& lobj);
-    void Set(const char* name, const LuaObject& lobj);
+    void Set(int index, const LuaRefObject& lobj);
+    void Set(const char* name, const LuaRefObject& lobj);
 
     void SetString(int index, const char* str);
     void SetString(int index, const char* str, uint64_t len);
@@ -60,6 +89,25 @@ public:
 
     bool ForEach(const std::function<bool(uint32_t i /* starting from 0 */, const LuaObject& value)>& func) const;
     bool ForEach(const std::function<bool(const LuaObject& key, const LuaObject& value)>& func) const;
+
+private:
+    template <typename T>
+    T GenericGetObject(int index) const {
+        PushSelf();
+        lua_rawgeti(m_l, -1, index);
+        T ret(m_l, -1);
+        lua_pop(m_l, 2);
+        return ret;
+    }
+
+    template <typename T>
+    T GenericGetObject(const char* name) const {
+        PushSelf();
+        lua_getfield(m_l, -1, name);
+        T ret(m_l, -1);
+        lua_pop(m_l, 2);
+        return ret;
+    }
 };
 
 } // namespace luacpp

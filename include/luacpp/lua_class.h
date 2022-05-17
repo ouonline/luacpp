@@ -20,7 +20,7 @@ struct LuaClassData final {
 };
 
 template <typename T>
-class LuaClass final : public LuaObject {
+class LuaClass final : public LuaRefObject {
 private:
     void PushInstanceMetatable() const {
         PushSelf();
@@ -171,13 +171,13 @@ private:
     /* -------------------------------------------------------------------------- */
 
 public:
-    LuaClass(lua_State* l, int index) : LuaObject(l, index) {
+    LuaClass(lua_State* l, int index) : LuaRefObject(l, index) {
         Init();
     }
-    LuaClass(LuaObject&& rhs) : LuaObject(std::move(rhs)) {
+    LuaClass(LuaObject&& rhs) : LuaRefObject(std::move(rhs)) {
         Init();
     }
-    LuaClass(const LuaObject& rhs) : LuaObject(rhs) {
+    LuaClass(const LuaObject& rhs) : LuaRefObject(rhs) {
         Init();
     }
 

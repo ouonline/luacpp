@@ -16,6 +16,10 @@ ValueConverter::operator LuaFunction() const {
     return LuaFunction(m_l, m_index);
 }
 
+void PushValue(lua_State* l, const LuaRefObject& obj) {
+    lua_rawgeti(l, LUA_REGISTRYINDEX, obj.GetRefIndex());
+}
+
 void PushValue(lua_State* l, const LuaObject& obj) {
     lua_rawgeti(l, LUA_REGISTRYINDEX, obj.GetRefIndex());
 }

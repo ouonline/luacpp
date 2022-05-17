@@ -83,4 +83,9 @@ struct Point final {
     int y = 20;
 };
 
+template <typename T>
+T ReturnSelf(T v) {
+    return v;
+}
+
 #endif

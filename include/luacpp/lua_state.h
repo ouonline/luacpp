@@ -7,6 +7,7 @@ extern "C" {
 }
 
 #include "lua_class.h"
+#include "lua_table.h"
 #include "lua_function.h"
 #include <functional>
 
@@ -69,16 +70,30 @@ public:
     LuaState& operator=(LuaState&&);
     LuaState& operator=(const LuaState&) = delete;
 
-    void Set(const char* name, const LuaObject& lobj);
+    void Set(const char* name, const LuaRefObject& lobj);
 
-    LuaObject Get(const char* name) const;
+    LuaObject Get(const char* name) const {
+        return GenericGetObject<LuaObject>(name);
+    }
+    LuaTable GetTable(const char* name) const {
+        return GenericGetObject<LuaTable>(name);
+    }
+    LuaFunction GetFunction(const char* name) const {
+        return GenericGetObject<LuaFunction>(name);
+    }
+
+    template <typename T>
+    LuaClass<T> GetClass(const char* name) const {
+        return GenericGetObject<LuaClass<T>>(name);
+    }
+
     const char* GetString(const char* name) const;
     LuaStringRef GetStringRef(const char* name) const;
     lua_Number GetNumber(const char* name) const;
     lua_Integer GetInteger(const char* name) const;
     void* GetPointer(const char* name) const;
 
-    void Push(const LuaObject& lobj) {
+    void Push(const LuaRefObject& lobj) {
         PushValue(m_l, lobj);
     }
     void PushString(const char* str) {
@@ -149,6 +164,15 @@ public:
 
     bool DoFile(const char* script, std::string* errstr = nullptr,
                 const std::function<bool(uint32_t, const LuaObject&)>& callback = nullptr);
+
+private:
+    template <typename T>
+    T GenericGetObject(const char* name) const {
+        lua_getglobal(m_l, name);
+        T ret(m_l, -1);
+        lua_pop(m_l, 1);
+        return ret;
+    }
 
 private:
     lua_State* m_l;

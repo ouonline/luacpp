@@ -7,7 +7,7 @@ using namespace std;
 #undef NDEBUG
 #include <assert.h>
 
-static void TestSetGet() {
+static void TestLuaStateSetGet() {
     LuaState l(luaL_newstate(), true);
     const int value = 5;
 
@@ -22,6 +22,16 @@ static void TestSetGet() {
     auto lp = l.CreatePointer(p, "rp");
     assert(l.GetPointer("rp") == p);
     assert(lp.ToPointer() == p);
+
+    auto t = l.CreateTable();
+    l.Set("t1", t);
+}
+
+static void TestLuaStatePush() {
+    LuaState l(luaL_newstate(), true);
+    l.Push(l.CreateInteger(5));
+    l.Push(l.CreateTable());
+    l.Push(l.CreateFunction([]() -> void {}));
 }
 
 static void TestNil() {
@@ -87,6 +97,7 @@ static void TestTable() {
     ltable.SetInteger("x", 5);
     ltable.SetString("o", "ouonline");
     ltable.Set("t", table);
+    ltable.Set("func", l.CreateFunction(ReturnSelf<const char*>));
     ltable.ForEach(iterfunc);
 
     l.DoString("arr = {'a', 'c', 'e'}");
@@ -120,6 +131,17 @@ static void TestTableGetSet() {
     assert(ltable.GetPointer("randomp") == p);
     ltable.SetPointer(531, p);
     assert(ltable.GetPointer(531) == p);
+
+    ltable.Set("func", l.CreateFunction(ReturnSelf<const char*>));
+    auto return_self_func = LuaFunction(ltable.Get("func"));
+    const string msg = "ouonline5";
+    string ret_msg;
+    auto ok = return_self_func.Execute([&ret_msg](int, const LuaObject& lobj) -> bool {
+        ret_msg = lobj.ToString();
+        return true;
+    }, nullptr, msg.c_str());
+    assert(ok);
+    assert(ret_msg == msg);
 }
 
 static void TestFuncWithReturnValue() {

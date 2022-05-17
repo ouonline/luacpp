@@ -7,11 +7,11 @@
 
 namespace luacpp {
 
-class LuaFunction final : public LuaObject {
+class LuaFunction final : public LuaRefObject {
 public:
-    LuaFunction(lua_State* l, int index) : LuaObject(l, index) {}
-    LuaFunction(LuaObject&& lobj) : LuaObject(std::move(lobj)) {}
-    LuaFunction(const LuaObject& lobj) : LuaObject(lobj) {}
+    LuaFunction(lua_State* l, int index) : LuaRefObject(l, index) {}
+    LuaFunction(LuaObject&& lobj) : LuaRefObject(std::move(lobj)) {}
+    LuaFunction(const LuaObject& lobj) : LuaRefObject(lobj) {}
     LuaFunction(LuaFunction&&) = default;
     LuaFunction(const LuaFunction&) = default;
 

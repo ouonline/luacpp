@@ -11,6 +11,7 @@ extern "C" {
 
 namespace luacpp {
 
+class LuaRefObject;
 class LuaObject;
 class LuaTable;
 class LuaFunction;
@@ -86,6 +87,7 @@ inline void PushValue(lua_State* l, const LuaStringRef& arg) {
     lua_pushlstring(l, (const char*)arg.base, arg.size);
 }
 
+void PushValue(lua_State* l, const LuaRefObject&);
 void PushValue(lua_State* l, const LuaObject&);
 void PushValue(lua_State* l, const LuaTable&);
 void PushValue(lua_State* l, const LuaFunction&);

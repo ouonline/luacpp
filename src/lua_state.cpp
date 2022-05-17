@@ -677,16 +677,9 @@ LuaState::~LuaState() {
     }
 }
 
-void LuaState::Set(const char* name, const LuaObject& lobj) {
+void LuaState::Set(const char* name, const LuaRefObject& lobj) {
     PushValue(m_l, lobj);
     lua_setglobal(m_l, name);
-}
-
-LuaObject LuaState::Get(const char* name) const {
-    lua_getglobal(m_l, name);
-    LuaObject ret(m_l, -1);
-    lua_pop(m_l, 1);
-    return ret;
 }
 
 const char* LuaState::GetString(const char* name) const {
