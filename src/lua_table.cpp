@@ -5,38 +5,6 @@ namespace luacpp {
 
 // ----- getters ----- //
 
-LuaObject LuaTable::Get(int index) const {
-    PushSelf();
-    lua_rawgeti(m_l, -1, index);
-    LuaObject ret(m_l, -1);
-    lua_pop(m_l, 2);
-    return ret;
-}
-
-LuaObject LuaTable::Get(const char* name) const {
-    PushSelf();
-    lua_getfield(m_l, -1, name);
-    LuaObject ret(m_l, -1);
-    lua_pop(m_l, 2);
-    return ret;
-}
-
-const char* LuaTable::GetString(int index) const {
-    PushSelf();
-    lua_rawgeti(m_l, -1, index);
-    const char* str = lua_tostring(m_l, -1);
-    lua_pop(m_l, 2);
-    return str;
-}
-
-const char* LuaTable::GetString(const char* name) const {
-    PushSelf();
-    lua_getfield(m_l, -1, name);
-    const char* str = lua_tostring(m_l, -1);
-    lua_pop(m_l, 2);
-    return str;
-}
-
 LuaStringRef LuaTable::GetStringRef(int index) const {
     PushSelf();
     lua_rawgeti(m_l, -1, index);
@@ -53,6 +21,22 @@ LuaStringRef LuaTable::GetStringRef(const char* name) const {
     const char* str = lua_tolstring(m_l, -1, &len);
     lua_pop(m_l, 2);
     return LuaStringRef(str, len);
+}
+
+const char* LuaTable::GetString(int index) const {
+    PushSelf();
+    lua_rawgeti(m_l, -1, index);
+    const char* str = lua_tostring(m_l, -1);
+    lua_pop(m_l, 2);
+    return str;
+}
+
+const char* LuaTable::GetString(const char* name) const {
+    PushSelf();
+    lua_getfield(m_l, -1, name);
+    const char* str = lua_tostring(m_l, -1);
+    lua_pop(m_l, 2);
+    return str;
 }
 
 lua_Number LuaTable::GetNumber(int index) const {
@@ -105,14 +89,14 @@ void* LuaTable::GetPointer(const char* name) const {
 
 // ----- setters ----- //
 
-void LuaTable::Set(int index, const LuaObject& lobj) {
+void LuaTable::Set(int index, const LuaRefObject& lobj) {
     PushSelf();
     PushValue(m_l, lobj);
     lua_rawseti(m_l, -2, index);
     lua_pop(m_l, 1);
 }
 
-void LuaTable::Set(const char* name, const LuaObject& lobj) {
+void LuaTable::Set(const char* name, const LuaRefObject& lobj) {
     PushSelf();
     PushValue(m_l, lobj);
     lua_setfield(m_l, -2, name);

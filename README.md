@@ -426,7 +426,7 @@ auto derived2 = l.CreateClass<DerivedDemo2>("DerivedDemo2")
 
 # Notes
 
-Builtin types(`LuaObject`, `LuaTable`, `LuaFunction` and `LuaStringRef`) should only be used in exported functions. Don't use them in normal c++ functions.
+Builtin types(`LuaRefObject`, `LuaObject`, `LuaTable`, `LuaFunction` and `LuaStringRef`) should only be used in exported functions. Don't use them in normal c++ functions.
 
 Currently `luacpp` supports exporting functions with the following argument types:
 
@@ -465,7 +465,7 @@ l.CreateFunction([](UserType&&) -> void {}); // error: reference of user-defined
 Types of returned values can be one of:
 
 * basic types(`bool`, `float`, `double` and integers)
-* builtin types(`LuaObject`, `LuaTable`, `LuaFunction` and `LuaStringRef`)
+* builtin types(`LuaRefObject`, `LuaObject`, `LuaTable`, `LuaFunction` and `LuaStringRef`)
 * pointers to user-defined types.
 
 For example:
@@ -509,12 +509,6 @@ This section describes all classes and functions provided by `lua-cpp`.
 ## LuaObject
 
 `LuaObject` represents an arbitrary item of Lua. You are expected to check the return value of `GetType()` before any of the following functions is called.
-
-```c++
-LuaObject(lua_State* l, int index);
-```
-
-Creates a `LuaObject` with the object located in `index` of the lua_State `l`.
 
 ```c++
 int GetType() const;
@@ -568,20 +562,45 @@ Converts this object to a pointer.
 
 ## LuaTable
 
-`LuaTable`(inherits from `LuaObject`) represents the table type of Lua.
-
-```c++
-LuaTable(lua_State* l, int index);
-```
-
-Creates a `LuaTable` with the table located in `index` of the lua_State `l`.
+`LuaTable`(inherits from `LuaRefObject`) represents the table type of Lua.
 
 ```c++
 LuaObject Get(int index) const;
 LuaObject Get(const char* name) const;
 ```
 
-Returns an object by its `index` or `name` in this table.
+Returns the object in the specified `index` or associated with `name`.
+
+```c++
+LuaTable GetTable(int index) const;
+LuaTable GetTable(const char* name) const;
+```
+
+Returns the object in the specified `index` or associated with `name` as a `LuaTable`.
+
+```c++
+LuaFunction GetFunction(int index) const;
+LuaFunction GetFunction(const char* name) const;
+```
+
+Returns the object in the specified `index` or associated with `name` as a `LuaFunction`.
+
+```c++
+template <typename T>
+LuaClass<T> GetClass(int index) const;
+
+template <typename T>
+LuaClass<T> GetClass(const char* name) const;
+```
+
+Returns the object in the specified `index` or associated with `name` as a `LuaClass<T>`.
+
+```c++
+LuaStringRef GetStringRef(int index) const;
+LuaStringRef GetStringRef(const char* name) const;
+```
+
+Returns the object in the specified `index` or associated with `name` as a `LuaStringRef`.
 
 ```c++
 const char* GetString(int index) const;
@@ -589,13 +608,6 @@ const char* GetString(const char* name) const;
 ```
 
 Returns the object in the specified `index` or associated with `name` as a C-style string.
-
-```c++
-LuaStringRef GetStringRef(int index) const;
-LuaStringRef GetStringRef(const char* name) const;
-```
-
-Returns the object in the specified `index` or associated with `name` as a `LuaStringRef` object.
 
 ```c++
 lua_Number GetNumber(int index) const;
@@ -619,8 +631,8 @@ void* GetPointer(const char* name) const;
 Returns the object in the specified `index` or associated with `name` as a pointer.
 
 ```c++
-void Set(int index, const LuaObject& lobj);
-void Set(const char* name, const LuaObject& lobj)
+void Set(int index, const LuaRefObject& lobj);
+void Set(const char* name, const LuaRefObject& lobj)
 ```
 
 Sets the value at `index` or `name` to the object `lobj`. Note that `lobj` and this table **MUST** be created by the same LuaState.
@@ -671,13 +683,7 @@ Itarates the table with the callback function `func`. Note that the parameter `i
 
 ## LuaFunction
 
-`LuaFunction`(inherits from `LuaObject`) represents the function type of Lua.
-
-```c++
-LuaFunction(lua_State* l, int index);
-```
-
-Creates a `LuaFunction` with the table located in `index` of the lua_State `l`.
+`LuaFunction`(inherits from `LuaRefObject`) represents the function type of Lua.
 
 ```c++
 template <typename... Argv>
@@ -691,20 +697,14 @@ Invokes the function with arguments `argv`. `callback` is a callback function us
 
 ## LuaClass
 
-`LuaClass`(inherits from `LuaObject`) is used to export C++ classes and member functions to Lua. It does not support exporting member variables.
-
-```c++
-LuaClass(lua_State* l, int index);
-```
-
-Creates a `LuaClass` with the table located in `index` of the lua_State `l`.
+`LuaClass`(inherits from `LuaRefObject`) is used to export C++ classes and member functions to Lua.
 
 ```c++
 template<typename... FuncArgType>
 LuaClass<T>& DefConstructor();
 ```
 
-Sets the class's constructor with argument type `FuncArgType` and return a reference of the class itself.
+Sets the class's constructor with argument type `FuncArgType` and returns a reference of the class itself.
 
 ```c++
 template <typename BaseType>
@@ -751,6 +751,13 @@ LuaClass& DefStatic(const char* name, GetterType&& getter, SetterType&& setter);
 
 Exports a static property `name` of this class in Lua. `nullptr` means that this property cannot be read or written. See `tests/test_class.hpp` for usage examples.
 
+```c++
+template<typename... Argv>
+LuaObject CreateInstance(Argv&&... argv) const;
+```
+
+Creates an instance of this class. The arguments `argv` are passed to the constructor of `T`. The newly created instance can be obtained by calling `LuaObject::ToPointer()`.
+
 [[back to top](#table-of-contents)]
 
 ## LuaState
@@ -762,7 +769,7 @@ LuaState(lua_State* l, bool is_owner);
 The constructor.
 
 ```c++
-void Set(const char* name, const LuaObject& lobj);
+void Set(const char* name, const LuaRefObject& lobj);
 ```
 
 Sets the variable `name` to be the object `lobj`. Note that `lobj` **MUST** be created by this LuaState.
@@ -771,10 +778,29 @@ Sets the variable `name` to be the object `lobj`. Note that `lobj` **MUST** be c
 LuaObject Get(const char* name) const;
 ```
 
-Gets an object by its name.
+Returns an object associated with `name`.
 
 ```c++
-void Push(const LuaObject& lobj);
+LuaTable GetTable(const char* name) const;
+```
+
+Returns a `LuaTable` associated with `name`.
+
+```c++
+LuaFunction GetFunction(const char* name) const;
+```
+
+Returns a `LuaFunction` associated with `name`.
+
+```c++
+template <typename T>
+LuaClass<T> GetClass(const char* name) const;
+```
+
+Returns a `LuaClass<T>` associated with `name`.
+
+```c++
+void Push(const LuaRefObject& lobj);
 ```
 
 Pushes an object `lobj`.
@@ -854,13 +880,6 @@ LuaClass<T> CreateClass(const char* name);
 ```
 
 Exports a new type `T` with the name `name`. If `name` is already exported, that class is returned.
-
-```c++
-template<typename... Argv>
-LuaObject CreateInstance(Argv&&... argv) const;
-```
-
-Creates an instance of this class. The arguments `argv` are passed to the constructor of `T`. The newly created instance can be obtained by calling `LuaObject::ToPointer()`.
 
 ```c++
 bool DoString(const char* chunk, std::string* errstr = nullptr,

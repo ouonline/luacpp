@@ -8,7 +8,8 @@ using namespace std;
 static const vector<pair<string, void (*)()>> g_test_suite = {
     // ----- test base ----- //
 
-    TEST_CASE(TestSetGet),
+    TEST_CASE(TestLuaStateSetGet),
+    TEST_CASE(TestLuaStatePush),
     TEST_CASE(TestNil),
     TEST_CASE(TestString),
     TEST_CASE(TestTable),
