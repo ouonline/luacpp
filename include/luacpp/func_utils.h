@@ -22,25 +22,7 @@ class LuaClass;
 /* -------------------------------------------------------------------------- */
 
 class ValueConverter final {
-public:
-    ValueConverter(lua_State* l, int index) : m_l(l), m_index(index) {}
-
-    operator const char*() const {
-        return lua_tostring(m_l, m_index);
-    }
-
-    operator LuaStringRef() const {
-        size_t len = 0;
-        auto addr = lua_tolstring(m_l, m_index, &len);
-        return LuaStringRef(addr, len);
-    }
-
-    operator LuaObject() const;
-    operator LuaTable() const;
-    operator LuaFunction() const;
-
-    // ----- //
-
+private:
     template <typename T>
     struct IntegerConverter final {
         T Convert(lua_State* l, int idx) const {
@@ -61,6 +43,23 @@ public:
             return (T)lua_touserdata(l, idx);
         }
     };
+
+public:
+    ValueConverter(lua_State* l, int index) : m_l(l), m_index(index) {}
+
+    operator const char*() const {
+        return lua_tostring(m_l, m_index);
+    }
+
+    operator LuaStringRef() const {
+        size_t len = 0;
+        auto addr = lua_tolstring(m_l, m_index, &len);
+        return LuaStringRef(addr, len);
+    }
+
+    operator LuaObject() const;
+    operator LuaTable() const;
+    operator LuaFunction() const;
 
     template <typename T>
     operator T() const {
@@ -242,7 +241,7 @@ struct DestructorObject {
 };
 
 /*
-  All `FuncWrapper` instances share the same metatable in order to save memory.
+  All `FuncWrapper` instances share the same metatable.
   According to the c++ standard, converting a void*, which is converted from a pointer to derived class, to its base
   class pointer, is not save. But `DestructorObject` is an empty class so that the address of `DestructorObject` and
   `FuncWrapper` are the same in our case.
