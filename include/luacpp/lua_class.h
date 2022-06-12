@@ -84,10 +84,12 @@ private:
     /** c-style functions, `std::function`s and lambda functions */
     template <typename FuncType>
     LuaClass& DoDefStatic(const char* name, FuncType&& f) {
-        using ConvertedFuncType = typename std::conditional<std::is_pointer<FuncType>::value, FuncType,
-                                                            typename FunctionTraits<FuncType>::std_function_type>::type;
+        using RealFuncType = typename std::remove_reference<FuncType>::type;
+        using ConvertedFuncType =
+            typename std::conditional<std::is_pointer<RealFuncType>::value, RealFuncType,
+                                      typename FunctionTraits<RealFuncType>::std_function_type>::type;
         ConvertedFuncType func(std::forward<FuncType>(f));
-        DoDefStaticFunction(m_l, name, std::forward<ConvertedFuncType>(func));
+        DoDefStaticFunction(m_l, name, std::move(func));
         return *this;
     }
 
@@ -121,7 +123,7 @@ private:
                                        std::is_pointer<FuncType>::value),
                                       FuncType, typename FunctionTraits<FuncType>::std_function_type>::type;
         ConvertedFuncType func(std::forward<FuncType>(f));
-        DoDefMemberFunction(m_l, argoffset, name, std::forward<ConvertedFuncType>(func));
+        DoDefMemberFunction(m_l, argoffset, name, std::move(func));
         return *this;
     }
 
