@@ -32,11 +32,12 @@ private:
     /** c-style functions, `std::function`s and lambda functions */
     template <typename FuncType>
     LuaFunction DoCreateFunction(FuncType&& f, const char* name = nullptr) {
-        using Traits = FunctionTraits<FuncType>;
-        using ConvertedFuncType = typename std::conditional<std::is_pointer<FuncType>::value, FuncType,
-                                                            typename Traits::std_function_type>::type;
+        using RealFuncType = typename std::remove_reference<FuncType>::type;
+        using ConvertedFuncType =
+            typename std::conditional<std::is_pointer<RealFuncType>::value, RealFuncType,
+                                      typename FunctionTraits<RealFuncType>::std_function_type>::type;
         ConvertedFuncType func(std::forward<FuncType>(f));
-        return DoCreateFunctionImpl(std::forward<ConvertedFuncType>(func), name);
+        return DoCreateFunctionImpl(std::move(func), name);
     }
 
     /** lua-style functions that can be used to implement variadic argument functions */

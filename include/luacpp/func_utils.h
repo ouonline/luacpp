@@ -153,9 +153,6 @@ template <typename FuncRetType, typename... FuncArgType>
 struct FunctionTraits<FuncRetType (*)(FuncArgType...)> final : public FunctionTraits<FuncRetType(FuncArgType...)> {};
 
 template <typename FuncRetType, typename... FuncArgType>
-struct FunctionTraits<FuncRetType (&)(FuncArgType...)> final : public FunctionTraits<FuncRetType(FuncArgType...)> {};
-
-template <typename FuncRetType, typename... FuncArgType>
 struct FunctionTraits<std::function<FuncRetType(FuncArgType...)>> final
     : public FunctionTraits<FuncRetType(FuncArgType...)> {};
 
