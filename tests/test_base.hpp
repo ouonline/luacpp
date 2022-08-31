@@ -101,9 +101,23 @@ static void TestTable() {
     ltable.ForEach(iterfunc);
 
     l.DoString("arr = {'a', 'c', 'e'}");
-    LuaTable(l.Get("arr")).ForEach([](uint32_t i, const LuaObject& value) -> bool {
+    LuaTable tbl(l.Get("arr"));
+    tbl.ForEach([](uint32_t i, const LuaObject& value) -> bool {
         auto buf_ref = value.ToStringRef();
         const string s(buf_ref.base, buf_ref.size);
+        cout << "[" << i << "] -> " << s << endl;
+        if (i == 0) {
+            assert(s == "a");
+        } else if (i == 1) {
+            assert(s == "c");
+        } else if (i == 2) {
+            assert(s == "e");
+        }
+        return true;
+    });
+    cout << "*****" << endl;
+    tbl.ForEach([](uint32_t i, const LuaStringRef& value) -> bool {
+        const string s(value.base, value.size);
         cout << "[" << i << "] -> " << s << endl;
         if (i == 0) {
             assert(s == "a");

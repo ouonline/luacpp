@@ -225,8 +225,7 @@ public:
 
     template <typename FuncType>
     LuaClass& DefMember(const char* name, FuncType&& f) {
-        DoDefMember(name, std::forward<FuncType>(f));
-        return *this;
+        return DoDefMember(name, std::forward<FuncType>(f));
     }
 
     /* ------------------------------- static ----------------------------------- */
@@ -252,8 +251,7 @@ public:
 
     template <typename FuncType>
     LuaClass& DefStatic(const char* name, FuncType&& f) {
-        DoDefStatic(name, std::forward<FuncType>(f));
-        return *this;
+        return DoDefStatic(name, std::forward<FuncType>(f));
     }
 
     /* -------------------------------------------------------------------------- */
