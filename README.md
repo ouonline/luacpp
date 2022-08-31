@@ -30,23 +30,21 @@
 Prerequisites
 
 * Lua >= 5.2.0
-* GCC >= 4.9 with c++11 support
+* GCC >= 4.9 or Clang >= 6.0 or Visual Studio >= 2015, with C++11 support
 * CMake >= 3.10 (optional)
 
 Building with pre-installed Lua package:
 
 ```bash
-mkdir build
+mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j
+cmake --build . --target install --config Release -j `nproc`
 ```
 
 or building with Lua source by specifying `LUA_SRC_DIR`:
 
 ```bash
-mkdir build
 cmake -DCMAKE_BUILD_TYPE=Release -DLUA_SRC_DIR=/path/to/lua/src ..
-make -j
 ```
 
 If you have a Lua binary package, specify the header directories through `LUA_INCLUDE_DIR` manually:
@@ -426,7 +424,7 @@ auto derived2 = l.CreateClass<DerivedDemo2>("DerivedDemo2")
 
 # Notes
 
-Builtin types(`LuaRefObject`, `LuaObject`, `LuaTable`, `LuaFunction` and `LuaStringRef`) should only be used in exported functions. Don't use them in normal c++ functions.
+Builtin types(`LuaRefObject`, `LuaObject`, `LuaTable`, `LuaFunction` and `LuaStringRef`) should only be used in exported functions. Don't use them in ordinary c++ functions.
 
 Currently `luacpp` supports exporting functions with the following argument types:
 
@@ -437,7 +435,7 @@ Currently `luacpp` supports exporting functions with the following argument type
 For example:
 
 ```c++
-// builtin types
+// builtin types(LuaObject for example)
 l.CreateFunction([](const LuaObject&) -> void {}); // ok
 l.CreateFunction([](LuaObject*) -> void {}); // ok but not recommended: will get the pointer itself
 l.CreateFunction([](const LuaObject*) -> void {}); // ok but not recommended: will get the pointer itself
@@ -445,7 +443,7 @@ l.CreateFunction([](LuaObject) -> void {}); // ok but not recommended: may cause
 l.CreateFunction([](LuaObject&) -> void {}); // error: non-const reference of builtin types
 l.CreateFunction([](LuaObject&&) -> void {}); // error: reference of builtin types
 
-// basic types
+// basic types(int for example)
 l.CreateFunction([](int) -> void {}); // ok
 l.CreateFunction([](int*) -> void {}); // ok
 l.CreateFunction([](const int*) -> void {}); // ok
@@ -471,13 +469,13 @@ Types of returned values can be one of:
 For example:
 
 ```c++
-// builtin types
+// builtin types(LuaObject for example)
 l.CreateFunction([]() -> LuaObject {...}); // ok, will be converted to lua types
 l.CreateFunction([]() -> LuaObject* {...}); // error: pointers to
 l.CreateFunction([]() -> LuaObject& {...}); // error: reference
 l.CreateFunction([]() -> const LuaObject& {...}); // error: reference
 
-// basic types
+// basic types(int for example)
 l.CreateFunction([]() -> int {...}); // ok
 l.CreateFunction([]() -> int* {...}); // ok, will be converted to a light user data in lua(not the value pointed by it)
 l.CreateFunction([]() -> int& {...}); // error: reference
@@ -673,11 +671,21 @@ void SetPointer(const char* name, void* p);
 Sets the value at `index` or `name` to the pointer `p`.
 
 ```c++
-bool ForEach(const std::function<bool (uint32_t i, const LuaObject& value)>& func) const;
-bool ForEach(const std::function<bool (const LuaObject& key, const LuaObject& value)>& func) const;
+template <typename FuncType>
+bool ForEach(FuncType&& func) const;
 ```
 
-Itarates the table with the callback function `func`. Note that the parameter `i` starts from 0.
+Itarates the table with the callback function `func`, which is one of the following types:
+
+```c++
+template <typename T2>
+std::function<bool (uint32_t i, const T2& value)>;
+
+template <typename T1, typename T2>
+std::function<bool (const T1& key, const T2& value)>;
+```
+
+Note that the parameter `i` starts from 0. Both `T1` and `T2` are builtin types(`LuaRefObject`, `LuaObject`, `LuaFunction`, `LuaTable` and `LuaStringRef`).
 
 [[back to top](#table-of-contents)]
 

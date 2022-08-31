@@ -285,6 +285,13 @@ void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset, FuncTy
     lua_pushcclosure(l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
 }
 
+template <typename T>
+void BuiltInTypeAssert() {
+    static_assert(std::is_same<T, LuaRefObject>::value || std::is_same<T, LuaObject>::value ||
+                  std::is_same<T, LuaTable>::value || std::is_same<T, LuaFunction>::value ||
+                  std::is_same<T, LuaStringRef>::value, "is not a luacpp builtin type");
+}
+
 } // namespace luacpp
 
 #endif

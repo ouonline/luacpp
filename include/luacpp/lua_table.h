@@ -87,8 +87,12 @@ public:
 
     // ----- //
 
-    bool ForEach(const std::function<bool(uint32_t i /* starting from 0 */, const LuaObject& value)>& func) const;
-    bool ForEach(const std::function<bool(const LuaObject& key, const LuaObject& value)>& func) const;
+    template <typename FuncType>
+    bool ForEach(FuncType&& f) const {
+        using RealFuncType = typename std::remove_reference<FuncType>::type;
+        typename FunctionTraits<RealFuncType>::std_function_type func(std::forward<FuncType>(f));
+        return DoForEach(func);
+    }
 
 private:
     template <typename T>
@@ -107,6 +111,46 @@ private:
         T ret(m_l, -1);
         lua_pop(m_l, 2);
         return ret;
+    }
+
+    template <typename T>
+    bool DoForEach(const std::function<bool(uint32_t i /* starting from 0 */, const T& value)>& func) const {
+        BuiltInTypeAssert<T>();
+
+        PushSelf();
+        auto len = lua_rawlen(m_l, -1);
+
+        for (uint32_t i = 0; i < len; ++i) {
+            lua_rawgeti(m_l, -1, i + 1);
+            if (!func(i, T(m_l, -1))) {
+                lua_pop(m_l, 2);
+                return false;
+            }
+            lua_pop(m_l, 1);
+        }
+
+        lua_pop(m_l, 1);
+        return true;
+    }
+
+    template <typename T1, typename T2>
+    bool DoForEach(const std::function<bool(const T1& key, const T2& value)>& func) const {
+        BuiltInTypeAssert<T1>();
+        BuiltInTypeAssert<T2>();
+
+        PushSelf();
+        lua_pushnil(m_l);
+        while (lua_next(m_l, -2) != 0) {
+            if (!func(T1(m_l, -2), T2(m_l, -1))) {
+                lua_pop(m_l, 3);
+                return false;
+            }
+
+            lua_pop(m_l, 1);
+        }
+        lua_pop(m_l, 1);
+
+        return true;
     }
 };
 
