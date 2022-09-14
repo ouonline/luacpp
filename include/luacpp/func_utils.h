@@ -7,6 +7,7 @@ extern "C" {
 
 #include "lua_52_53.h"
 #include "lua_string_ref.h"
+#include <stdint.h>
 #include <functional>
 
 namespace luacpp {
@@ -147,6 +148,7 @@ struct FunctionTraits<FuncRetType(FuncArgType...)> {
     using return_type = FuncRetType;
     using argument_type_holder = TypeHolder<FuncArgType...>;
     using std_function_type = std::function<FuncRetType(FuncArgType...)>;
+    static constexpr uint32_t argc = sizeof...(FuncArgType);
 };
 
 template <typename FuncRetType, typename... FuncArgType>
@@ -258,17 +260,16 @@ int luacpp_generic_destructor(lua_State* l) {
 }
 
 /** FuncType may be a c-style function or a std::function or a callable object */
-template <typename FuncType, typename... FuncArgType>
+template <typename FuncType>
 int luacpp_generic_function(lua_State* l) {
     auto argoffset = lua_tointeger(l, lua_upvalueindex(1));
     auto wrapper = (FuncWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
-    return FunctionCaller<sizeof...(FuncArgType)>::Execute(wrapper->f, l, argoffset);
+    return FunctionCaller<FunctionTraits<FuncType>::argc>::Execute(wrapper->f, l, argoffset);
 }
 
 // pushes an instance of `luacpp_generic_function`
-template <typename FuncType, typename... FuncArgType>
-void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset, FuncType&& f,
-                           const TypeHolder<FuncArgType...>&) {
+template <typename FuncType>
+void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset, FuncType&& f) {
     using WrapperType = FuncWrapper<FuncType>;
 
     // upvalue 1: argoffset
@@ -282,7 +283,7 @@ void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset, FuncTy
     lua_rawgeti(l, LUA_REGISTRYINDEX, gc_table_ref);
     lua_setmetatable(l, -2);
 
-    lua_pushcclosure(l, luacpp_generic_function<FuncType, FuncArgType...>, 2);
+    lua_pushcclosure(l, luacpp_generic_function<FuncType>, 2);
 }
 
 template <typename T>
