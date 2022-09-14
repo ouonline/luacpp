@@ -54,10 +54,10 @@ private:
         // move the new instance to the first position as the first argument of InitInstance()
         lua_replace(l, 1);
 
-        FunctionCaller<sizeof...(FuncArgType) + 1>::Execute(InitInstance<FuncArgType...>, l, 0);
+        constexpr uint32_t argc = sizeof...(FuncArgType);
+        FunctionCaller<argc + 1>::Execute(InitInstance<FuncArgType...>, l, 0);
 
         // pops arguments so that the new instance is on the top of lua_State
-        constexpr int argc = sizeof...(FuncArgType);
         lua_pop(l, argc);
 
         lua_pushvalue(l, lua_upvalueindex(1)); // this class
@@ -75,8 +75,7 @@ private:
     void DoDefStaticFunction(lua_State* l, const char* name, FuncType&& f) {
         PushSelf();
         lua_getmetatable(l, -1);
-        CreateGenericFunction<FuncType>(l, m_data->gc_table_ref, 1, std::forward<FuncType>(f),
-                                        typename FunctionTraits<FuncType>::argument_type_holder());
+        CreateGenericFunction(l, m_data->gc_table_ref, 1, std::forward<FuncType>(f));
         lua_setfield(l, -2, name);
         lua_pop(l, 2);
     }
@@ -108,8 +107,7 @@ private:
     template <typename FuncType>
     void DoDefMemberFunction(lua_State* l, int argoffset, const char* name, FuncType&& f) {
         PushInstanceMetatable();
-        CreateGenericFunction<FuncType>(l, m_data->gc_table_ref, argoffset, std::forward<FuncType>(f),
-                                        typename FunctionTraits<FuncType>::argument_type_holder());
+        CreateGenericFunction(l, m_data->gc_table_ref, argoffset, std::forward<FuncType>(f));
         lua_setfield(l, -2, name);
         lua_pop(l, 1);
     }
@@ -142,13 +140,11 @@ private:
     void CreateMemberProperty(lua_State* l, GetterType&& getter, SetterType&& setter) {
         lua_createtable(l, 2, 0);
         if (getter) {
-            CreateGenericFunction(l, m_data->gc_table_ref, 0, std::forward<GetterType>(getter),
-                                  typename FunctionTraits<GetterType>::argument_type_holder());
+            CreateGenericFunction(l, m_data->gc_table_ref, 0, std::forward<GetterType>(getter));
             lua_rawseti(l, -2, MEMBER_GETTER_IDX);
         }
         if (setter) {
-            CreateGenericFunction(l, m_data->gc_table_ref, 0, std::forward<SetterType>(setter),
-                                  typename FunctionTraits<SetterType>::argument_type_holder());
+            CreateGenericFunction(l, m_data->gc_table_ref, 0, std::forward<SetterType>(setter));
             lua_rawseti(l, -2, MEMBER_SETTER_IDX);
         }
     }
@@ -159,13 +155,11 @@ private:
     void CreateStaticProperty(lua_State* l, GetterType&& getter, SetterType&& setter) {
         lua_createtable(l, 2, 0);
         if (getter) {
-            CreateGenericFunction(l, m_data->gc_table_ref, 1, std::forward<GetterType>(getter),
-                                  typename FunctionTraits<GetterType>::argument_type_holder());
+            CreateGenericFunction(l, m_data->gc_table_ref, 1, std::forward<GetterType>(getter));
             lua_rawseti(l, -2, MEMBER_GETTER_IDX);
         }
         if (setter) {
-            CreateGenericFunction(l, m_data->gc_table_ref, 1, std::forward<SetterType>(setter),
-                                  typename FunctionTraits<SetterType>::argument_type_holder());
+            CreateGenericFunction(l, m_data->gc_table_ref, 1, std::forward<SetterType>(setter));
             lua_rawseti(l, -2, MEMBER_SETTER_IDX);
         }
     }

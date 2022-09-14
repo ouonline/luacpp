@@ -17,8 +17,7 @@ class LuaState final {
 private:
     template <typename FuncType>
     LuaFunction DoCreateFunctionImpl(FuncType&& f, const char* name) {
-        CreateGenericFunction(m_l, m_gc_table_ref, 0, std::forward<FuncType>(f),
-                              typename FunctionTraits<FuncType>::argument_type_holder());
+        CreateGenericFunction(m_l, m_gc_table_ref, 0, std::forward<FuncType>(f));
 
         LuaFunction ret(m_l, -1);
         if (name) {
