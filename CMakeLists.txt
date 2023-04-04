@@ -10,6 +10,12 @@ target_include_directories(luacpp_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/incl
 target_compile_features(luacpp_static PUBLIC cxx_std_11)
 set_target_properties(luacpp_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+if(MSVC)
+    target_compile_options(luacpp_static PRIVATE /W4)
+else()
+    target_compile_options(luacpp_static PRIVATE -Wall -Wextra -Werror)
+endif()
+
 if(LUA_SRC_DIR AND LUA_INCLUDE_DIR)
     message(FATAL_ERROR "only one of `LUA_SRC_DIR` and `LUA_INCLUDE_DIR` can be set at the same time.")
 endif()
