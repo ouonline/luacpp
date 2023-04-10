@@ -671,6 +671,12 @@ void SetPointer(const char* name, void* p);
 Sets the value at `index` or `name` to the pointer `p`.
 
 ```c++
+uint64_t GetSize() const;
+```
+
+Returns the size of this table.
+
+```c++
 template <typename FuncType>
 bool ForEach(FuncType&& func) const;
 ```

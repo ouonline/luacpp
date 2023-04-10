@@ -102,6 +102,7 @@ static void TestTable() {
 
     l.DoString("arr = {'a', 'c', 'e'}");
     LuaTable tbl(l.Get("arr"));
+    assert(tbl.GetSize() == 3);
     tbl.ForEach([](uint32_t i, const LuaObject& value) -> bool {
         auto buf_ref = value.ToStringRef();
         const string s(buf_ref.base, buf_ref.size);

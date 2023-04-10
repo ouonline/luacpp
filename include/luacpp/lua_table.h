@@ -87,6 +87,13 @@ public:
 
     // ----- //
 
+    uint64_t GetSize() const {
+        PushSelf();
+        auto len = lua_rawlen(m_l, -1);
+        lua_pop(m_l, 1);
+        return len;
+    }
+
     template <typename FuncType>
     bool ForEach(FuncType&& f) const {
         using RealFuncType = typename std::remove_reference<FuncType>::type;
