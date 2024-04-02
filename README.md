@@ -1,6 +1,7 @@
 # Table of Contents
 
 * [Overview](#overview)
+* [Building from Source](#building-from-source)
 * [Quick Start](#quick-start)
     - [Setting and Getting Variables](#setting-and-getting-variables)
     - [Processing Tables](#processing-tables)
@@ -19,7 +20,7 @@
 
 # Overview
 
-`lua-cpp` is a C++ library aiming at simplifying the use of Lua APIs. It is compatible with Lua 5.2.0(or above) and needs C++11 support.
+`luacpp` is a C++ library aiming at simplifying the use of Lua APIs. It is compatible with Lua 5.2.0(or above) and needs C++11 support.
 
 [[back to top](#table-of-contents)]
 
@@ -498,11 +499,12 @@ l.CreateFunction([]() -> LuaObject {
 ```
 
 [[back to top](#table-of-contents)]
+
 -----
 
 # API Reference
 
-This section describes all classes and functions provided by `lua-cpp`.
+This section describes all classes and functions provided by `luacpp`.
 
 ## LuaObject
 
