@@ -48,4 +48,4 @@ void* LuaObject::ToPointer() const {
     return ret;
 }
 
-} // namespace luacpp
+}

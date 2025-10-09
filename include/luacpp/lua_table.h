@@ -97,7 +97,8 @@ public:
     template <typename FuncType>
     bool ForEach(FuncType&& f) const {
         using RealFuncType = typename std::remove_reference<FuncType>::type;
-        typename FunctionTraits<RealFuncType>::std_function_type func(std::forward<FuncType>(f));
+        typename FunctionTraits<RealFuncType>::std_function_type func(
+            std::forward<FuncType>(f));
         return DoForEach(func);
     }
 
@@ -121,7 +122,8 @@ private:
     }
 
     template <typename T>
-    bool DoForEach(const std::function<bool(uint32_t i /* starting from 0 */, const T& value)>& func) const {
+    bool DoForEach(const std::function<bool(uint32_t i /* starting from 0 */,
+                                            const T& value)>& func) const {
         BuiltInTypeAssert<T>();
 
         PushSelf();
@@ -141,7 +143,8 @@ private:
     }
 
     template <typename T1, typename T2>
-    bool DoForEach(const std::function<bool(const T1& key, const T2& value)>& func) const {
+    bool DoForEach(
+        const std::function<bool(const T1& key, const T2& value)>& func) const {
         BuiltInTypeAssert<T1>();
         BuiltInTypeAssert<T2>();
 
@@ -161,6 +164,6 @@ private:
     }
 };
 
-} // namespace luacpp
+}
 
 #endif

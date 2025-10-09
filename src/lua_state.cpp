@@ -54,13 +54,13 @@ int LuaState::luacpp_index_for_class(lua_State* l) {
 
     lua_getfield(l, -1, key);
 
-    // ----- case 1: is a member function or static member function ----- //
+    /* case 1: is a member function or static member function */
 
     if (lua_isfunction(l, -1)) {
         return 1;
     }
 
-    // ----- case 2: is a property ----- //
+    /* case 2: is a property */
 
     if (lua_istable(l, -1)) {
         lua_rawgeti(l, -1, MEMBER_GETTER_IDX);
@@ -82,7 +82,7 @@ int LuaState::luacpp_index_for_class(lua_State* l) {
         return 1;
     }
 
-    // ----- case 3: not found in current class ----- //
+    /* case 3: not found in current class */
 
     // get parent table
     lua_getiuservalue(l, 1, CLASS_PARENT_TABLE_IDX);
@@ -159,7 +159,7 @@ int LuaState::luacpp_newindex_for_class(lua_State* l) {
       +-----------+
     */
 
-    // ----- case 1: is a property ----- //
+    /* case 1: is a property */
 
     if (lua_istable(l, -1)) {
         lua_rawgeti(l, -1, MEMBER_SETTER_IDX);
@@ -177,7 +177,7 @@ int LuaState::luacpp_newindex_for_class(lua_State* l) {
         return 0;
     }
 
-    // ----- case 2: is not a field exported by c++ ----- //
+    /* case 2: is not a field exported by c++ */
 
     // get parent table
     lua_getiuservalue(l, 1, CLASS_PARENT_TABLE_IDX);
@@ -219,7 +219,7 @@ int LuaState::luacpp_newindex_for_class(lua_State* l) {
     return 0;
 }
 
-/**
+/*
   parameters:
 
   +---------------+
@@ -233,7 +233,8 @@ int LuaState::luacpp_newindex_for_class(lua_State* l) {
 int LuaState::luacpp_index_for_class_instance(lua_State* l) {
     auto key = lua_tostring(l, 2);
 
-    // cannot use `lua_getiuservalue` because this userdata may be used as a parent class instance
+    // cannot use `lua_getiuservalue` because this userdata may be used as a
+    // parent class instance
     if (lua_gettop(l) == 2) { // called by lua from `__index`
         lua_getiuservalue(l, 1, 1); // the class
     }
@@ -257,13 +258,13 @@ int LuaState::luacpp_index_for_class_instance(lua_State* l) {
 
     lua_getfield(l, -1, key);
 
-    // ----- case 1: is a member function ----- //
+    /* case 1: is a member function */
 
     if (lua_isfunction(l, -1)) {
         return 1;
     }
 
-    // ----- case 2: is a property ----- //
+    /* case 2: is a property */
 
     if (lua_istable(l, -1)) {
         lua_rawgeti(l, -1, MEMBER_GETTER_IDX);
@@ -278,14 +279,14 @@ int LuaState::luacpp_index_for_class_instance(lua_State* l) {
         return 1;
     }
 
-    // ----- case 3: is not a field exported by c++ ----- //
+    /* case 3: is not a field exported by c++ */
 
     if (!lua_isnil(l, -1)) {
         lua_pushnil(l);
         return 1;
     }
 
-    // ----- case 4: not found in current instance ----- //
+    /* case 4: not found in current instance */
 
     lua_pop(l, 2);
 
@@ -297,7 +298,7 @@ int LuaState::luacpp_index_for_class_instance(lua_State* l) {
       +-------+
     */
 
-    // ----- case 4.1: find from the class because this key may be a static member ----- //
+    /* case 4.1: find from the class because this key may be a static member */
 
     lua_getmetatable(l, -1);
 
@@ -316,7 +317,7 @@ int LuaState::luacpp_index_for_class_instance(lua_State* l) {
         return 1;
     }
 
-    // ----- case 4.2: find from parents ----- //
+    /* case 4.2: find from parents */
 
     lua_pop(l, 2);
 
@@ -421,7 +422,7 @@ int LuaState::luacpp_index_for_class_instance(lua_State* l) {
     return 1;
 }
 
-/**
+/*
   parameters:
 
   +---------------+
@@ -437,7 +438,8 @@ int LuaState::luacpp_index_for_class_instance(lua_State* l) {
 int LuaState::luacpp_newindex_for_class_instance(lua_State* l) {
     auto key = lua_tostring(l, 2);
 
-    // cannot use `lua_getiuservalue` because this userdata may be used as a parent class instance
+    // cannot use `lua_getiuservalue` because this userdata may be used as a
+    // parent class instance
     if (lua_gettop(l) == 3) {
         lua_getiuservalue(l, 1, 1);
     }
@@ -481,7 +483,7 @@ int LuaState::luacpp_newindex_for_class_instance(lua_State* l) {
       +--------------------------+
     */
 
-    // ----- case 1: is a property ----- //
+    /* case 1: is a property */
 
     if (lua_istable(l, -1)) {
         lua_rawgeti(l, -1, MEMBER_SETTER_IDX);
@@ -505,7 +507,7 @@ int LuaState::luacpp_newindex_for_class_instance(lua_State* l) {
         return 0;
     }
 
-    // ----- case 2: is a static member ----- //
+    /* case 2: is a static member */
 
     lua_pop(l, 2);
 
@@ -554,7 +556,7 @@ int LuaState::luacpp_newindex_for_class_instance(lua_State* l) {
 
     lua_pop(l, 2);
 
-    // ----- case 3: not found in current class ----- //
+    /* case 3: not found in current class */
 
     // get parent table
     lua_getiuservalue(l, -1, CLASS_PARENT_TABLE_IDX);
@@ -641,7 +643,8 @@ void LuaState::CreateClassMetatable(lua_State* l) {
     lua_setfield(l, -2, "__index");
 }
 
-void LuaState::CreateClassInstanceMetatable(lua_State* l, int (*gc)(lua_State*)) {
+void LuaState::CreateClassInstanceMetatable(lua_State* l,
+                                            int (*gc)(lua_State*)) {
     // creates metatable for class instances
     lua_createtable(l, 0, 3);
 
@@ -649,7 +652,8 @@ void LuaState::CreateClassInstanceMetatable(lua_State* l, int (*gc)(lua_State*))
     lua_pushcfunction(l, luacpp_newindex_for_class_instance);
     lua_setfield(l, -2, "__newindex");
 
-    // sets the __index field to be itself so that userdata can find member functions
+    // sets the __index field to be itself so that userdata can find member
+    // functions
     lua_pushcfunction(l, luacpp_index_for_class_instance);
     lua_setfield(l, -2, "__index");
 
@@ -729,7 +733,8 @@ LuaObject LuaState::CreateString(const char* str, const char* name) {
     return ret;
 }
 
-LuaObject LuaState::CreateString(const char* str, uint64_t len, const char* name) {
+LuaObject LuaState::CreateString(const char* str, uint64_t len,
+                                 const char* name) {
     lua_pushlstring(m_l, str, len);
     LuaObject ret(m_l, -1);
     if (name) {
@@ -786,7 +791,9 @@ LuaTable LuaState::CreateTable(const char* name) {
     return ret;
 }
 
-bool LuaState::DoString(const char* chunk, string* errstr, const function<bool(uint32_t, const LuaObject&)>& callback) {
+bool LuaState::DoString(
+    const char* chunk, string* errstr,
+    const function<bool(uint32_t, const LuaObject&)>& callback) {
     bool ok = (luaL_loadstring(m_l, chunk) == LUA_OK);
     if (!ok) {
         if (errstr) {
@@ -802,7 +809,9 @@ bool LuaState::DoString(const char* chunk, string* errstr, const function<bool(u
     return ok;
 }
 
-bool LuaState::DoFile(const char* script, string* errstr, const function<bool(uint32_t, const LuaObject&)>& callback) {
+bool LuaState::DoFile(
+    const char* script, string* errstr,
+    const function<bool(uint32_t, const LuaObject&)>& callback) {
     bool ok = (luaL_loadfile(m_l, script) == LUA_OK);
     if (!ok) {
         if (errstr) {
@@ -818,4 +827,4 @@ bool LuaState::DoFile(const char* script, string* errstr, const function<bool(ui
     return ok;
 }
 
-} // namespace luacpp
+}

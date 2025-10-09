@@ -42,7 +42,7 @@ inline int lua_setiuservalue(lua_State* l, int idx, int n) {
     return 1;
 }
 
-} // namespace luacpp
+}
 
 #endif
 

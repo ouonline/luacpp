@@ -13,7 +13,8 @@ public:
         if (msg) {
             m_msg = msg;
         }
-        cout << "ClassDemo::ClassDemo() is called with string -> '" << msg << "' and int -> " << x << "." << endl;
+        cout << "ClassDemo::ClassDemo() is called with string -> '" << msg
+             << "' and int -> " << x << "." << endl;
     }
     ClassDemo(const ClassDemo& rhs) {
         if (this != &rhs) {

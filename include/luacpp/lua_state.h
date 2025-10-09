@@ -17,7 +17,8 @@ class LuaState final {
 private:
     template <typename FuncType>
     LuaFunction DoCreateFunctionImpl(FuncType&& f, const char* name) {
-        CreateGenericFunction(m_l, m_gc_table_ref, 0, std::forward<FuncType>(f));
+        CreateGenericFunction(m_l, m_gc_table_ref, 0,
+                              std::forward<FuncType>(f));
 
         LuaFunction ret(m_l, -1);
         if (name) {
@@ -28,19 +29,21 @@ private:
         return ret;
     }
 
-    /** c-style functions, `std::function`s and lambda functions */
+    // c-style functions, `std::function`s and lambda functions
     template <typename FuncType>
     LuaFunction DoCreateFunction(FuncType&& f, const char* name = nullptr) {
         using RealFuncType = typename std::remove_reference<FuncType>::type;
-        using ConvertedFuncType =
-            typename std::conditional<std::is_pointer<RealFuncType>::value, RealFuncType,
-                                      typename FunctionTraits<RealFuncType>::std_function_type>::type;
+        using ConvertedFuncType = typename std::conditional<
+            std::is_pointer<RealFuncType>::value, RealFuncType,
+            typename FunctionTraits<RealFuncType>::std_function_type>::type;
         ConvertedFuncType func(std::forward<FuncType>(f));
         return DoCreateFunctionImpl(std::move(func), name);
     }
 
-    /** lua-style functions that can be used to implement variadic argument functions */
-    LuaFunction DoCreateFunction(int (*f)(lua_State*), const char* name = nullptr) {
+    // lua-style functions that can be used to implement variadic argument
+    // functions
+    LuaFunction DoCreateFunction(int (*f)(lua_State*),
+                                 const char* name = nullptr) {
         lua_pushcfunction(m_l, f);
         LuaFunction ret(m_l, -1);
         if (name) {
@@ -116,7 +119,8 @@ public:
     }
 
     LuaObject CreateString(const char* str, const char* name = nullptr);
-    LuaObject CreateString(const char* str, uint64_t len, const char* name = nullptr);
+    LuaObject CreateString(const char* str, uint64_t len,
+                           const char* name = nullptr);
     LuaObject CreateNumber(lua_Number value, const char* name = nullptr);
     LuaObject CreateInteger(lua_Integer value, const char* name = nullptr);
     LuaObject CreatePointer(void* ptr, const char* name = nullptr);
@@ -134,7 +138,8 @@ public:
 
     template <typename T>
     LuaClass<T> CreateClass(const char* name = nullptr) {
-        auto ud = (LuaClassData*)lua_newuserdatauv(m_l, sizeof(LuaClassData), 2);
+        auto ud =
+            (LuaClassData*)lua_newuserdatauv(m_l, sizeof(LuaClassData), 2);
         new (ud) LuaClassData();
         ud->gc_table_ref = m_gc_table_ref;
 
@@ -159,11 +164,13 @@ public:
         return ret;
     }
 
-    bool DoString(const char* chunk, std::string* errstr = nullptr,
-                  const std::function<bool(uint32_t, const LuaObject&)>& callback = nullptr);
+    bool DoString(
+        const char* chunk, std::string* errstr = nullptr,
+        const std::function<bool(uint32_t, const LuaObject&)>& callback = {});
 
-    bool DoFile(const char* script, std::string* errstr = nullptr,
-                const std::function<bool(uint32_t, const LuaObject&)>& callback = nullptr);
+    bool DoFile(
+        const char* script, std::string* errstr = nullptr,
+        const std::function<bool(uint32_t, const LuaObject&)>& callback = {});
 
 private:
     template <typename T>
@@ -178,10 +185,10 @@ private:
     lua_State* m_l;
     void (*m_deleter)(lua_State*);
 
-    /** metatable(only contains __gc) for DestructorObject */
+    // metatable(only contains __gc) for DestructorObject
     int m_gc_table_ref;
 };
 
-} // namespace luacpp
+}
 
 #endif

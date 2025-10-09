@@ -42,7 +42,8 @@ static const vector<pair<string, void (*)()>> g_test_suite = {
 
 int main(void) {
     for (auto x : g_test_suite) {
-        cout << "-------------------- " << x.first << " --------------------" << endl;
+        cout << "-------------------- " << x.first << " --------------------"
+             << endl;
         x.second();
     }
     cout << "--------------------------------------------" << endl;

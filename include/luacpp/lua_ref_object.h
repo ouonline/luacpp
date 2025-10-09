@@ -13,7 +13,8 @@ namespace luacpp {
 
 class LuaRefObject {
 public:
-    LuaRefObject(lua_State* l) : m_l(l), m_type(LUA_TNIL), m_ref_index(LUA_REFNIL) {}
+    LuaRefObject(lua_State* l)
+        : m_l(l), m_type(LUA_TNIL), m_ref_index(LUA_REFNIL) {}
 
     LuaRefObject(lua_State* l, int index) {
         m_l = l;
@@ -102,6 +103,6 @@ private:
     int m_ref_index;
 };
 
-} // namespace luacpp
+}
 
 #endif

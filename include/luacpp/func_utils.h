@@ -66,9 +66,11 @@ public:
     operator T() const {
         typename std::conditional<
             std::is_integral<T>::value, IntegerConverter<T>,
-            typename std::conditional<std::is_floating_point<T>::value, FloatConverter<T>,
-                                      typename std::conditional<std::is_pointer<T>::value, PointerConverter<T>,
-                                                                void>::type>::type>::type converter;
+            typename std::conditional<
+                std::is_floating_point<T>::value, FloatConverter<T>,
+                typename std::conditional<std::is_pointer<T>::value,
+                                          PointerConverter<T>,
+                                          void>::type>::type>::type converter;
         return converter.Convert(m_l, m_index);
     }
 
@@ -122,9 +124,11 @@ template <typename T>
 void PushValue(lua_State* l, T arg) {
     typename std::conditional<
         std::is_integral<T>::value, IntegerPusher<T>,
-        typename std::conditional<std::is_floating_point<T>::value, FloatPusher<T>,
-                                  typename std::conditional<std::is_pointer<T>::value, PointerPusher<T>,
-                                                            void>::type>::type>::type pusher(l, arg);
+        typename std::conditional<
+            std::is_floating_point<T>::value, FloatPusher<T>,
+            typename std::conditional<std::is_pointer<T>::value,
+                                      PointerPusher<T>, void>::type>::type>::
+        type pusher(l, arg);
 }
 
 inline void PushValues(lua_State*) {}
@@ -152,7 +156,8 @@ struct FunctionTraits<FuncRetType(FuncArgType...)> {
 };
 
 template <typename FuncRetType, typename... FuncArgType>
-struct FunctionTraits<FuncRetType (*)(FuncArgType...)> final : public FunctionTraits<FuncRetType(FuncArgType...)> {};
+struct FunctionTraits<FuncRetType (*)(FuncArgType...)> final
+    : public FunctionTraits<FuncRetType(FuncArgType...)> {};
 
 template <typename FuncRetType, typename... FuncArgType>
 struct FunctionTraits<std::function<FuncRetType(FuncArgType...)>> final
@@ -170,9 +175,11 @@ struct FunctionTraits<FuncRetType (ClassType::*)(FuncArgType...) const>
     using class_type = ClassType;
 };
 
-// for lambda functions that will be deduced to `FuncRetType (ClassType::*)(FuncArgType...) const`
+// for lambda functions that will be deduced to `FuncRetType
+// (ClassType::*)(FuncArgType...) const`
 template <typename ClassType>
-struct FunctionTraits final : public FunctionTraits<decltype(&ClassType::operator())> {};
+struct FunctionTraits final
+    : public FunctionTraits<decltype(&ClassType::operator())> {};
 
 /* -------------------------------------------------------------------------- */
 
@@ -194,8 +201,11 @@ struct FuncWithoutReturnValue final {
 
 template <typename FuncType, typename... Argv>
 struct ClassMemberFuncWithReturnValue final {
-    ClassMemberFuncWithReturnValue(lua_State* l, const FuncType& f, Argv&&... argv) {
-        auto obj = (typename FunctionTraits<FuncType>::class_type*)lua_touserdata(l, 1);
+    ClassMemberFuncWithReturnValue(lua_State* l, const FuncType& f,
+                                   Argv&&... argv) {
+        auto obj =
+            (typename FunctionTraits<FuncType>::class_type*)lua_touserdata(l,
+                                                                           1);
         PushValue(l, (obj->*f)(std::forward<Argv>(argv)...));
     }
     static constexpr int returned_value_num = 1;
@@ -203,8 +213,11 @@ struct ClassMemberFuncWithReturnValue final {
 
 template <typename FuncType, typename... Argv>
 struct ClassMemberFuncWithoutReturnValue final {
-    ClassMemberFuncWithoutReturnValue(lua_State* l, const FuncType& f, Argv&&... argv) {
-        auto obj = (typename FunctionTraits<FuncType>::class_type*)lua_touserdata(l, 1);
+    ClassMemberFuncWithoutReturnValue(lua_State* l, const FuncType& f,
+                                      Argv&&... argv) {
+        auto obj =
+            (typename FunctionTraits<FuncType>::class_type*)lua_touserdata(l,
+                                                                           1);
         (obj->*f)(std::forward<Argv>(argv)...);
     }
     static constexpr int returned_value_num = 0;
@@ -213,8 +226,10 @@ struct ClassMemberFuncWithoutReturnValue final {
 template <uint32_t N>
 struct FunctionCaller final {
     template <typename FuncType, typename... Argv>
-    static int Execute(const FuncType& f, lua_State* l, int argoffset, Argv&&... argv) {
-        return FunctionCaller<N - 1>::Execute(f, l, argoffset, ValueConverter(l, N + argoffset),
+    static int Execute(const FuncType& f, lua_State* l, int argoffset,
+                       Argv&&... argv) {
+        return FunctionCaller<N - 1>::Execute(f, l, argoffset,
+                                              ValueConverter(l, N + argoffset),
                                               std::forward<Argv>(argv)...);
     }
 };
@@ -223,14 +238,18 @@ template <>
 struct FunctionCaller<0> final {
     template <typename FuncType, typename... Argv>
     static int Execute(const FuncType& f, lua_State* l, int, Argv&&... argv) {
-        constexpr bool is_void_ret = std::is_void<typename FunctionTraits<FuncType>::return_type>::value;
+        constexpr bool is_void_ret =
+            std::is_void<typename FunctionTraits<FuncType>::return_type>::value;
         typename std::conditional<
             std::is_member_function_pointer<FuncType>::value,
-            typename std::conditional<is_void_ret, ClassMemberFuncWithoutReturnValue<FuncType, Argv...>,
-                                      ClassMemberFuncWithReturnValue<FuncType, Argv...>>::type,
-            typename std::conditional<is_void_ret, FuncWithoutReturnValue<FuncType, Argv...>,
-                                      FuncWithReturnValue<FuncType, Argv...>>::type>::type
-            func_executor(l, f, std::forward<Argv>(argv)...);
+            typename std::conditional<
+                is_void_ret,
+                ClassMemberFuncWithoutReturnValue<FuncType, Argv...>,
+                ClassMemberFuncWithReturnValue<FuncType, Argv...>>::type,
+            typename std::conditional<
+                is_void_ret, FuncWithoutReturnValue<FuncType, Argv...>,
+                FuncWithReturnValue<FuncType, Argv...>>::type>::type
+        func_executor(l, f, std::forward<Argv>(argv)...);
         return func_executor.returned_value_num;
     }
 };
@@ -241,9 +260,10 @@ struct DestructorObject {
 
 /*
   All `FuncWrapper` instances share the same metatable.
-  According to the c++ standard, converting a void*, which is converted from a pointer to derived class, to its base
-  class pointer, is not save. But `DestructorObject` is an empty class so that the address of `DestructorObject` and
-  `FuncWrapper` are the same in our case.
+  According to the c++ standard, converting a void*, which is converted from a
+  pointer to derived class, to its base class pointer, is not save. But
+  `DestructorObject` is an empty class so that the address of `DestructorObject`
+  and `FuncWrapper` are the same in our case.
 */
 template <typename FuncType>
 struct FuncWrapper final : public DestructorObject {
@@ -259,17 +279,20 @@ int luacpp_generic_destructor(lua_State* l) {
     return 0;
 }
 
-/** FuncType may be a c-style function or a std::function or a callable object */
+// FuncType may be a c-style function or a std::function or a callable object
 template <typename FuncType>
 int luacpp_generic_function(lua_State* l) {
     auto argoffset = lua_tointeger(l, lua_upvalueindex(1));
-    auto wrapper = (FuncWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
-    return FunctionCaller<FunctionTraits<FuncType>::argc>::Execute(wrapper->f, l, argoffset);
+    auto wrapper =
+        (FuncWrapper<FuncType>*)lua_touserdata(l, lua_upvalueindex(2));
+    return FunctionCaller<FunctionTraits<FuncType>::argc>::Execute(
+        wrapper->f, l, argoffset);
 }
 
 // pushes an instance of `luacpp_generic_function`
 template <typename FuncType>
-void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset, FuncType&& f) {
+void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset,
+                           FuncType&& f) {
     using WrapperType = FuncWrapper<FuncType>;
 
     // upvalue 1: argoffset
@@ -288,11 +311,14 @@ void CreateGenericFunction(lua_State* l, int gc_table_ref, int argoffset, FuncTy
 
 template <typename T>
 void BuiltInTypeAssert() {
-    static_assert(std::is_same<T, LuaRefObject>::value || std::is_same<T, LuaObject>::value ||
-                  std::is_same<T, LuaTable>::value || std::is_same<T, LuaFunction>::value ||
-                  std::is_same<T, LuaStringRef>::value, "is not a luacpp builtin type");
+    static_assert(std::is_same<T, LuaRefObject>::value ||
+                      std::is_same<T, LuaObject>::value ||
+                      std::is_same<T, LuaTable>::value ||
+                      std::is_same<T, LuaFunction>::value ||
+                      std::is_same<T, LuaStringRef>::value,
+                  "is not a luacpp builtin type");
 }
 
-} // namespace luacpp
+}
 
 #endif
