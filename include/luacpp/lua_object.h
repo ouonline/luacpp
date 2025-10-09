@@ -24,6 +24,6 @@ public:
     void* ToPointer() const;
 };
 
-} // namespace luacpp
+}
 
 #endif

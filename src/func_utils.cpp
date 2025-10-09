@@ -32,4 +32,4 @@ void PushValue(lua_State* l, const LuaFunction& func) {
     lua_rawgeti(l, LUA_REGISTRYINDEX, func.GetRefIndex());
 }
 
-} // namespace luacpp
+}

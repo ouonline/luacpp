@@ -59,7 +59,7 @@ static void TestString() {
 static void TestTable() {
     LuaState l(luaL_newstate(), true);
 
-    auto iterfunc = [] (const LuaObject& key, const LuaObject& value) -> bool {
+    auto iterfunc = [](const LuaObject& key, const LuaObject& value) -> bool {
         cout << "    ";
         if (key.GetType() == LUA_TNUMBER) {
             cout << key.ToNumber();
@@ -75,7 +75,8 @@ static void TestTable() {
         } else if (value.GetType() == LUA_TSTRING) {
             cout << " -> " << value.ToString() << endl;
         } else {
-            cout << " -> unsupported iter value type: " << value.GetTypeName() << endl;
+            cout << " -> unsupported iter value type: " << value.GetTypeName()
+                 << endl;
         }
 
         return true;
@@ -151,10 +152,12 @@ static void TestTableGetSet() {
     auto return_self_func = LuaFunction(ltable.Get("func"));
     const string msg = "ouonline5";
     string ret_msg;
-    auto ok = return_self_func.Execute([&ret_msg](int, const LuaObject& lobj) -> bool {
-        ret_msg = lobj.ToString();
-        return true;
-    }, nullptr, msg.c_str());
+    auto ok = return_self_func.Execute(
+        [&ret_msg](int, const LuaObject& lobj) -> bool {
+            ret_msg = lobj.ToString();
+            return true;
+        },
+        nullptr, msg.c_str());
     assert(ok);
     assert(ret_msg == msg);
 }
@@ -162,40 +165,49 @@ static void TestTableGetSet() {
 static void TestFuncWithReturnValue() {
     LuaState l(luaL_newstate(), true);
 
-    auto lfunc = l.CreateFunction([] (const char* msg) -> int {
-        cout << "in std::function Echo(str): '" << msg << "'" << endl;
-        return 5;
-    }, "Echo");
+    auto lfunc = l.CreateFunction(
+        [](const char* msg) -> int {
+            cout << "in std::function Echo(str): '" << msg << "'" << endl;
+            return 5;
+        },
+        "Echo");
 
     const string msg = "calling cpp function with return value from cpp.";
     l.CreateString(msg.data(), msg.size(), "msg");
 
-    lfunc.Execute([](uint32_t, const LuaObject& lobj) -> bool {
-        auto res = lobj.ToInteger();
-        assert(res == 5);
-        return true;
-    }, nullptr, l.Get("msg"));
+    lfunc.Execute(
+        [](uint32_t, const LuaObject& lobj) -> bool {
+            auto res = lobj.ToInteger();
+            assert(res == 5);
+            return true;
+        },
+        nullptr, l.Get("msg"));
 
     string errmsg;
-    bool ok = l.DoString("res = Echo('calling cpp function with return value from lua: ');"
-                         "io.write('return value -> ', res, '\\n')", &errmsg);
+    bool ok = l.DoString(
+        "res = Echo('calling cpp function with return value from lua: ');"
+        "io.write('return value -> ', res, '\\n')",
+        &errmsg);
     assert(ok);
     assert(errmsg.empty());
 
     const string msg2 = "ouonline.net";
     l.DoString("function return2(a, b) return a, b end");
-    LuaFunction(l.Get("return2")).Execute([&msg2](uint32_t i, const LuaObject& lobj) -> bool {
-        if (i == 0) {
-            assert(lobj.ToInteger() == 5);
-            cout << "get [0] -> " << lobj.ToInteger() << endl;
-        } else if (i == 1) {
-            auto buf = lobj.ToStringRef();
-            const string res2(buf.base, buf.size);
-            assert(res2 == msg2);
-            cout << "get [1] -> '" << res2 << "'" << endl;
-        }
-        return true;
-    }, nullptr, 5, msg2.c_str());
+    LuaFunction(l.Get("return2"))
+        .Execute(
+            [&msg2](uint32_t i, const LuaObject& lobj) -> bool {
+                if (i == 0) {
+                    assert(lobj.ToInteger() == 5);
+                    cout << "get [0] -> " << lobj.ToInteger() << endl;
+                } else if (i == 1) {
+                    auto buf = lobj.ToStringRef();
+                    const string res2(buf.base, buf.size);
+                    assert(res2 == msg2);
+                    cout << "get [1] -> '" << res2 << "'" << endl;
+                }
+                return true;
+            },
+            nullptr, 5, msg2.c_str());
 }
 
 static void GlobalEcho(const char* msg) {
@@ -206,10 +218,12 @@ static void TestFuncWithoutReturnValue() {
     LuaState l(luaL_newstate(), true);
 
     auto lfunc = l.CreateFunction(GlobalEcho, "Echo");
-    lfunc.Execute(nullptr, nullptr, "calling cpp function without return value from cpp");
+    lfunc.Execute(nullptr, nullptr,
+                  "calling cpp function without return value from cpp");
 
     string errmsg;
-    bool ok = l.DoString("Echo('calling cpp function without return value from lua')", &errmsg);
+    bool ok = l.DoString(
+        "Echo('calling cpp function without return value from lua')", &errmsg);
     assert(ok);
     assert(errmsg.empty());
 }
@@ -272,7 +286,9 @@ static void TestVariadicArguments() {
     assert(ok);
     assert(errmsg.empty());
 
-    ok = l.DoString("VariadicFunc(123, {'a', ['b'] = 2, ['c'] = 'd'}, 'ouonline')", &errmsg);
+    ok = l.DoString(
+        "VariadicFunc(123, {'a', ['b'] = 2, ['c'] = 'd'}, 'ouonline')",
+        &errmsg);
     assert(ok);
     assert(errmsg.empty());
 }
@@ -281,11 +297,12 @@ static void TestUserdata1() {
     LuaState l(luaL_newstate(), true);
 
     auto lclass = l.CreateClass<ClassDemo>("ClassDemo")
-        .DefConstructor<const char*, int>()
-        .DefMember("get_object_addr", [](ClassDemo* obj) -> ClassDemo* {
-            return obj;
-        })
-        .DefMember("print", &ClassDemo::Print);
+                      .DefConstructor<const char*, int>()
+                      .DefMember("get_object_addr",
+                                 [](ClassDemo* obj) -> ClassDemo* {
+                                     return obj;
+                                 })
+                      .DefMember("print", &ClassDemo::Print);
 
     auto lud = lclass.CreateInstance("ouonline", 5);
     auto ud = static_cast<ClassDemo*>(lud.ToPointer());
@@ -305,7 +322,9 @@ static void TestUserdata2() {
     l.CreateClass<ClassDemo>("ClassDemo")
         .DefConstructor<const char*, int>()
         .DefMember("set", &ClassDemo::Set);
-    l.DoString("tc = ClassDemo('ouonline', 3); tc:set('in cpp: Print test data from lua')");
+    l.DoString(
+        "tc = ClassDemo('ouonline', 3); tc:set('in cpp: Print test data from "
+        "lua')");
     static_cast<ClassDemo*>(l.Get("tc").ToPointer())->Print();
 }
 
@@ -313,14 +332,13 @@ static void TestDoString() {
     LuaState l(luaL_newstate(), true);
     string errstr;
     bool ok = l.DoString("return 'ouonline', 5", &errstr,
-                         [] (uint32_t n, const LuaObject& lobj) -> bool {
+                         [](uint32_t n, const LuaObject& lobj) -> bool {
                              cout << "output from resiter: ";
                              if (n == 0) {
                                  cout << lobj.ToString() << endl;
                              } else if (n == 1) {
                                  cout << lobj.ToNumber() << endl;
                              }
-
                              return true;
                          });
     assert(ok);

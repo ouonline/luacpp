@@ -173,4 +173,4 @@ void LuaTable::SetPointer(const char* name, void* ptr) {
     lua_pop(m_l, 1);
 }
 
-} // namespace luacpp
+}

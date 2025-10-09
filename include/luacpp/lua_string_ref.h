@@ -13,6 +13,6 @@ struct LuaStringRef final {
     size_t size;
 };
 
-} // namespace luacpp
+}
 
 #endif
