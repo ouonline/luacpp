@@ -4,10 +4,13 @@ project(luacpp)
 option(LUACPP_BUILD_TESTS "build tests" ON)
 option(LUACPP_INSTALL "install headers and libs" ON)
 
+if(NOT CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 11)
+endif()
+
 file(GLOB LUACPP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 add_library(luacpp_static STATIC ${LUACPP_SRC})
 target_include_directories(luacpp_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_features(luacpp_static PUBLIC cxx_std_11)
 set_target_properties(luacpp_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if(MSVC)
