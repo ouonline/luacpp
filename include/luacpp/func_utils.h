@@ -141,16 +141,12 @@ void PushValues(lua_State* l, First&& first, Rest&&... rest) {
 
 /* -------------------------------------------------------------------------- */
 
-template <typename... Ts>
-struct TypeHolder final {};
-
 template <typename T>
 struct FunctionTraits;
 
 template <typename FuncRetType, typename... FuncArgType>
 struct FunctionTraits<FuncRetType(FuncArgType...)> {
     using return_type = FuncRetType;
-    using argument_type_holder = TypeHolder<FuncArgType...>;
     using std_function_type = std::function<FuncRetType(FuncArgType...)>;
     static constexpr uint32_t argc = sizeof...(FuncArgType);
 };
